@@ -58,6 +58,8 @@ body {
 }
 
 :root {
+  --font-geist-sans: 'Segoe UI', 'Microsoft JhengHei', 'PingFang TC', Arial, sans-serif;
+  --font-geist-mono: Consolas, 'SFMono-Regular', 'Liberation Mono', monospace;
   --background: oklch(0.975 0.008 235);
   --foreground: oklch(0.2 0.025 245);
   --card: oklch(0.995 0.003 235);
