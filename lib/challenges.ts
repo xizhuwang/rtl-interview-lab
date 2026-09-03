@@ -2,7 +2,7 @@ export type Locale = 'zh' | 'en';
 
 export type Localized = { zh: string; en: string };
 
-export type TrackId = 'rtl' | 'cdc' | 'timing' | 'soc' | 'verification' | 'ppa';
+export type TrackId = 'rtl' | 'cdc' | 'timing' | 'soc' | 'verification' | 'ppa' | 'dft' | 'low-power';
 
 export type PatternRule = {
   pattern: string;
@@ -40,6 +40,8 @@ export const tracks: { id: TrackId; label: Localized; accent: string }[] = [
   { id: 'soc', label: { zh: 'SoC 介面', en: 'SoC Interfaces' }, accent: 'bg-amber-500' },
   { id: 'verification', label: { zh: '驗證與 Debug', en: 'Verification & Debug' }, accent: 'bg-emerald-500' },
   { id: 'ppa', label: { zh: 'PPA 與面積', en: 'PPA & Area' }, accent: 'bg-rose-500' },
+  { id: 'dft', label: { zh: 'DFT 與記憶體測試', en: 'DFT & Memory Test' }, accent: 'bg-orange-500' },
+  { id: 'low-power', label: { zh: '低功耗設計', en: 'Low Power' }, accent: 'bg-lime-500' },
 ];
 
 const educationalSram = `\`timescale 1ns/1ps
@@ -564,6 +566,218 @@ task try_case;input integer value;input integer sh;begin acc=value;shift=sh;expe
 initial begin try_case(100,0);try_case(15,1);try_case(14,1);try_case(-15,1);try_case(-14,1);try_case(1024,2);try_case(-1024,2);try_case(32767,7);try_case(-32768,7);try_case(255,1);try_case(-255,1);for(j=0;j<16;j=j+1)begin try_case(-32768,j);try_case(32767,j);for(i=-260;i<=260;i=i+13)try_case(i,j);end $display("@@PASS@@");$finish;end endmodule`,
   },
 ];
+
+// Original, reduced-size teaching circuits. No vendor IP, ATPG patterns, or PDK data.
+challenges.push(
+  {
+    id: 'dft-scan-capture', order: 27, track: 'dft', difficulty: 'beginner', minutes: 20, points: 130,
+    kind: 'debug', judge: 'simulation', language: 'Verilog-2005',
+    title: { zh: '修好 Scan Chain 的 Shift／Capture', en: 'Debug scan-chain shift and capture' },
+    description: { zh: '讓 8-bit 狀態暫存器能從 scan_in 載入測試狀態、擷取功能結果，再由 scan_out 讀出。修正 shift 方向與功能 enable 蓋過 scan enable 的錯誤。', en: 'Load an 8-bit state through scan_in, capture functional results, and unload through scan_out. Repair shift direction and scan/functional priority.' },
+    specs: [
+      { zh: '同一個 clk 上升緣操作；同步低有效 reset 優先，其次 scan_en，最後 func_en；其他情況保持 q。', en: 'One rising-edge clock: synchronous active-low reset has priority over scan_en, then func_en; otherwise hold q.' },
+      { zh: 'scan_en=1 時 q <= {q[6:0],scan_in}；scan_out 永遠等於 q[7]。串列位元在移位前讀取，MSB 先送入。', en: 'When scan_en=1, q <= {q[6:0],scan_in}; scan_out is always q[7]. Sample serial output before shifting; load MSB first.' },
+      { zh: 'scan_en=0 且 func_en=1 時 capture func_d。這是 scan 行為模型，不是 ATPG、fault coverage 或 at-speed 測試；真實 scan cell 與 clock/reset test control 仍需 DFT flow。', en: 'Capture func_d when scan_en=0 and func_en=1. This models scan behavior, not ATPG, fault coverage, or at-speed testing; real scan cells and clock/reset test controls need a DFT flow.' },
+    ],
+    testGroups: [{ zh: '逐位移入／移出與方向', en: 'Bit-by-bit load/unload order' }, { zh: 'Capture、保持與控制優先序', en: 'Capture, hold and control priority' }, { zh: 'Reset 與 scan 同時發生', en: 'Reset during scan' }],
+    hints: [
+      { zh: '先畫 q[7]→scan_out 與 scan_in→q[0]；不要把左右方向記反。', en: 'Draw q[7]→scan_out and scan_in→q[0] before choosing the shift direction.' },
+      { zh: 'Scan shift 必須蓋過 func_en，否則功能電路還在 enable 時就無法灌入測試資料。', en: 'Scan shifting must override func_en, or functional activity will corrupt test loading.' },
+      { zh: '使用 if(!rst_n)…else if(scan_en)…else if(func_en)…；scan_out 用 assign q[7]，不是額外延遲一拍。', en: 'Use reset → scan_en → func_en priority. Drive scan_out directly from q[7], without an extra register.' },
+    ],
+    starter: `module scan_register(input wire clk,rst_n,scan_en,scan_in,func_en,input wire [7:0] func_d,output reg [7:0] q,output wire scan_out);
+assign scan_out=q[7];
+always @(posedge clk) begin
+  if(!rst_n) q<=0;
+  else if(func_en) q<=func_d; // BUG: functional mode overrides scan
+  else if(scan_en) q<={scan_in,q[7:1]}; // BUG: wrong direction
+end
+endmodule`,
+    testbench: `module tb;reg clk=0,rst_n=0,se=0,si=0,fe=0;reg[7:0]d=0,expected_q=0;wire[7:0]q;wire so;integer i,j;scan_register dut(clk,rst_n,se,si,fe,d,q,so);always #5 clk=~clk;${pass}
+task step;input r,s,b,f;input[7:0]v;begin @(negedge clk);rst_n=r;se=s;si=b;fe=f;d=v;#1;check(so===expected_q[7]);@(posedge clk);if(!r)expected_q=0;else if(s)expected_q={expected_q[6:0],b};else if(f)expected_q=v;#1;check(q===expected_q);check(so===expected_q[7]);end endtask
+initial begin @(posedge clk);#1;check(q===0);for(j=0;j<8;j=j+1)begin for(i=7;i>=0;i=i-1)step(1,1,((8'hA6^j)>>i)&1,1,8'hff);step(1,0,0,1,8'h81+j);step(1,0,1,0,0);for(i=0;i<8;i=i+1)step(1,1,i[0],0,0);end step(0,1,1,1,255);step(1,0,0,0,0);$display("@@PASS@@");$finish;end endmodule`,
+  },
+  {
+    id: 'dft-sram-mbist', order: 28, track: 'dft', difficulty: 'advanced', minutes: 45, points: 260,
+    kind: 'build', judge: 'simulation', language: 'Verilog-2005',
+    title: { zh: 'SRAM MBIST：抓出 Stuck-at 故障', en: 'SRAM MBIST: detect stuck-at faults' },
+    description: { zh: '為 8×8-bit 教學 SRAM 寫自我測試控制器：依序寫 0、讀 0、寫 1、讀 1。測資注入各地址的 stuck-at-0／1，確認你的 checker 真正能抓到故障。', en: 'Build a self-test controller for an educational 8×8-bit SRAM: write zero, read zero, write ones, then read ones. Tests inject stuck-at-0/1 faults at every address.' },
+    specs: [
+      { zh: '四個 phase 都以地址 0→7 掃描；每個 phase 完成後才開始下一個。mem_en=1 的上升緣接受命令，mem_we=1 為寫入。', en: 'Each of the four phases traverses addresses 0→7 and finishes before the next. A rising edge with mem_en accepts a command; mem_we=1 writes.' },
+      { zh: 'SRAM 在接受 read 的邊緣後更新 rdata，控制器要到下一個上升緣才能比較；read 與 compare 分兩拍，不可拿舊 Q 比對。', en: 'SRAM updates rdata after the accepting read edge. Compare at the following rising edge using separate read and compare cycles, not stale Q.' },
+      { zh: 'Idle 時 start=1 接受一次工作，busy=1；busy 時忽略 start。fail 遇 mismatch 後保持 1，但仍完成所有 32 筆命令；新工作／reset 才清除。', en: 'Accept start only while idle and assert busy; ignore start while busy. Latch fail on mismatch but complete all 32 commands; clear fail only on a new run or reset.' },
+      { zh: '最後一筆 read 比較完成後 busy=0、done=1 一拍。同步低有效 reset 中不送命令。測試會破壞 SRAM 原內容，CPU／DMA 必須先停止使用該記憶體。', en: 'After the final read comparison, deassert busy and pulse done for one cycle. No commands during synchronous active-low reset. Testing is destructive: CPU/DMA access must be quiesced.' },
+      { zh: '只示範 stuck-at 測試及 latency；不是完整 March C-、耦合／保留故障覆蓋，也不是 flash program/erase 演算法或良率保證。', en: 'This teaches stuck-at detection and latency, not full March C-, coupling/retention coverage, a flash program/erase algorithm, or a yield guarantee.' },
+    ],
+    testGroups: [{ zh: '健康 SRAM、32 筆命令順序', en: 'Healthy SRAM and 32-command ordering' }, { zh: '每個地址 SA0／SA1 故障注入', en: 'SA0/SA1 injection at every address' }, { zh: 'Sticky fail、重跑與中途 reset', en: 'Sticky failure, rerun and mid-test reset' }],
+    hints: [
+      { zh: '先畫 IDLE、W0、R0、CHECK0、W1、R1、CHECK1；地址暫存器可重複使用。', en: 'Start with IDLE, W0, R0, CHECK0, W1, R1, CHECK1 and one shared address register.' },
+      { zh: 'R0／R1 發命令後先進 CHECK；比較的是前一拍要求的地址，不是下一個地址。', en: 'Enter CHECK after each read; compare the requested address before incrementing it.' },
+      { zh: 'CHECK 中 fail <= fail | mismatch；最後 CHECK1 才拉 done。新 start 清 fail，其他正常比較不能清 fail。', en: 'Accumulate fail | mismatch in CHECK. Pulse done only after the last CHECK1; successful comparisons must not clear fail.' },
+    ],
+    starter: `module sram_mbist(input wire clk,rst_n,start,input wire [7:0] rdata,output reg mem_en,mem_we,output reg [2:0] addr,output reg [7:0] wdata,output reg busy,done,fail);
+  // TODO: controller only; SRAM and fault injection are supplied by the testbench
+endmodule`,
+    testbench: `module tb;reg clk=0,rst_n=0,start=0;reg[7:0]rdata=0,mem[0:7];wire en,we,busy,done,fail;wire[2:0]addr;wire[7:0]wd;integer fault=-1,stuck=0,phase=0,idx=0,commands=0,i,a,k,guard;reg mismatch_seen=0;reg[7:0]expected_data;wire expected_we=(phase==0||phase==2);sram_mbist dut(clk,rst_n,start,rdata,en,we,addr,wd,busy,done,fail);always #5 clk=~clk;${pass}
+always @(posedge clk)begin
+ if(!rst_n)begin rdata<=0;phase=0;idx=0;commands=0;mismatch_seen=0;end
+ else if(en)begin check(busy===1);check(phase<4);check(addr===idx[2:0]);check(we===expected_we);expected_data=phase<2?0:255;
+ if(we)begin check(wd===expected_data);mem[addr]<=wd;end
+ else begin if(addr==fault)begin rdata<=stuck? (mem[addr]|8'h04):(mem[addr]&8'hfb);if((stuck&&phase==1)||(!stuck&&phase==3))mismatch_seen=1;end else rdata<=mem[addr];end
+ commands=commands+1;if(idx==7)begin idx=0;phase=phase+1;end else idx=idx+1;end
+end
+task run;input integer f,s;begin @(negedge clk);rst_n=0;start=0;fault=f;stuck=s;@(negedge clk);rst_n=1;start=1;@(negedge clk);start=0;check(busy===1);guard=0;while(done!==1&&guard<100)begin @(negedge clk);guard=guard+1;if(guard==5)start=1;else start=0;end check(done===1);check(busy===0);check(commands==32);check(fail===(f>=0));check(mismatch_seen===(f>=0));@(negedge clk);check(done===0);check(fail===(f>=0));end endtask
+initial begin for(i=0;i<8;i=i+1)mem[i]=8'h5a;run(-1,0);for(a=0;a<8;a=a+1)for(k=0;k<2;k=k+1)run(a,k);
+// No reset: a fresh healthy run must clear the preceding failure.
+@(negedge clk);fault=-1;phase=0;idx=0;commands=0;start=1;@(negedge clk);start=0;check(fail===0);guard=0;while(done!==1&&guard<100)begin @(negedge clk);guard=guard+1;end check(done===1);check(fail===0);check(commands==32);
+@(negedge clk);phase=0;idx=0;commands=0;start=1;@(negedge clk);start=0;repeat(5)@(negedge clk);rst_n=0;#1;check(en===0);@(posedge clk);#1;check(busy===0&&done===0&&fail===0);run(-1,0);$display("@@PASS@@");$finish;end endmodule`,
+  },
+  {
+    id: 'dft-spare-row-remap', order: 29, track: 'dft', difficulty: 'intermediate', minutes: 25, points: 170,
+    kind: 'debug', judge: 'simulation', language: 'Verilog-2005',
+    title: { zh: 'BISR 概念：故障列導向備援列', en: 'BISR concept: redirect a faulty row' },
+    description: { zh: 'MBIST 找到壞列後，修復 wrapper 要同時改寫 write 路徑及 read 回傳。修正只改讀取、卻仍把資料寫回壞列的 bug。', en: 'After a faulty row is identified, a repair wrapper must redirect both writes and readback. Repair a design that remaps reads but still writes the bad row.' },
+    specs: [
+      { zh: '16 列 normal bank＋1 列 spare；hit=repair_en && addr==bad_row。normal_addr 永遠接 addr；repair 設定在操作期間保持穩定。', en: 'Sixteen normal rows plus one spare: hit=repair_en && addr==bad_row. Always drive normal_addr=addr; repair configuration stays stable during transactions.' },
+      { zh: 'req=1 時只啟用 normal 或 spare 其中之一；各 write enable 必須同時受 req、write、bank 選擇控制。req=0 時所有 enable=0。', en: 'A request enables exactly one bank. Each write enable depends on req, write, and bank selection; all enables are zero when req=0.' },
+      { zh: '本題只練組合映射：req && !write 時依 hit 回傳 spare_q 或 normal_q，其他情況 rdata=0；真實同步 SRAM 要另外 pipeline bank select 對齊 read latency。', en: 'This is combinational remapping: return selected spare_q/normal_q only for req && !write, otherwise zero. A synchronous SRAM wrapper must pipeline bank selection to align read latency.' },
+      { zh: '不包含 fuse/OTP、修復分析或實體冗餘 SRAM；一列備援只能替代一個壞列。不可把此模型當作 flash erase/program 控制。', en: 'No fuse/OTP, repair analysis, or physical redundant SRAM is included. One spare replaces one bad row; this is not flash erase/program control.' },
+    ],
+    testGroups: [{ zh: '所有地址／repair 設定', en: 'All addresses and repair settings' }, { zh: '正常列與備援列互斥', en: 'Exclusive normal/spare selection' }, { zh: 'Read／write／idle gating', en: 'Read/write/idle gating' }],
+    hints: [
+      { zh: '把 hit 當成 bank select，不只用於 rdata mux。', en: 'Use hit for bank selection, not just the read mux.' },
+      { zh: '先產生兩個互斥 enable，再由各自 enable & write 產生 write enable。', en: 'Generate mutually exclusive enables, then gate each write enable with its bank enable.' },
+      { zh: 'normal_en=req & ~hit、spare_en=req & hit；讀資料只有 req & ~write 時有效。', en: 'normal_en=req & ~hit and spare_en=req & hit; read data is valid only for req & ~write.' },
+    ],
+    starter: `module spare_row_map(input wire req,write,repair_en,input wire [3:0] addr,bad_row,input wire [7:0] normal_q,spare_q,output wire normal_en,spare_en,normal_we,spare_we,output wire [3:0] normal_addr,output wire [7:0] rdata);
+wire hit=repair_en&&(addr==bad_row);
+assign normal_addr=addr;
+assign normal_en=req; // BUG: still selects the bad row
+assign spare_en=req&&hit;
+assign normal_we=req&&write; // BUG: write not remapped
+assign spare_we=1'b0;
+assign rdata=hit?spare_q:normal_q; // BUG: missing idle/write qualification
+endmodule`,
+    testbench: `module tb;reg req=0,wr=0,re=0;reg[3:0]a=0,b=0;reg[7:0]nq=0,sq=0;wire ne,se,nw,sw;wire[3:0]na;wire[7:0]q;reg hit;reg[7:0]expected_q;integer x,y,c;spare_row_map dut(req,wr,re,a,b,nq,sq,ne,se,nw,sw,na,q);${pass}
+initial begin for(x=0;x<16;x=x+1)for(y=0;y<16;y=y+1)for(c=0;c<8;c=c+1)begin a=x;b=y;{req,wr,re}=c;nq=8'h50+x;sq=8'ha0+y;hit=re&&(a==b);expected_q=req&&!wr?(hit?sq:nq):0;#1;check(na===a);check(ne===(req&&!hit));check(se===(req&&hit));check(nw===(req&&wr&&!hit));check(sw===(req&&wr&&hit));check(q===expected_q);end $display("@@PASS@@");$finish;end endmodule`,
+  }
+);
+
+challenges.push(
+  {
+    id: 'lp-glitch-free-clock-gate', order: 30, track: 'low-power', difficulty: 'intermediate', minutes: 25, points: 170,
+    kind: 'debug', judge: 'simulation', language: 'Verilog-2005',
+    title: { zh: '修好 Clock Gating，保留 Scan 測試通路', en: 'Glitch-free clock gating with test override' },
+    description: { zh: '直接 clk & enable 可能產生半截 clock。修好教學 ICG 模型，並讓 test_en 在功能 enable=0 時仍能送入 scan clock。', en: 'Direct clk & enable can create partial clock pulses. Repair an educational ICG model and preserve scan clocks through test_en when functional enable is low.' },
+    specs: [
+      { zh: 'clk=0 時以透明 latch 保存 en | test_en；clk=1 時不得改變保存值。gclk=clk & 保存值。此處 latch 是刻意設計，不是組合邏輯漏寫 default。', en: 'A transparent latch stores en | test_en while clk=0 and holds while clk=1; gclk=clk & stored enable. This latch is intentional, not an incomplete combinational assignment.' },
+      { zh: '不提供 reset；測試先讓 clk=0 且 en=test_en=0 初始化 latch。低相位期間 enable 改變必須能被本次上升緣採用。', en: 'No reset port: initialize with clk=0 and en=test_en=0. Enable changes during the low phase must affect the upcoming rising edge.' },
+      { zh: 'en、test_en 在高相位改變不可增加 gclk 上升緣，也不可截短目前的高脈衝。test_en 也必須在 latch 前合併，不能直接 OR 在 gclk 上。', en: 'High-phase changes must neither add gated-clock edges nor truncate a high pulse. Merge test_en before the latch, not directly into gclk.' },
+      { zh: '此模型只驗證理想數位波形；真實 ASIC 應使用 library ICG 並檢查 gating setup/hold、CTS、DFT 與 STA。非同步 enable 仍要同步；FPGA 應優先用 CE／專用 clock buffer。', en: 'Only ideal digital waveforms are checked. ASICs need library ICG mapping, gating setup/hold, CTS, DFT and STA; asynchronous enables still need synchronization. Prefer CE/dedicated clock buffers on FPGAs.' },
+    ],
+    testGroups: [{ zh: '高相位 enable 切換不產生毛刺', en: 'No high-phase enable glitches' }, { zh: '低相位透明與完整脈衝', en: 'Low-phase transparency and full pulses' }, { zh: 'Test override 與關閉', en: 'Test override and disable' }],
+    hints: [
+      { zh: '問題不是加一個 data FF，而是 enable 不能在 clock 高相位直接影響 AND gate。', en: 'The issue is not a missing data FF: enable must not directly affect the AND gate during the high phase.' },
+      { zh: '先用 en | test_en 得到共同 enable，再用 clk=0 的 level-sensitive latch 保存。', en: 'Combine en | test_en, then hold it with a low-level-sensitive latch.' },
+      { zh: 'reg gate_en; always @* if(!clk) gate_en=en|test_en; assign gclk=clk&gate_en; 本題刻意不寫 else。', en: 'Use reg gate_en; always @* if(!clk) gate_en=en|test_en; assign gclk=clk&gate_en; intentionally omit else here.' },
+    ],
+    starter: `module clock_gate(input wire clk,en,test_en,output wire gclk);
+assign gclk=clk & en; // BUG: glitch-prone and blocks scan test clocks
+endmodule`,
+    testbench: `module tb;reg clk=0,en=0,te=0;wire gclk;reg expected_gclk=0;integer c,edges=0,expected_edges=0;reg gate_ref;clock_gate dut(clk,en,te,gclk);always @(posedge gclk)edges=edges+1;${pass}
+initial begin #2;check(gclk===0);for(c=0;c<32;c=c+1)begin
+en=0;te=0;#2;en=c[0];te=c[1];#2;gate_ref=en|te;clk=1;expected_gclk=gate_ref;if(gate_ref)expected_edges=expected_edges+1;#1;check(gclk===expected_gclk);
+en=~en;#1;check(gclk===expected_gclk);te=~te;#1;check(gclk===expected_gclk);en=0;te=0;#1;check(gclk===expected_gclk);check(edges==expected_edges);
+clk=0;expected_gclk=0;#2;check(gclk===0);end $display("@@PASS@@");$finish;end endmodule`,
+  },
+  {
+    id: 'lp-operand-isolation', order: 31, track: 'low-power', difficulty: 'beginner', minutes: 20, points: 140,
+    kind: 'optimize', judge: 'simulation', language: 'Verilog-2005',
+    title: { zh: '加速器閒置時，讓乘法器輸入停止切換', en: 'Stop multiplier input toggles while idle' },
+    description: { zh: 'HBM-PIM／AI 加速器的資料 bus 可能持續切換，卻不是每拍都需要運算。用 operand registers 的 enable 保持輸入，不要只遮住結果或每拍灌零。', en: 'An accelerator data bus can toggle even without useful work. Hold enabled operand registers, rather than merely masking the result or writing zero on every idle cycle.' },
+    specs: [
+      { zh: '同步低有效 reset 清 op_a、op_b、out_valid。每個上升緣 out_valid<=in_valid；in_valid=1 才擷取 a、b，否則兩個 operand registers 保持。', en: 'Synchronous active-low reset clears op_a, op_b and out_valid. Each rising edge sets out_valid<=in_valid; capture a,b only when in_valid=1, otherwise hold both operands.' },
+      { zh: 'product 必須永遠等於 op_a * op_b（unsigned 8×8→16）；資料在擷取邊緣後有效。本題不另加一級 output register，也不遮蔽閒置結果。', en: 'product always equals op_a * op_b (unsigned 8×8→16) and is valid after capture. Do not add an output register or mask idle results.' },
+      { zh: '這是 RTL switching-activity 概念，不是實測功耗。Clock enable 不保證工具插入 ICG；功耗效益還受額外 mux/register、cell library、活動率與時序影響。', en: 'This teaches RTL switching activity, not measured power. A clock enable does not guarantee ICG insertion; mux/register overhead, libraries, activity and timing affect benefits.' },
+    ],
+    testGroups: [{ zh: '連續有效輸入與最大乘積', en: 'Back-to-back inputs and maximum product' }, { zh: '閒置 bus 切換但 operands 保持', en: 'Toggling idle bus with held operands' }, { zh: 'Valid 對齊與 reset', en: 'Valid alignment and reset' }],
+    hints: [
+      { zh: '只讓 out_valid=0 不會阻止乘法器內部因輸入變動而切換。', en: 'Deasserting out_valid alone does not stop input-induced switching inside the multiplier.' },
+      { zh: '將 operand 更新放在 if(in_valid)，out_valid 則每拍都更新。', en: 'Guard operand updates with in_valid, but update out_valid every cycle.' },
+      { zh: 'Idle 分支不賦值 op_a/op_b 才是 FF 保持；不要寫成 op_a<=0。product 以 assign 連接兩個保存的 operands。', en: 'Omit idle assignments to hold the flip-flops; do not clear operands to zero. Assign product from the held operands.' },
+    ],
+    starter: `module quiet_multiplier(input wire clk,rst_n,in_valid,input wire [7:0] a,b,output reg [7:0] op_a,op_b,output reg out_valid,output wire [15:0] product);
+assign product=op_a*op_b;
+always @(posedge clk) begin
+  if(!rst_n) begin op_a<=0;op_b<=0;out_valid<=0;end
+  else begin out_valid<=in_valid;op_a<=a;op_b<=b;end // BUG: idle inputs still toggle
+end
+endmodule`,
+    testbench: `module tb;reg clk=0,rst_n=0,v=0;reg[7:0]a=0,b=0,expected_a=0,expected_b=0;reg[15:0]expected_product=0;wire[7:0]oa,ob;wire ov;wire[15:0]p;integer i;quiet_multiplier dut(clk,rst_n,v,a,b,oa,ob,ov,p);always #5 clk=~clk;${pass}
+task tick;input r,valid;input[7:0]x,y;begin @(negedge clk);rst_n=r;v=valid;a=x;b=y;@(posedge clk);if(!r)begin expected_a=0;expected_b=0;end else if(valid)begin expected_a=x;expected_b=y;end expected_product=expected_a*expected_b;#1;check(oa===expected_a&&ob===expected_b);check(p===expected_product);check(ov===(r&&valid));end endtask
+initial begin tick(0,1,255,255);tick(1,1,255,255);for(i=0;i<96;i=i+1)tick(1,(i%5)<2,(i*37)^8'ha5,(i*19)^8'hc3);tick(0,0,1,1);tick(1,0,255,255);tick(1,1,0,0);$display("@@PASS@@");$finish;end endmodule`,
+  },
+  {
+    id: 'lp-retention-register', order: 32, track: 'low-power', difficulty: 'intermediate', minutes: 25, points: 170,
+    kind: 'debug', judge: 'simulation', language: 'Verilog-2005',
+    title: { zh: 'Retention：斷電前保存、上電後還原', en: 'Retention: save before power-off, restore after' },
+    description: { zh: '修正把 retention shadow 也一起清掉的設計。區分可斷電的工作狀態與 always-on 保存狀態，確認 save/restore 和一般 write 的優先序。', en: 'Repair a model that clears its retention shadow on power loss. Separate switchable working state from always-on saved state, and define save/restore/write priority.' },
+    specs: [
+      { zh: '本題用 always-on clk 模擬狀態：同步低有效 reset 清 q、saved。power_on=0 時下一拍 q=0，但 saved 保持，且忽略 save/restore/wr。', en: 'Use an always-on clock: synchronous active-low reset clears q and saved. With power_on=0, clear q on the next edge but hold saved and ignore save/restore/wr.' },
+      { zh: 'power_on=1 的優先序為 restore > save > wr。restore 時 q<=saved；save 時 saved<=q 並保持 q；wr 時 q<=wdata；其他情況保持。', en: 'When powered, priority is restore > save > wr: restore loads q from saved; save copies q to saved and holds q; wr updates q; otherwise hold.' },
+      { zh: '同拍 save+wr 保存的是舊 q，不接受 write；restore+save+wr 只 restore。saved 在 restore 時不變。', en: 'Simultaneous save+wr saves old q and suppresses the write; restore+save+wr only restores. Restore does not modify saved.' },
+      { zh: 'q=0 只是明確的教學 loss model，真實斷電通常是無效/X；一般 FF 不會自動成為 retention cell。實際需 retention library、always-on 供電與 UPF／power-aware verification。', en: 'Zero is an explicit teaching loss model; real power-off values are invalid/X. Ordinary flip-flops are not retention cells: real designs need retention libraries, always-on supplies and UPF/power-aware verification.' },
+    ],
+    testGroups: [{ zh: '多次 save/off/on/restore', en: 'Repeated save/off/on/restore' }, { zh: '同時控制的優先序', en: 'Simultaneous control priority' }, { zh: '斷電時忽略控制與 reset', en: 'Ignore controls while off, plus reset' }],
+    hints: [
+      { zh: '斷電可以破壞 q，但不應破壞 always-on 的 saved。', en: 'Power loss destroys q, not the always-on saved state.' },
+      { zh: '先分 reset、power_on=0、正常供電三種情境；正常供電再排 restore/save/write。', en: 'Separate reset, power-off and powered operation; then prioritize restore/save/write.' },
+      { zh: 'Off 分支只改 q；save 分支只改 saved；restore 分支只改 q。用 non-blocking assignment 保存邊緣前的狀態。', en: 'Only change q in the off/restore branches, and saved in the save branch. Non-blocking assignments preserve pre-edge state.' },
+    ],
+    starter: `module retained_register(input wire clk,rst_n,power_on,save,restore,wr,input wire [7:0] wdata,output reg [7:0] q,saved);
+always @(posedge clk) begin
+  if(!rst_n) begin q<=0;saved<=0;end
+  else if(!power_on) begin q<=0;saved<=0;end // BUG: loses retention image
+  else if(wr) q<=wdata; // BUG: priority
+  else if(save) saved<=q;
+  else if(restore) q<=saved;
+end
+endmodule`,
+    testbench: `module tb;reg clk=0,rst_n=0,p=0,s=0,r=0,w=0;reg[7:0]d=0,expected_q=0,expected_saved=0;wire[7:0]q,saved;integer i;retained_register dut(clk,rst_n,p,s,r,w,d,q,saved);always #5 clk=~clk;${pass}
+task tick;input reset_n,power,sv,rs,wr;input[7:0]data;begin @(negedge clk);rst_n=reset_n;p=power;s=sv;r=rs;w=wr;d=data;@(posedge clk);if(!reset_n)begin expected_q=0;expected_saved=0;end else if(!power)expected_q=0;else if(rs)expected_q=expected_saved;else if(sv)expected_saved=expected_q;else if(wr)expected_q=data;#1;check(q===expected_q);check(saved===expected_saved);end endtask
+initial begin tick(0,0,0,0,0,0);for(i=1;i<12;i=i+1)begin tick(1,1,0,0,1,i*17);tick(1,1,1,0,1,8'hff);tick(1,0,1,1,1,8'hee);tick(1,0,0,0,0,0);tick(1,1,0,0,0,0);tick(1,1,1,1,1,8'hff);tick(1,1,0,0,0,0);end for(i=0;i<32;i=i+1)tick(1,i[3],i[2],i[1],i[0],i*7);tick(0,1,1,1,1,255);$display("@@PASS@@");$finish;end endmodule`,
+  },
+  {
+    id: 'lp-power-sequencer', order: 33, track: 'low-power', difficulty: 'advanced', minutes: 45, points: 270,
+    kind: 'build', judge: 'simulation', language: 'Verilog-2005',
+    title: { zh: 'Power Gating：先排空、保存、隔離，再斷電', en: 'Power gating: drain, save, isolate, power off' },
+    description: { zh: '以 always-on FSM 管理加速器睡眠與喚醒，避免資料還在飛就關電，或把斷電域的未知值送到 CPU。實作控制順序及輸出 isolation clamp。', en: 'Use an always-on FSM to sleep/wake an accelerator without dropping in-flight work or exposing powered-off unknown values to the CPU. Implement sequencing and an output isolation clamp.' },
+    specs: [
+      { zh: '固定 Moore 順序：RUN→DRAIN（等 idle）→SAVE（一拍）→ISOLATE（一拍）→OFF（等 wake_req）→RAMP（等 power_good）→RESTORE（一拍）→RELEASE（一拍）→RUN。sleep_req 只在 RUN 接受；一旦接受不取消，wake_req 保持到 OFF 接受。', en: 'Fixed Moore sequence: RUN→DRAIN(wait idle)→SAVE(1 cycle)→ISOLATE(1)→OFF(wait wake_req)→RAMP(wait power_good)→RESTORE(1)→RELEASE(1)→RUN. Accept sleep_req only in RUN, with no cancellation; hold wake_req until accepted in OFF.' },
+      { zh: 'accept=1 僅 RUN；power_en=0 僅 OFF；clk_en=0 僅 ISOLATE/OFF/RAMP；iso_en=0 僅 RUN/DRAIN/SAVE；save=1 僅 SAVE，restore=1 僅 RESTORE。', en: 'accept=1 only in RUN; power_en=0 only in OFF; clk_en=0 only in ISOLATE/OFF/RAMP; iso_en=0 only in RUN/DRAIN/SAVE; save and restore assert only in their named states.' },
+      { zh: 'iso_en=1 時 out_valid 與 out_data 一律 clamp 0（即使 domain 送 X）；否則直接傳遞 domain_valid、domain_data。clk_en 是送往 ICG 的控制，不是直接以 AND 產生 clock。', en: 'Clamp out_valid and out_data to zero when iso_en=1, even if domain inputs are X; otherwise pass them through. clk_en controls an ICG; do not generate a raw AND-gated clock.' },
+      { zh: '同步低有效 reset 進 OFF；初次上電也遵循 RAMP→RESTORE→RELEASE。假設 retention reset image 為 0，save/restore 在各自一拍完成；RELEASE 多留一拍 isolation。', en: 'Synchronous active-low reset enters OFF. Initial boot also follows RAMP→RESTORE→RELEASE; assume a zero reset retention image, one-cycle save/restore, and one extra isolated RELEASE cycle.' },
+      { zh: '所有輸入已同步至 always-on clk；idle 代表沒有 outstanding transaction。power_good 穩定後在 RUN 不會突然消失。真實產品須另做 CDC、reset、UPF isolation/retention、供電穩定時間與故障處理，這不是通用 signoff 序列。', en: 'All inputs are already synchronized to the always-on clock. idle means no outstanding transactions; power_good remains stable in RUN. Real products also need CDC, reset, UPF isolation/retention, rail settling and fault handling; this is not a universal signoff sequence.' },
+    ],
+    testGroups: [{ zh: '等待 outstanding 清空', en: 'Wait for outstanding work to drain' }, { zh: 'Save／isolation／power 順序', en: 'Save/isolation/power order' }, { zh: 'Power-good 等待、X clamp、reset', en: 'Power-good wait, X clamp and reset' }],
+    hints: [
+      { zh: 'sleep request 不等於可以立刻斷電：先禁止新工作，等 idle 才保存。', en: 'A sleep request is not permission to cut power immediately: stop new work and wait for idle.' },
+      { zh: '將狀態更新與輸出 decode 分開；SAVE 仍有 clock，ISOLATE 先隔離再讓下一拍進 OFF。', en: 'Separate state transitions and output decode. Keep the clock in SAVE, then isolate before entering OFF.' },
+      { zh: '上電先開 power，再等 power_good，保持 isolation 做 restore，隔一拍後才恢復 accept。clamp 用 iso_en mux，不能直接判斷 domain_valid。', en: 'Enable power, wait for power_good, restore under isolation, wait a release cycle, then accept work. Clamp with iso_en rather than trusting domain_valid.' },
+    ],
+    starter: `module power_sequencer(input wire clk,rst_n,sleep_req,idle,wake_req,power_good,domain_valid,input wire [7:0] domain_data,output reg accept,power_en,clk_en,iso_en,save,restore,output wire out_valid,output wire [7:0] out_data);
+  // TODO: always-on FSM and isolation mux
+endmodule`,
+    testbench: `module tb;reg clk=0,rst_n=0,sl=0,id=0,wk=0,pg=0,dv=0;reg[7:0]dd=0;wire ac,pe,ce,iso,sv,rs,ov;wire[7:0]od;integer expected_state=4,i,j;reg[5:0]expected_control;reg expected_valid;reg[7:0]expected_data;power_sequencer dut(clk,rst_n,sl,id,wk,pg,dv,dd,ac,pe,ce,iso,sv,rs,ov,od);always #5 clk=~clk;${pass}
+task tick;input reset_n,sleep,idle_in,wake,power_ok;begin @(negedge clk);rst_n=reset_n;sl=sleep;id=idle_in;wk=wake;pg=power_ok;@(posedge clk);
+if(!reset_n)expected_state=4;else case(expected_state)0:if(sleep)expected_state=1;1:if(idle_in)expected_state=2;2:expected_state=3;3:expected_state=4;4:if(wake)expected_state=5;5:if(power_ok)expected_state=6;6:expected_state=7;7:expected_state=0;endcase
+case(expected_state)0:expected_control=6'b111000;1:expected_control=6'b011000;2:expected_control=6'b011010;3:expected_control=6'b010100;4:expected_control=6'b000100;5:expected_control=6'b010100;6:expected_control=6'b011101;7:expected_control=6'b011100;endcase
+#1;check({ac,pe,ce,iso,sv,rs}===expected_control);dv=1;dd=8'ha5;#1;expected_valid=!expected_control[2];expected_data=expected_control[2]?0:8'ha5;check(ov===expected_valid&&od===expected_data);dv=0;dd=8'h3c;#1;check(ov===0);check(od===(expected_control[2]?8'h00:8'h3c));dv=1'bx;dd=8'hxx;#1;if(expected_control[2])check(ov===0&&od===0);end endtask
+initial begin tick(0,0,0,0,0);tick(1,0,0,0,0);tick(1,0,0,1,0);repeat(3)tick(1,0,0,0,0);tick(1,0,0,0,1);tick(1,0,0,0,1);tick(1,0,0,0,1);
+for(i=0;i<4;i=i+1)begin tick(1,0,0,0,1);tick(1,1,0,0,1);for(j=0;j<=i;j=j+1)tick(1,0,0,1,1);tick(1,0,1,0,1);tick(1,0,1,0,1);tick(1,0,1,0,0);repeat(2)tick(1,0,1,0,0);tick(1,0,1,1,0);for(j=0;j<=i;j=j+1)tick(1,0,1,0,0);tick(1,0,1,0,1);tick(1,0,1,0,1);tick(1,0,1,0,1);end
+tick(1,1,0,0,1);tick(0,1,1,1,1);tick(1,0,0,0,0);$display("@@PASS@@");$finish;end endmodule`,
+  }
+);
 
 export const difficultyLabel: Record<Challenge['difficulty'], Localized> = {
   beginner: { zh: '入門', en: 'Beginner' },

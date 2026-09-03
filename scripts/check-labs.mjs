@@ -11,6 +11,7 @@ async function loadTs(path) {
 const { challenges } = await loadTs('../lib/challenges.ts');
 const { gradeXorCnf } = await loadTs('../lib/cnf.ts');
 const { patternFailures } = await loadTs('../lib/pattern-check.ts');
+const { learningContext } = await loadTs('../lib/learning-context.ts');
 let checks = 0;
 function verify(ok, name) { assert.ok(ok, name); checks++; console.log('PASS ' + name); }
 function simulate(design, testbench, timeout = 15000) {
@@ -24,9 +25,16 @@ function simulate(design, testbench, timeout = 15000) {
     });
   });
 }
-verify(challenges.length === 26 && new Set(challenges.map((c) => c.id)).size === 26, '26 unique bilingual challenges');
+verify(challenges.length === 33 && new Set(challenges.map((c) => c.id)).size === 33, '33 unique bilingual challenges');
+verify(challenges.filter(c=>c.track==='dft').length===3, 'Three DFT exercises');
+verify(challenges.filter(c=>c.track==='low-power').length===4, 'Four low-power exercises');
 for (const c of challenges) {
   verify(Boolean(c.title.zh && c.title.en && c.description.zh && c.description.en), c.id + ' bilingual content');
+  if(c.track==='dft'||c.track==='low-power') {
+    const context=learningContext[c.id];
+    verify(c.language==='Verilog-2005' && c.judge==='simulation' && c.hints.length===3
+      && [...c.specs,...c.hints,...c.testGroups,context.why,context.roles].every(v=>v.zh&&v.en&&!/[\u4e00-\u9fff]/.test(v.en)), c.id+' three bilingual hints, rationale and role mapping');
+  }
   if (c.judge !== 'simulation') continue;
   const design = solutions[c.id]?.(c.starter) ?? c.referenceSolution;
   assert.ok(design, 'Missing fixture: ' + c.id);
@@ -35,6 +43,38 @@ for (const c of challenges) {
   verify(Boolean(good.vcd?.includes('$enddefinitions')), c.id + ' emits VCD');
   const starter = await simulate(c.starter, c.testbench);
   verify(starter.ok === (c.id === 'ppa-width-discipline'), c.id + ' starter verdict: ' + starter.console.slice(-100));
+}
+// Deliberately broken versions must fail in simulation, not merely fail compilation.
+const mutationCases = [
+  ['dft-scan-capture','reverse scan direction','{q[6:0],scan_in}','{scan_in,q[7:1]}'],
+  ['dft-scan-capture','wrong scan tap','scan_out=q[7]','scan_out=q[0]'],
+  ['dft-scan-capture','functional enable masks scan','else if(scan_en)','else if(scan_en&&!func_en)'],
+  ['dft-sram-mbist','clear sticky failure after a good read',"if(rdata!=8'hff)fail<=1;","fail<=(rdata!=8'hff);"],
+  ['dft-sram-mbist','write wrong test pattern',"state==W1?8'hff:8'h00","8'h00"],
+  ['dft-sram-mbist','compare stale read output','R0:state<=C0;',"R0:begin if(rdata!=8'h00)fail<=1;state<=C0;end"],
+  ['dft-spare-row-remap','ignore repair enable','repair_en&&(addr==bad_row)','(addr==bad_row)'],
+  ['dft-spare-row-remap','never write spare','spare_we=spare_en&&write',"spare_we=1'b0"],
+  ['dft-spare-row-remap','write outside request','normal_we=normal_en&&write','normal_we=write&&!hit'],
+  ['lp-glitch-free-clock-gate','raw combinational gate','always @* if(!clk) gate_en=en|test_en;','always @* gate_en=en|test_en;'],
+  ['lp-glitch-free-clock-gate','scan clock blocked','gate_en=en|test_en','gate_en=en'],
+  ['lp-glitch-free-clock-gate','miss late-low enable update','always @* if(!clk)','always @(negedge clk)'],
+  ['lp-operand-isolation','clear instead of hold on bubbles','op_a<=a;op_b<=b;end end','op_a<=a;op_b<=b;end else begin op_a<=0;op_b<=0;end end'],
+  ['lp-operand-isolation','stale valid during idle','out_valid<=in_valid;','if(in_valid)out_valid<=1;'],
+  ['lp-operand-isolation','mask only output','assign product=op_a*op_b;',"assign product=out_valid?op_a*op_b:16'h0000;"],
+  ['lp-retention-register','lose shadow while off','else if(!power_on)q<=0;','else if(!power_on)begin q<=0;saved<=0;end'],
+  ['lp-retention-register','save incoming write not old state','else if(save)saved<=q;','else if(save)saved<=wdata;'],
+  ['lp-retention-register','restore zeros','else if(restore)q<=saved;','else if(restore)q<=0;'],
+  ['lp-power-sequencer','cut power with outstanding work','RUN:if(sleep_req)state<=DRAIN;','RUN:if(sleep_req)state<=OFF;'],
+  ['lp-power-sequencer','ignore drain acknowledgement','DRAIN:if(idle)state<=SAVE;','DRAIN:state<=SAVE;'],
+  ['lp-power-sequencer','ignore power good','RAMP:if(power_good)state<=RESTORE;','RAMP:state<=RESTORE;'],
+  ['lp-power-sequencer','release isolation during restore','state!=RUN&&state!=DRAIN&&state!=SAVE','state!=RUN&&state!=DRAIN&&state!=SAVE&&state!=RESTORE'],
+];
+for(const [id,name,before,after] of mutationCases) {
+  const c=challenges.find(c=>c.id===id);
+  const correct=solutions[id](c.starter);
+  assert.ok(correct.includes(before), 'Mutation target not found: '+name);
+  const result=await simulate(correct.replace(before,after),c.testbench);
+  verify(!result.ok && result.phase==='simulate', id+' rejects '+name+': '+result.console.slice(-100));
 }
 const cnf = challenges.find((c) => c.judge === 'cnf');
 const correctCnf = 'p cnf 3 4\n1 2 -3 0\n-1 -2 -3 0\n1 -2 3 0\n-1 2 3 0';

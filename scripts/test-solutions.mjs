@@ -19,6 +19,58 @@ const bodies = {
   "verification-bit-true-requant": "integer mag,q;always @*begin mag=acc<0?-acc:acc;if(shift==0)q=mag;else q=(mag+(1<<(shift-1)))>>shift;if(acc<0)q=-q;if(q>127)y=127;else if(q< -128)y=-128;else y=q;end"
 };
 export const solutions = Object.fromEntries(Object.entries(bodies).map(([id, body]) => [id, (s) => s.slice(0,s.indexOf('//')) + body + '\nendmodule']));
+// Fixtures are reference implementations, not copied vendor IP.
+const dftPowerBodies = {
+  'dft-scan-capture': `assign scan_out=q[7];
+always @(posedge clk)if(!rst_n)q<=0;else if(scan_en)q<={q[6:0],scan_in};else if(func_en)q<=func_d;`,
+  'dft-sram-mbist': `localparam IDLE=0,W0=1,R0=2,C0=3,W1=4,R1=5,C1=6;
+reg[2:0]state;
+always @*begin mem_en=rst_n&&(state==W0||state==R0||state==W1||state==R1);mem_we=(state==W0||state==W1);wdata=state==W1?8'hff:8'h00;end
+always @(posedge clk)if(!rst_n)begin state<=IDLE;addr<=0;busy<=0;done<=0;fail<=0;end else begin done<=0;
+case(state)
+IDLE:if(start)begin state<=W0;addr<=0;busy<=1;fail<=0;end
+W0:if(addr==7)begin addr<=0;state<=R0;end else addr<=addr+1'b1;
+R0:state<=C0;
+C0:begin if(rdata!=8'h00)fail<=1;if(addr==7)begin addr<=0;state<=W1;end else begin addr<=addr+1'b1;state<=R0;end end
+W1:if(addr==7)begin addr<=0;state<=R1;end else addr<=addr+1'b1;
+R1:state<=C1;
+C1:begin if(rdata!=8'hff)fail<=1;if(addr==7)begin state<=IDLE;busy<=0;done<=1;end else begin addr<=addr+1'b1;state<=R1;end end
+default:begin state<=IDLE;busy<=0;end
+endcase end`,
+  'dft-spare-row-remap': `wire hit=repair_en&&(addr==bad_row);
+assign normal_addr=addr;assign normal_en=req&&!hit;assign spare_en=req&&hit;
+assign normal_we=normal_en&&write;assign spare_we=spare_en&&write;
+assign rdata=req&&!write?(hit?spare_q:normal_q):8'h00;`,
+  'lp-glitch-free-clock-gate': `reg gate_en;
+always @* if(!clk) gate_en=en|test_en;
+assign gclk=clk&gate_en;`,
+  'lp-operand-isolation': `assign product=op_a*op_b;
+always @(posedge clk)if(!rst_n)begin op_a<=0;op_b<=0;out_valid<=0;end
+else begin out_valid<=in_valid;if(in_valid)begin op_a<=a;op_b<=b;end end`,
+  'lp-retention-register': `always @(posedge clk)if(!rst_n)begin q<=0;saved<=0;end
+else if(!power_on)q<=0;
+else if(restore)q<=saved;
+else if(save)saved<=q;
+else if(wr)q<=wdata;`,
+  'lp-power-sequencer': `localparam RUN=0,DRAIN=1,SAVE=2,ISOLATE=3,OFF=4,RAMP=5,RESTORE=6,RELEASE=7;
+reg[2:0]state;
+always @(posedge clk)if(!rst_n)state<=OFF;else case(state)
+RUN:if(sleep_req)state<=DRAIN;
+DRAIN:if(idle)state<=SAVE;
+SAVE:state<=ISOLATE;
+ISOLATE:state<=OFF;
+OFF:if(wake_req)state<=RAMP;
+RAMP:if(power_good)state<=RESTORE;
+RESTORE:state<=RELEASE;
+RELEASE:state<=RUN;
+default:state<=OFF;endcase
+always @*begin accept=(state==RUN);power_en=(state!=OFF);clk_en=(state!=ISOLATE&&state!=OFF&&state!=RAMP);iso_en=(state!=RUN&&state!=DRAIN&&state!=SAVE);save=(state==SAVE);restore=(state==RESTORE);end
+assign out_valid=iso_en?1'b0:domain_valid;
+assign out_data=iso_en?8'h00:domain_data;`,
+};
+for (const [id, body] of Object.entries(dftPowerBodies)) {
+  solutions[id] = (starter) => starter.slice(0, starter.indexOf('\n')) + '\n' + body + '\nendmodule';
+}
 solutions['rtl-saturating-counter'] = s=>s.replace("else if (en) count <= up ? count + 1'b1 : count - 1'b1;", "else if(en&&up&&count!=15)count<=count+1'b1;else if(en&&!up&&count!=0)count<=count-1'b1;");
 solutions['rtl-latch-debug'] = s=>s.replace('// BUG: sel=3 is missing','default:y=0;');
 solutions['timing-valid-retime'] = s=>s.replace('reg [15:0] product;','reg v;reg [15:0] product;').replace('product<=0;','v<=0;product<=0;').replace('out_valid <= in_valid;','v<=in_valid;out_valid<=v;');

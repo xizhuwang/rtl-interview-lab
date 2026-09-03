@@ -2,7 +2,27 @@
 
 An original, bilingual (Traditional Chinese / English) hands-on practice site for SoC and digital IC interviews.
 
-The current release contains 26 coding, debugging, constraint, and interactive challenges across RTL foundations, CDC/reset, timing closure, SoC interfaces, verification, and PPA. The SoC track includes AXI4-Lite accelerator control, AXI4 burst transfer, and a generic 1RW SRAM-compiler wrapper. The CDC track includes a complete asynchronous FIFO.
+The current release contains 33 coding, debugging, constraint, and interactive challenges across RTL foundations, CDC/reset, timing closure, SoC interfaces, verification, PPA, DFT, and low power. The SoC track includes AXI4-Lite accelerator control, AXI4 burst transfer, and a generic 1RW SRAM-compiler wrapper. The CDC track includes a complete asynchronous FIFO.
+
+## DFT and low-power practice
+
+These seven original Verilog-2005 exercises each include a bilingual specification, three hints, role/rationale notes, self-checking simulation and VCD signals. They build on memory reliability, accelerator activity and SoC integration concepts:
+
+| Track | Exercise | Main debug target |
+| --- | --- | --- |
+| DFT | Scan shift/capture | Serial direction, capture/shift priority, reset |
+| DFT | SRAM MBIST | Four ascending phases: w0, r0, w1, r1; read latency and sticky failure |
+| DFT | Spare-row remapping | Consistent read/write redirection and exclusive bank enables |
+| Low power | Clock gate with test override | Low-level latch, full clock pulses, scan accessibility |
+| Low power | Operand isolation | Hold multiplier operands during invalid cycles |
+| Low power | Retention register | Keep saved state powered and define save/restore/write priority |
+| Low power | Power sequencer and isolation | Drain work, save, isolate, power off, wait for power-good, restore |
+
+The MBIST fixture injects one stuck-at bit (bit 2) at each of eight addresses, in both polarities. This is a destructive teaching test, **not** full March C-, ATPG/fault coverage, physical BISR, flash programming, or a yield measurement. The remapper assumes stable repair configuration and a combinational interface; a real synchronous SRAM needs bank-selection latency alignment.
+
+The clock-gate exercise intentionally models a latch, not an accidental inferred latch. Real ASICs must use qualified ICG cells and check gating setup/hold, CTS/STA and DFT. FPGA clock-enable primitives are preferred over fabric-gated clocks. Retention and isolation are behavioral models only; they do not instantiate UPF supplies, retention cells or physical power switches. No power savings or signoff result is inferred from simulation or cell counts.
+
+Public conceptual references (not copied exercise/test content): [OpenROAD DFT](https://openroad.readthedocs.io/en/latest/main/src/dft/README.html), [Yosys clockgate](https://yosyshq.readthedocs.io/projects/yosys/en/0.46/cmd/clockgate.html), and [Accellera UPF tutorial](https://www.eda.org/resources/videos/upf-tutorial-2013). No proprietary interview transcript, vendor IP or foundry model is included.
 
 ## Judging model
 

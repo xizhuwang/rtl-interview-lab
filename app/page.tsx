@@ -30,7 +30,7 @@ const initialHoldLab: HoldLabState = { setup: 0.12, hold: -0.08, message: '', ok
 
 const copy = {
   zh: {
-    subtitle: '從 RTL、CDC 到時序與 PPA 的實作型訓練場', search: '搜尋題目', tracks: '學習路徑', all: '全部題目',
+    subtitle: 'RTL、SoC、CDC、DFT 與低功耗實作', search: '搜尋題目', tracks: '學習路徑', all: '全部題目',
     progress: '本機進度', points: '分', task: '任務', constraints: '規格與限制', hint: '使用提示', hintsLeft: '次提示可用',
     reset: '重設程式', run: '執行測試', running: '編譯與測試中…', waitingBody: '編譯錯誤、失敗原因與執行時間會顯示在這裡。',
     passed: '全部通過', passedBody: '本題已完成，分數與本機進度已更新。', failed: '尚未通過',
@@ -45,7 +45,7 @@ const copy = {
     whyTitle: '為什麼要學？', rolesTitle: '對應工作', reference: 'Reference solution', userResult: '你的 RTL', delta: '差異', waveform: '波形', commandGuide: '三套 APR 工具指令速查', commandCaution: '這些是常見流程範例，不是可直接複製到所有專案的完整腳本；請依工具版本、MMMC scenario、PDK 與公司 flow 確認。',
   },
   en: {
-    subtitle: 'Hands-on RTL, CDC, timing and PPA practice', search: 'Search challenges', tracks: 'Learning tracks', all: 'All challenges',
+    subtitle: 'Hands-on RTL, SoC, CDC, DFT and low-power practice', search: 'Search challenges', tracks: 'Learning tracks', all: 'All challenges',
     progress: 'Local progress', points: 'pts', task: 'Task', constraints: 'Requirements', hint: 'Use hint', hintsLeft: 'hints left',
     reset: 'Reset code', run: 'Run tests', running: 'Compiling and testing…', waitingBody: 'Compile errors, failures and execution time will appear here.',
     passed: 'All tests passed', passedBody: 'Challenge completed. Your local score and progress are updated.', failed: 'Not passed yet',
