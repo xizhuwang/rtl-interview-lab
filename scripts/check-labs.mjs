@@ -9,6 +9,7 @@ async function loadTs(path) {
   return import('data:text/javascript;base64,' + Buffer.from(outputText).toString('base64'));
 }
 const { challenges } = await loadTs('../lib/challenges.ts');
+const { formatCodeForEditor } = await loadTs('../lib/code-format.ts');
 const { gradeXorCnf } = await loadTs('../lib/cnf.ts');
 const { patternFailures } = await loadTs('../lib/pattern-check.ts');
 const { learningContext } = await loadTs('../lib/learning-context.ts');
@@ -35,15 +36,25 @@ for (const c of challenges) {
     verify(c.language==='Verilog-2005' && c.judge==='simulation' && c.hints.length===3
       && [...c.specs,...c.hints,...c.testGroups,context.why,context.roles].every(v=>v.zh&&v.en&&!/[\u4e00-\u9fff]/.test(v.en)), c.id+' three bilingual hints, rationale and role mapping');
   }
+  const formattedStarter = formatCodeForEditor(c.starter, c.language);
+  if (c.language === 'Verilog-2005') {
+    verify(!/^\s*module[^\n]*,[^\n]*\);/m.test(formattedStarter), c.id + ' readable module port layout');
+  }
   if (c.judge !== 'simulation') continue;
-  const design = solutions[c.id]?.(c.starter) ?? c.referenceSolution;
-  assert.ok(design, 'Missing fixture: ' + c.id);
+  const rawDesign = solutions[c.id]?.(c.starter) ?? c.referenceSolution;
+  assert.ok(rawDesign, 'Missing fixture: ' + c.id);
+  const design = formatCodeForEditor(rawDesign, c.language);
   const good = await simulate(design, c.testbench);
   verify(good.ok, c.id + ' reference accepts: ' + (good.ok ? '' : good.console));
   verify(Boolean(good.vcd?.includes('$enddefinitions')), c.id + ' emits VCD');
-  const starter = await simulate(c.starter, c.testbench);
+  const starter = await simulate(formattedStarter, c.testbench);
   verify(starter.ok === (c.id === 'ppa-width-discipline'), c.id + ' starter verdict: ' + starter.console.slice(-100));
 }
+const publicVisibleText = JSON.stringify({
+  challenges: challenges.map(({ title, description, specs, hints, testGroups }) => ({ title, description, specs, hints, testGroups })),
+  learningContext,
+});
+verify(!/(?:面試|interview|王璽鑄|MediaTek|Realtek|Qualcomm|Phison|NVIDIA|Cadence|聯發科|瑞昱|群聯|威宏|創星)/i.test(publicVisibleText), 'Public exercise text contains no interview source, company name or personal name');
 // Deliberately broken versions must fail in simulation, not merely fail compilation.
 const mutationCases = [
   ['dft-scan-capture','reverse scan direction','{q[6:0],scan_in}','{scan_in,q[7:1]}'],

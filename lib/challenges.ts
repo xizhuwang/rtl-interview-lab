@@ -45,8 +45,38 @@ export const tracks: { id: TrackId; label: Localized; accent: string }[] = [
 ];
 
 const educationalSram = `\`timescale 1ns/1ps
-// ORIGINAL EDUCATIONAL MODEL. Not a foundry macro or signoff timing model.
-module edu_sram_1rw_256x32(input wire CLK,input wire CEN_n,input wire WEN_n,input wire[3:0]BWEN_n,input wire[7:0]A,input wire[31:0]D,output reg[31:0]Q);reg[31:0]mem[0:255];integer i;initial for(i=0;i<256;i=i+1)mem[i]=0;always @(posedge CLK)if(!CEN_n)begin if(!WEN_n)begin if(!BWEN_n[0])mem[A][7:0]<=D[7:0];if(!BWEN_n[1])mem[A][15:8]<=D[15:8];if(!BWEN_n[2])mem[A][23:16]<=D[23:16];if(!BWEN_n[3])mem[A][31:24]<=D[31:24];end else #0.35 Q<=mem[A];end endmodule
+// ORIGINAL EDUCATIONAL MODEL.
+// This is not a foundry macro or signoff timing model.
+module edu_sram_1rw_256x32(
+  input  wire        CLK,
+  input  wire        CEN_n,
+  input  wire        WEN_n,
+  input  wire [3:0]  BWEN_n,
+  input  wire [7:0]  A,
+  input  wire [31:0] D,
+  output reg  [31:0] Q
+);
+  reg [31:0] mem [0:255];
+  integer i;
+
+  initial begin
+    for (i = 0; i < 256; i = i + 1)
+      mem[i] = 0;
+  end
+
+  always @(posedge CLK) begin
+    if (!CEN_n) begin
+      if (!WEN_n) begin
+        if (!BWEN_n[0]) mem[A][7:0]   <= D[7:0];
+        if (!BWEN_n[1]) mem[A][15:8]  <= D[15:8];
+        if (!BWEN_n[2]) mem[A][23:16] <= D[23:16];
+        if (!BWEN_n[3]) mem[A][31:24] <= D[31:24];
+      end else begin
+        #0.35 Q <= mem[A];
+      end
+    end
+  end
+endmodule
 `;
 
 const pass = `
@@ -66,7 +96,7 @@ export const challenges: Challenge[] = [
     id: 'rtl-edge-pulse', order: 1, track: 'rtl', difficulty: 'beginner', minutes: 10, points: 80,
     kind: 'build', judge: 'simulation', language: 'Verilog-2005',
     title: { zh: '上升沿單週期脈衝', en: 'One-cycle rising-edge pulse' },
-    description: { zh: '把 level 訊號的每次 0→1 轉換變成恰好一個 clock 的 pulse。這是面試最常見的白板題之一。', en: 'Convert every 0→1 transition of a level signal into exactly one clock-cycle pulse.' },
+    description: { zh: '把 level 訊號的每次 0→1 轉換變成恰好一個 clock 的 pulse，避免持續高電位重複觸發下游。', en: 'Convert every 0→1 transition of a level signal into exactly one clock-cycle pulse.' },
     specs: [
       { zh: '同步 active-low reset；reset 後 pulse 必須為 0。', en: 'Synchronous active-low reset; pulse must be 0 after reset.' },
       { zh: '輸入維持為 1 時不可重複產生 pulse。', en: 'A high input must not generate repeated pulses.' },

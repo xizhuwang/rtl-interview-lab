@@ -1,6 +1,6 @@
 # SoC RTL Lab
 
-An original, bilingual (Traditional Chinese / English) hands-on practice site for SoC and digital IC interviews.
+An original, bilingual (Traditional Chinese / English) hands-on practice site for SoC and digital IC engineering.
 
 The current release contains 33 coding, debugging, constraint, and interactive challenges across RTL foundations, CDC/reset, timing closure, SoC interfaces, verification, PPA, DFT, and low power. The SoC track includes AXI4-Lite accelerator control, AXI4 burst transfer, and a generic 1RW SRAM-compiler wrapper. The CDC track includes a complete asynchronous FIFO.
 
@@ -22,7 +22,7 @@ The MBIST fixture injects one stuck-at bit (bit 2) at each of eight addresses, i
 
 The clock-gate exercise intentionally models a latch, not an accidental inferred latch. Real ASICs must use qualified ICG cells and check gating setup/hold, CTS/STA and DFT. FPGA clock-enable primitives are preferred over fabric-gated clocks. Retention and isolation are behavioral models only; they do not instantiate UPF supplies, retention cells or physical power switches. No power savings or signoff result is inferred from simulation or cell counts.
 
-Public conceptual references (not copied exercise/test content): [OpenROAD DFT](https://openroad.readthedocs.io/en/latest/main/src/dft/README.html), [Yosys clockgate](https://yosyshq.readthedocs.io/projects/yosys/en/0.46/cmd/clockgate.html), and [Accellera UPF tutorial](https://www.eda.org/resources/videos/upf-tutorial-2013). No proprietary interview transcript, vendor IP or foundry model is included.
+Public conceptual references (not copied exercise/test content): [OpenROAD DFT](https://openroad.readthedocs.io/en/latest/main/src/dft/README.html), [Yosys clockgate](https://yosyshq.readthedocs.io/projects/yosys/en/0.46/cmd/clockgate.html), and [Accellera UPF tutorial](https://www.eda.org/resources/videos/upf-tutorial-2013). No proprietary transcript, vendor IP or foundry model is included.
 
 ## Judging model
 
@@ -30,6 +30,7 @@ Public conceptual references (not copied exercise/test content): [OpenROAD DFT](
 - Compilation/simulation runs in a disposable Web Worker with a 45-second total limit (including first download) and a simulation-time watchdog. Changing tasks or editing code cancels in-flight jobs.
 - No local compiler or EDA installation is required. Yosys WebAssembly is downloaded only when the user requests a generic-cell comparison and can then be browser-cached.
 - Simulation results include a browser-rendered VCD waveform. Testbenches that expose `expected_*` signals overlay the golden behavior with the DUT waveform.
+- The editor and read-only SRAM model use line numbers, Verilog/CNF syntax coloring, a code-oriented font stack, comfortable line spacing, and multiline module port formatting. The solution remains a plain textarea for accessibility and native editing behavior.
 - Vendor-specific APR command exercises are intentionally excluded. Timing topics such as hold repair use interactive, tool-neutral decision labs, with a clearly labeled OpenROAD / ICC2 / Innovus command quick reference for real-flow context.
 - Verification exercises now cover a formal-equivalence miter, editable DIMACS CNF with an in-browser DPLL SAT solver, UVM scoreboard plumbing, and bit-true fixed-point checking.
 - The UVM exercise is a structural code-review lab, not a substitute for compiling the full UVM library in VCS, Xcelium, or Questa.
@@ -66,6 +67,6 @@ Run `pnpm test` for the regression suite (the same Icarus WASM worker runs throu
 
 Original application source is GPL-2.0-or-later. The combined browser distribution selects **GPL-3.0-or-later** for compatibility with Apache-2.0 dependencies; individual third-party licenses remain intact. The complete GPLv3 text is included in `public/LICENSE-GPL-3.0.txt`. Do not describe the combined browser bundle as GPLv2-only.
 
-The challenge descriptions, starter code and tests are independently written educational examples. No commercial PDK, licensed SRAM macro, proprietary standard text, company interview records or paper figures are included.
+The challenge descriptions, starter code and tests are independently written educational examples. No commercial PDK, licensed SRAM macro, proprietary standard text, internal company records or paper figures are included.
 
 The application is GPL-2.0-or-later, without warranty. Third-party code retains its own licenses. See `public/THIRD_PARTY_NOTICES.txt`; the Pages build generates `OPEN_SOURCE_LICENSES.txt` for dependencies actually bundled in the browser. Upstream WASM-specific build sources have not been independently verified; Icarus binaries are therefore downloaded directly from the upstream distributor rather than republished here. This review is not a legal opinion or a guarantee of third-party compliance.

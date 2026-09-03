@@ -13,7 +13,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { WaveformViewer } from '@/components/waveform-viewer';
+import { CodeEditor, ReadOnlyCodeBlock } from '@/components/code-editor';
 import { challenges, difficultyLabel, kindLabel, localize, tracks, type Locale, type TrackId } from '@/lib/challenges';
+import { formatCodeForEditor } from '@/lib/code-format';
 import { gradeXorCnf } from '@/lib/cnf';
 import { patternFailures } from '@/lib/pattern-check';
 import { learningContext, timingCommandGuide } from '@/lib/learning-context';
@@ -91,7 +93,8 @@ export default function Home() {
   const current = challenges.find((item) => item.id === selectedId) ?? challenges[0];
   const context = learningContext[current.id];
   const text = copy[locale];
-  const code = solutions[current.id] ?? current.starter;
+  const starterCode = useMemo(() => formatCodeForEditor(current.starter, current.language), [current.starter, current.language]);
+  const code = solutions[current.id] ?? starterCode;
 
   const markSolved = useCallback((id: string) => {
     setSolved((previous) => {
@@ -123,7 +126,12 @@ export default function Home() {
         const parsedSolutions: unknown = JSON.parse(savedSolutions ?? '{}');
         if (Array.isArray(parsedSolved)) setSolved([...new Set(parsedSolved.filter((id) => typeof id === 'string' && challenges.some((item) => item.id === id)))]);
         if (parsedSolutions && typeof parsedSolutions === 'object' && !Array.isArray(parsedSolutions)) {
-          setSolutions(Object.fromEntries(Object.entries(parsedSolutions).filter(([id, value]) => typeof value === 'string' && challenges.some((item) => item.id === id))));
+          setSolutions(Object.fromEntries(Object.entries(parsedSolutions)
+            .filter(([id, value]) => typeof value === 'string' && challenges.some((item) => item.id === id))
+            .map(([id, value]) => {
+              const challenge = challenges.find((item) => item.id === id)!;
+              return [id, formatCodeForEditor(value as string, challenge.language)];
+            })));
         }
       } catch { /* Ignore malformed saved data without overwriting it. */ }
       storageLoaded.current = true;
@@ -278,14 +286,14 @@ export default function Home() {
         <aside className="border-b border-border bg-sidebar px-4 py-5 xl:min-h-[calc(100vh-65px)] xl:border-b-0 xl:border-r">
           <div className="relative mb-4"><Search className="pointer-events-none absolute left-3 top-2.5 size-4 text-muted-foreground" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={text.search} className="pl-9" /></div>
           <div className="mb-2 flex items-center justify-between"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">{text.tracks}</p><Badge variant="outline">{challenges.length}</Badge></div>
-          <nav className="grid gap-1 sm:grid-cols-3 xl:grid-cols-1" aria-label={text.tracks}>
+          <nav className="grid grid-cols-2 gap-1 sm:grid-cols-3 xl:grid-cols-1" aria-label={text.tracks}>
             <button type="button" onClick={() => setTrack('all')} className={`flex min-h-10 items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${track === 'all' ? 'bg-sidebar-primary text-sidebar-primary-foreground' : 'hover:bg-sidebar-accent'}`}><span>{text.all}</span><span className="font-mono text-xs opacity-70">{challenges.length}</span></button>
             {tracks.map((item) => {
               const count = challenges.filter((challenge) => challenge.track === item.id).length;
               return <button key={item.id} type="button" onClick={() => setTrack(item.id)} className={`flex min-h-10 items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${track === item.id ? 'bg-sidebar-primary text-sidebar-primary-foreground' : 'hover:bg-sidebar-accent'}`}><span className="flex items-center gap-2"><span className={`size-2 rounded-full ${item.accent}`} />{localize(item.label, locale)}</span><span className="font-mono text-xs opacity-70">{count}</span></button>;
             })}
           </nav>
-          <div className="mt-5 max-h-[330px] space-y-1 overflow-y-auto border-t border-sidebar-border pt-4 xl:max-h-[calc(100vh-420px)]">
+          <div className="mt-5 max-h-40 space-y-1 overflow-y-auto border-t border-sidebar-border pt-4 sm:max-h-56 xl:max-h-[calc(100vh-420px)]">
             {filtered.length ? filtered.map((item) => <button key={item.id} type="button" onClick={() => selectChallenge(item.id)} className={`flex w-full items-start gap-2 rounded-lg px-2.5 py-2 text-left text-sm ${current.id === item.id ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/60'}`}>{solved.includes(item.id) ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" /> : <Circle className="mt-0.5 size-4 shrink-0 text-muted-foreground/50" />}<span className="min-w-0"><span className="block truncate">{localize(item.title, locale)}</span><span className="font-mono text-[10px] text-muted-foreground">{item.id}</span></span></button>) : <p className="px-2 text-xs leading-5 text-muted-foreground">{text.noMatch}</p>}
           </div>
           <div className="mt-5 border-t border-sidebar-border pt-4"><div className="mb-2 flex items-center justify-between text-xs"><span className="text-muted-foreground">{text.progress}</span><span className="font-mono">{solved.length} / {challenges.length}</span></div><Progress value={progress} className="h-1.5" /><div className="mt-3 flex items-center justify-between rounded-lg bg-sidebar-accent px-3 py-2"><span className="flex items-center gap-2 text-xs"><Trophy className="size-4 text-amber-500" />{rankFor(points, locale)}</span><span className="font-mono text-xs font-semibold">{points} {text.points}</span></div></div>
@@ -303,7 +311,7 @@ export default function Home() {
             <button type="button" onClick={() => setRevealedHints((value) => Math.min(3, value + 1))} disabled={revealedHints >= 3} className="mt-4 flex items-center gap-2 text-sm font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50"><Lightbulb className="size-4" />{text.hint} · {3 - revealedHints} {text.hintsLeft}<ChevronDown className={`size-4 transition-transform ${revealedHints > 0 ? 'rotate-180' : ''}`} /></button>
             {revealedHints > 0 && <ol className="mt-3 space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">{hintLayers.slice(0, revealedHints).map((hint, index) => <li key={index}><span className="mr-2 font-mono text-xs opacity-70">{index + 1}/3</span>{localize(hint, locale)}</li>)}</ol>}
           </article>
-          {current.supportCode && <details className="mb-5 rounded-xl border border-border bg-card p-4"><summary className="cursor-pointer text-sm font-semibold text-primary">{locale === 'zh' ? '題目提供的 SRAM IP 模型（唯讀）' : 'Provided SRAM IP model (read-only)'}</summary><pre className="mt-3 overflow-auto whitespace-pre-wrap rounded-lg bg-editor p-3 font-mono text-xs leading-5 text-editor-foreground">{current.supportCode}</pre></details>}
+          {current.supportCode && <details className="mb-5 rounded-xl border border-border bg-card p-4"><summary className="cursor-pointer text-sm font-semibold text-primary">{locale === 'zh' ? '題目提供的 SRAM IP 模型（唯讀）' : 'Provided SRAM IP model (read-only)'}</summary><ReadOnlyCodeBlock code={formatCodeForEditor(current.supportCode, 'Verilog-2005')} language="Verilog-2005" ariaLabel={locale === 'zh' ? '唯讀 SRAM IP 原始碼' : 'Read-only SRAM IP source'} /></details>}
           {current.judge === 'interactive' ? <div className="overflow-hidden rounded-xl border border-border bg-card shadow-lg">
             <div className="border-b border-border bg-muted/40 px-4 py-3"><div className="flex items-center gap-2 text-sm font-semibold"><Gauge className="size-4 text-primary" />{locale === 'zh' ? '互動式 Timing Lab' : 'Interactive Timing Lab'}</div></div>
             <div className="grid gap-5 p-5 lg:grid-cols-[1fr_1.2fr]">
@@ -312,8 +320,8 @@ export default function Home() {
             </div>{holdLab.message && <div className={`border-t px-5 py-4 text-sm leading-6 ${holdLab.ok ? 'border-success/30 bg-success/8 text-success' : 'border-destructive/20 bg-destructive/5 text-foreground'}`}>{holdLab.message}</div>}
             <details className="border-t border-border px-5 py-4"><summary className="cursor-pointer text-sm font-semibold text-primary">{text.commandGuide}</summary><p className="mt-2 text-xs leading-5 text-muted-foreground">{text.commandCaution}</p><div className="mt-4 grid gap-3 lg:grid-cols-3">{timingCommandGuide.map((guide) => <div key={guide.tool} className="rounded-lg border border-border bg-muted/30 p-3"><p className="text-sm font-semibold">{guide.tool}</p><p className="mt-3 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Inspect</p><pre className="mt-1 overflow-x-auto whitespace-pre-wrap rounded bg-editor p-2 font-mono text-[10px] leading-5 text-editor-foreground">{guide.inspect}</pre><p className="mt-3 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Repair / optimize</p><pre className="mt-1 overflow-x-auto whitespace-pre-wrap rounded bg-editor p-2 font-mono text-[10px] leading-5 text-editor-foreground">{guide.repair}</pre><p className="mt-2 text-xs leading-5 text-muted-foreground">{localize(guide.note, locale)}</p></div>)}</div></details>
           </div> : <div className="overflow-hidden rounded-xl border border-editor-border bg-editor shadow-lg">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-editor-border px-3 py-2"><div className="flex items-center gap-2 text-xs text-editor-muted"><Code2 className="size-4" />{editorFileName}</div><div className="flex items-center gap-3"><span className="font-mono text-[11px] text-editor-muted">{current.language}</span><button type="button" onClick={() => updateCode(current.starter)} className="flex items-center gap-1 text-xs text-editor-muted hover:text-editor-foreground"><RotateCcw className="size-3.5" />{text.reset}</button></div></div>
-            <textarea value={code} onChange={(event) => updateCode(event.target.value)} spellCheck={false} aria-label="Code editor" className="min-h-[430px] w-full resize-y bg-editor px-4 py-4 font-mono text-[13px] leading-6 text-editor-foreground outline-none selection:bg-primary/40" />
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-editor-border px-3 py-2"><div className="flex items-center gap-2 text-xs text-editor-muted"><Code2 className="size-4" />{editorFileName}</div><div className="flex items-center gap-3"><span className="font-code text-[11px] text-editor-muted">{current.language}</span><button type="button" onClick={() => updateCode(starterCode)} className="flex items-center gap-1 text-xs text-editor-muted hover:text-editor-foreground"><RotateCcw className="size-3.5" />{text.reset}</button></div></div>
+            <CodeEditor value={code} onChange={updateCode} language={current.language} ariaLabel={locale === 'zh' ? '程式碼編輯器' : 'Code editor'} />
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-editor-border px-3 py-2.5"><span className="flex items-center gap-2 text-xs text-editor-muted"><ShieldCheck className="size-3.5" />{text.codeLocal}</span><Button onClick={run} disabled={running || (current.judge === 'simulation' && !engineReady)}>{running ? <LoaderCircle className="animate-spin" /> : <Play />}{running ? text.running : text.run}</Button></div>
           </div>}
           {waveformVcd && <WaveformViewer vcd={waveformVcd} locale={locale} />}
@@ -335,7 +343,7 @@ export default function Home() {
           <summary className="cursor-pointer text-center text-primary">{locale === 'zh' ? '隱私、開源授權與教學範圍' : 'Privacy, open-source licenses and scope'}</summary>
           <p className="mt-3">{locale === 'zh' ? '本站沒有登入、廣告或追蹤分析程式，也沒有接收解題程式碼的後端。程式與進度存於此瀏覽器的 localStorage；同一 GitHub Pages 網域的其他頁面也可能存取這份儲存空間，請勿輸入公司 RTL、NDA 內容、密碼或個資。可透過瀏覽器網站資料設定清除本機紀錄。' : 'No accounts, ads, analytics or source-code submission backend. Code and progress use browser localStorage, shared with other pages on this GitHub Pages origin. Do not enter company RTL, NDA material, passwords or personal data. Clear browser site data to remove local records.'}</p>
           <p className="mt-2">{locale === 'zh' ? 'GitHub 提供網站託管，jsDelivr 在執行測試／合成時提供工具檔案；服務商可能收到 IP、瀏覽器資訊與請求紀錄，不等於完全匿名或完全離線。本站不會把編輯器內容加入這些下載請求。Icarus 工具檔案使用固定版本與 SHA-256 檢查；第三方服務與授權仍由其供應者負責。' : 'GitHub hosts the site; jsDelivr serves tool downloads on test/synthesis requests. Providers may receive IP addresses, browser information and request logs. This is not anonymous or fully offline. Editor contents are not included in these download requests. Icarus assets are version-pinned and SHA-256 verified; third-party services and licenses remain those of their providers.'}</p>
-          <p className="mt-2">{locale === 'zh' ? '題目採用自行撰寫的簡化模型，未附商用 PDK、SRAM IP、標準全文或公司面試資料。結果僅供教學，不等同正式 CDC／STA／APR／Formal signoff；公開測資與本機積分不具防作弊保證。' : 'Exercises use independently written simplified models, not commercial PDKs, SRAM IP, full standards or company interview materials. Results are educational, not CDC/STA/APR/formal signoff. Public tests and local scores are not cheat-resistant.'}</p>
+          <p className="mt-2">{locale === 'zh' ? '題目採用自行撰寫的簡化模型，未附商用 PDK、SRAM IP、標準全文或公司內部資料。結果僅供教學，不等同正式 CDC／STA／APR／Formal signoff；公開測資與本機積分不具防作弊保證。' : 'Exercises use independently written simplified models, not commercial PDKs, SRAM IP, full standards or internal company materials. Results are educational, not CDC/STA/APR/formal signoff. Public tests and local scores are not cheat-resistant.'}</p>
           <p className="mt-2"><a className="underline" href="./THIRD_PARTY_NOTICES.txt">{locale === 'zh' ? '第三方來源與授權' : 'Third-party notices'}</a> · <a className="underline" href="./engine/LICENSE-VERISIM-GPL-2.0.txt">GPL</a> · <a className="underline" href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noreferrer">GitHub privacy</a> · <a className="underline" href="https://www.jsdelivr.com/terms/privacy-policy" target="_blank" rel="noreferrer">jsDelivr privacy</a></p>
         </details>
       </footer>

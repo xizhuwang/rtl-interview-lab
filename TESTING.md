@@ -4,9 +4,11 @@
 
 Run `pnpm test`. The suite downloads SHA-256-verified upstream Icarus assets to an ignored `.engine-cache`, then uses the same compiler and simulator as the site, with a Node message-port shim around the browser worker. Nothing from this cache is published.
 
-The current run passes 180 assertions:
+The current run passes 211 assertions:
 
 - 33 unique challenge IDs and bilingual titles/descriptions.
+- Every Verilog starter is normalized to a multiline, one-port-per-line module header and the formatted code is compiled by the regression.
+- Public exercise copy is checked for interview-source, company-name and personal-name leakage.
 - 30 Verilog tasks: positive fixtures accepted, VCD produced, and starter verdicts checked.
 - Three DFT and four low-power exercises, each with three bilingual hints, rationale, role mapping and Verilog-2005 simulation (not keyword grading).
 - 22 compiling-but-incorrect DFT/low-power mutations rejected during simulation: scan order/control, stale MBIST read data, nonsticky errors, spare write mapping, raw gated clocks, blocked test override, late-low enables, invalid operand updates, retention loss and unsafe power sequencing.
@@ -51,7 +53,7 @@ These are not represented by the automated Node assertions:
 3. Execute a blank/incorrect answer and a correct answer; inspect diagnostics and VCD.
 4. Switch challenges or edit code during a run: the old result must not complete another task.
 5. Exercise all three hint reveals, reset code, search/filter and local progress.
-6. Open the read-only SRAM model. Compare its port map against the wrapper interface.
+6. Open the read-only SRAM model. Confirm line numbers, syntax colors, multiline ports and horizontal scrolling remain readable; compare its port map against the wrapper interface.
 7. Run Yosys on both PPA exercises; confirm user/reference counts load and network failures show an error. Yosys downloads from an external CDN.
 8. In the hold lab, compare all four repair choices. These numbers are illustrative, not a live APR report.
 
