@@ -44,6 +44,8 @@ Run `pnpm test` for the regression suite (the same Icarus WASM worker runs throu
 
 ## Independence and licensing
 
+Original application source is GPL-2.0-or-later. The combined browser distribution selects **GPL-3.0-or-later** for compatibility with Apache-2.0 dependencies; individual third-party licenses remain intact. The complete GPLv3 text is included in `public/LICENSE-GPL-3.0.txt`. Do not describe the combined browser bundle as GPLv2-only.
+
 The challenge descriptions, starter code and tests are independently written educational examples. No commercial PDK, licensed SRAM macro, proprietary standard text, company interview records or paper figures are included.
 
 The application is GPL-2.0-or-later, without warranty. Third-party code retains its own licenses. See `public/THIRD_PARTY_NOTICES.txt`; the Pages build generates `OPEN_SOURCE_LICENSES.txt` for dependencies actually bundled in the browser. Upstream WASM-specific build sources have not been independently verified; Icarus binaries are therefore downloaded directly from the upstream distributor rather than republished here. This review is not a legal opinion or a guarantee of third-party compliance.

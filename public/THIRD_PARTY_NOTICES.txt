@@ -6,6 +6,12 @@ Provided WITHOUT ANY WARRANTY, including MERCHANTABILITY or FITNESS FOR A
 PARTICULAR PURPOSE. Source: https://github.com/xizhuwang/rtl-interview-lab
 License text: ./engine/LICENSE-VERISIM-GPL-2.0.txt
 
+Combined browser distribution: GPL-3.0-or-later, selecting a later GPL version
+per the application's GPL-2.0-or-later grant for compatibility with bundled
+Apache-2.0 code (class-variance-authority). GPLv2-only is NOT offered for that
+combined bundle. Full GPLv3 text: LICENSE-GPL-3.0.txt. Individual third-party
+components retain their original notices and license grants.
+
 Icarus Verilog: Copyright Stephen Williams and contributors, GPL-2.0-or-later.
 https://github.com/steveicarus/iverilog
 The browser requests the unmodified VeriSim port from its upstream distributor

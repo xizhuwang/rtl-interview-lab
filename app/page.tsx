@@ -330,7 +330,7 @@ export default function Home() {
       </div>
       <footer className="border-t border-border bg-card px-5 py-6 text-center text-sm leading-6 text-muted-foreground">
         <p>{text.independent}</p>
-        <p>© 2026 Xi-Zhu Wang · GPL-2.0-or-later · {locale === 'zh' ? '不提供正確性或適用性保證' : 'Provided without warranty'}</p>
+        <p>© 2026 Xi-Zhu Wang · <a className="underline" href="./LICENSE-GPL-3.0.txt">GPL-3.0-or-later</a> · {locale === 'zh' ? '前端整合版本，不提供正確性或適用性保證' : 'Combined browser distribution; without warranty'}</p>
         <details className="mx-auto mt-3 max-w-3xl text-left">
           <summary className="cursor-pointer text-center text-primary">{locale === 'zh' ? '隱私、開源授權與教學範圍' : 'Privacy, open-source licenses and scope'}</summary>
           <p className="mt-3">{locale === 'zh' ? '本站沒有登入、廣告或追蹤分析程式，也沒有接收解題程式碼的後端。程式與進度存於此瀏覽器的 localStorage；同一 GitHub Pages 網域的其他頁面也可能存取這份儲存空間，請勿輸入公司 RTL、NDA 內容、密碼或個資。可透過瀏覽器網站資料設定清除本機紀錄。' : 'No accounts, ads, analytics or source-code submission backend. Code and progress use browser localStorage, shared with other pages on this GitHub Pages origin. Do not enter company RTL, NDA material, passwords or personal data. Clear browser site data to remove local records.'}</p>

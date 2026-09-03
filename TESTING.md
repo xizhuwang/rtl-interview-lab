@@ -27,6 +27,7 @@ Verified in Chromium through the visible UI of the production Pages build:
 - English switching and language/code/completion persistence survive reload.
 - Yosys width exercise: 38 user cells / 38 reference cells, delta 0. This is expected because unused bits are optimized away.
 - The browser loader was tested with upstream hash checks and blob-module URL resolution.
+- Public GitHub Pages: invalid syntax fails at compilation; valid RTL passes and renders expected/DUT signals. CNF XOR succeeds; all four hold choices produce the intended verdict; live Yosys returns 38/38 cells.
 
 ## Additional manual acceptance checklist
 
