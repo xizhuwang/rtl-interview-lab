@@ -1,0 +1,43 @@
+SoC RTL Lab — sources and third-party notices (2026-09-03)
+
+Application and educational exercises: Copyright 2026 Xi-Zhu Wang.
+Licensed under GNU GPL version 2 or (at your option) any later version.
+Provided WITHOUT ANY WARRANTY, including MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. Source: https://github.com/xizhuwang/rtl-interview-lab
+License text: ./engine/LICENSE-VERISIM-GPL-2.0.txt
+
+Icarus Verilog: Copyright Stephen Williams and contributors, GPL-2.0-or-later.
+https://github.com/steveicarus/iverilog
+The browser requests the unmodified VeriSim port from its upstream distributor
+via jsDelivr, pinned to a275a9ac28c59db1130505973644c9a3754ec1d7 and SHA-256.
+https://github.com/senolgulgonul/verisim/tree/a275a9ac28c59db1130505973644c9a3754ec1d7
+VeriSim identifies Icarus c7530db as its source base. Complete WASM-specific
+patches/build scripts have not been independently verified here. Consequently
+this repository and its Pages artifact do NOT redistribute its JS/WASM binaries.
+The local/CI cache is excluded from source control and deployment.
+
+Yosys: Copyright Claire Xenia Wolf and contributors, ISC license.
+https://github.com/YosysHQ/yosys/blob/main/COPYING
+YoWASP distributes the browser package loaded on request:
+@yowasp/yosys 0.65.176-dev.1145, via jsDelivr.
+https://yowasp.org/ https://codeberg.org/YoWASP/yosys
+This application does not bundle the Yosys binary.
+
+React / React DOM: Copyright Meta Platforms, Inc. and affiliates, MIT.
+Lucide icons: Copyright Lucide contributors, ISC.
+Tailwind CSS: Copyright Tailwind Labs, Inc., MIT.
+shadcn/ui: Copyright shadcn, MIT.
+Base UI: Copyright MUI, MIT.
+clsx: Copyright Luke Edwards, MIT.
+class-variance-authority: Copyright Joe Bell, Apache-2.0.
+tailwind-merge: Copyright Dany Castillo, MIT.
+tw-animate-css: Copyright contributors, MIT.
+
+Full notices for bundled UI dependencies are in OPEN_SOURCE_LICENSES.txt.
+Package versions are fixed in pnpm-lock.yaml; respective original notices apply.
+Third-party trademarks identify tools/protocols, not endorsements or affiliation.
+
+Privacy: Editor code and progress are stored on the local browser origin.
+No analytics, accounts or code-submission server is provided. GitHub and jsDelivr
+may process connection metadata. Do not enter private RTL, NDA data or personal
+information. Local progress is not a secure multi-user database.

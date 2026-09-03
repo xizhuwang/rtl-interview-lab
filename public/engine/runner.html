@@ -1,0 +1,37 @@
+<meta charset="utf-8">
+<title>SoC RTL Lab isolated simulation engine</title>
+<script type="module">
+const active = new Map();
+function cancelAll() {
+  for (const { worker, timer } of active.values()) { clearTimeout(timer); worker.terminate(); }
+  active.clear();
+}
+window.addEventListener('message', (event) => {
+  if (event.origin !== window.location.origin || event.source !== parent) return;
+  const data = event.data;
+  if (data?.type === 'SOC_RTL_CANCEL') { cancelAll(); return; }
+  if (data?.type === 'SOC_RTL_ENGINE_PING') {
+    parent.postMessage({ type: 'SOC_RTL_ENGINE_READY' }, event.origin);
+    return;
+  }
+  if (!['SOC_RTL_RUN', 'SOC_RTL_SYNTH'].includes(data?.type)) return;
+  const synth = data.type === 'SOC_RTL_SYNTH';
+  const type = synth ? 'SOC_RTL_SYNTH_RESULT' : 'SOC_RTL_RESULT';
+  const worker = new Worker('./worker.js', { type: 'module' });
+  const finish = (result) => {
+    const job = active.get(data.requestId);
+    if (!job) return;
+    clearTimeout(job.timer); worker.terminate(); active.delete(data.requestId);
+    parent.postMessage(result, event.origin);
+  };
+  const timer = setTimeout(() => finish({
+    type, requestId: data.requestId, ok: false, phase: 'engine',
+    console: 'Time limit exceeded. Check infinite loops, missing handshakes or reset. / 執行逾時，請檢查迴圈、握手與 reset。'
+  }), synth ? 120000 : 45000);
+  active.set(data.requestId, { worker, timer });
+  worker.onmessage = ({ data: result }) => { if (result.type === type) finish(result); };
+  worker.onerror = (error) => finish({ type, requestId: data.requestId, ok: false, phase: 'engine', console: error.message });
+  worker.postMessage(data);
+});
+parent.postMessage({ type: 'SOC_RTL_ENGINE_READY' }, window.location.origin);
+</script>
