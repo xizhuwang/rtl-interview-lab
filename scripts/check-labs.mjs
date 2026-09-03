@@ -54,7 +54,7 @@ const publicVisibleText = JSON.stringify({
   challenges: challenges.map(({ title, description, specs, hints, testGroups }) => ({ title, description, specs, hints, testGroups })),
   learningContext,
 });
-verify(!/(?:面試|interview|王璽鑄|MediaTek|Realtek|Qualcomm|Phison|NVIDIA|Cadence|聯發科|瑞昱|群聯|威宏|創星)/i.test(publicVisibleText), 'Public exercise text contains no interview source, company name or personal name');
+verify(!/(?:面試|interview|王璽鑄|MediaTek|Realtek|Qualcomm|Phison|NVIDIA|TSMC|聯發科|瑞昱|群聯|威宏|創星|台積電)/i.test(publicVisibleText), 'Public exercise text contains no interview source, employer name or personal name');
 // Deliberately broken versions must fail in simulation, not merely fail compilation.
 const mutationCases = [
   ['dft-scan-capture','reverse scan direction','{q[6:0],scan_in}','{scan_in,q[7:1]}'],
