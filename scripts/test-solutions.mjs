@@ -71,6 +71,43 @@ assign out_data=iso_en?8'h00:domain_data;`,
 for (const [id, body] of Object.entries(dftPowerBodies)) {
   solutions[id] = (starter) => starter.slice(0, starter.indexOf('\n')) + '\n' + body + '\nendmodule';
 }
+const cpuCacheBodies = {
+  'soc-cpu-register-file': `reg[31:0]regs[0:31];integer i;
+assign rdata1=(raddr1==0)?0:regs[raddr1];assign rdata2=(raddr2==0)?0:regs[raddr2];
+always @(posedge clk)if(!rst_n)begin for(i=0;i<32;i=i+1)regs[i]<=0;end else if(we&&waddr!=0)regs[waddr]<=wdata;`,
+  'soc-cpu-forwarding': `always @*begin forward_a=0;forward_b=0;
+if(mem_regwrite&&mem_rd!=0&&mem_rd==ex_rs1)forward_a=2;else if(wb_regwrite&&wb_rd!=0&&wb_rd==ex_rs1)forward_a=1;
+if(mem_regwrite&&mem_rd!=0&&mem_rd==ex_rs2)forward_b=2;else if(wb_regwrite&&wb_rd!=0&&wb_rd==ex_rs2)forward_b=1;end`,
+  'soc-cpu-hazard-control': `always @*begin pc_write=1;if_id_write=1;if_id_flush=0;id_ex_flush=0;
+if(branch_taken)begin if_id_flush=1;id_ex_flush=1;end
+else if(ex_memread&&ex_rd!=0&&(ex_rd==id_rs1||ex_rd==id_rs2))begin pc_write=0;if_id_write=0;id_ex_flush=1;end end`,
+  'soc-cpu-branch-predictor': `reg[1:0]state;assign predict_taken=state[1];assign state_dbg=state;
+always @(posedge clk)if(!rst_n)state<=2'b01;else if(update&&actual_taken&&state!=2'b11)state<=state+1'b1;else if(update&&!actual_taken&&state!=2'b00)state<=state-1'b1;`,
+  'soc-cache-direct-mapped': `reg[3:0]valid;reg[27:0]tags[0:3];reg[31:0]data[0:3];integer i;
+wire[1:0]req_index=req_addr[3:2];wire[1:0]fill_index=fill_addr[3:2];
+assign hit=req&&valid[req_index]&&(tags[req_index]==req_addr[31:4]);assign rdata=hit?data[req_index]:0;
+always @(posedge clk)if(!rst_n)valid<=0;else if(fill_en)begin valid[fill_index]<=1;tags[fill_index]<=fill_addr[31:4];data[fill_index]<=fill_data;end`,
+  'soc-cache-two-way': `reg[1:0]valid0,valid1;reg[28:0]tag0[0:1],tag1[0:1];reg[31:0]data0[0:1],data1[0:1];
+wire req_set=req_addr[2],fill_set=fill_addr[2];wire hit0=req&&valid0[req_set]&&tag0[req_set]==req_addr[31:3];wire hit1=req&&valid1[req_set]&&tag1[req_set]==req_addr[31:3];
+assign hit=hit0||hit1;assign hit_way=hit1&&!hit0;assign rdata=hit0?data0[req_set]:(hit1?data1[req_set]:0);
+always @(posedge clk)if(!rst_n)begin valid0<=0;valid1<=0;end else if(fill_en)begin if(!fill_way)begin valid0[fill_set]<=1;tag0[fill_set]<=fill_addr[31:3];data0[fill_set]<=fill_data;end else begin valid1[fill_set]<=1;tag1[fill_set]<=fill_addr[31:3];data1[fill_set]<=fill_data;end end`,
+  'soc-cache-fully-associative': `reg[3:0]valid;reg[7:0]tags[0:3];reg[31:0]data[0:3];
+always @(posedge clk)if(!rst_n)valid<=0;else if(fill_en)begin valid[fill_index]<=1;tags[fill_index]<=fill_tag;data[fill_index]<=fill_data;end
+always @*begin hit=0;hit_index=0;rdata=0;
+if(req&&valid[3]&&tags[3]==req_tag)begin hit=1;hit_index=3;rdata=data[3];end
+if(req&&valid[2]&&tags[2]==req_tag)begin hit=1;hit_index=2;rdata=data[2];end
+if(req&&valid[1]&&tags[1]==req_tag)begin hit=1;hit_index=1;rdata=data[1];end
+if(req&&valid[0]&&tags[0]==req_tag)begin hit=1;hit_index=0;rdata=data[0];end end`,
+  'soc-cache-lru': `reg[3:0]lru;always @(posedge clk)if(!rst_n)lru<=0;else if(touch)lru[touch_set]<=~touch_way;
+always @*if(!way0_valid)victim_way=0;else if(!way1_valid)victim_way=1;else victim_way=lru[query_set];`,
+  'soc-cache-miss-fsm': `localparam IDLE=0,WRITEBACK=1,REFILL=2,RESPOND=3;reg[1:0]state,next;
+always @(posedge clk)if(!rst_n)state<=IDLE;else state<=next;
+always @*begin next=state;case(state)IDLE:if(cpu_req&&!cache_hit)next=victim_dirty?WRITEBACK:REFILL;WRITEBACK:if(mem_ready)next=REFILL;REFILL:if(mem_ready)next=RESPOND;RESPOND:next=IDLE;default:next=IDLE;endcase end
+always @*begin cpu_ready=0;writeback_req=0;refill_req=0;busy=(state!=IDLE);case(state)IDLE:cpu_ready=cpu_req&&cache_hit;WRITEBACK:writeback_req=1;REFILL:refill_req=1;RESPOND:cpu_ready=1;endcase end`,
+};
+for (const [id, body] of Object.entries(cpuCacheBodies)) {
+  solutions[id] = (starter) => starter.slice(0, starter.indexOf('\n')) + '\n' + body + '\nendmodule';
+}
 solutions['rtl-saturating-counter'] = s=>s.replace("else if (en) count <= up ? count + 1'b1 : count - 1'b1;", "else if(en&&up&&count!=15)count<=count+1'b1;else if(en&&!up&&count!=0)count<=count-1'b1;");
 solutions['rtl-latch-debug'] = s=>s.replace('// BUG: sel=3 is missing','default:y=0;');
 solutions['timing-valid-retime'] = s=>s.replace('reg [15:0] product;','reg v;reg [15:0] product;').replace('product<=0;','v<=0;product<=0;').replace('out_valid <= in_valid;','v<=in_valid;out_valid<=v;');

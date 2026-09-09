@@ -2,7 +2,25 @@
 
 An original, bilingual (Traditional Chinese / English) hands-on practice site for SoC and digital IC engineering.
 
-The current release contains 33 coding, debugging, constraint, and interactive challenges across RTL foundations, CDC/reset, timing closure, SoC interfaces, verification, PPA, DFT, and low power. The SoC track includes AXI4-Lite accelerator control, AXI4 burst transfer, and a generic 1RW SRAM-compiler wrapper. The CDC track includes a complete asynchronous FIFO.
+The current release contains 42 coding, debugging, constraint, and interactive challenges across RTL foundations, CDC/reset, timing closure, SoC/CPU/cache design, verification, PPA, DFT, and low power. The SoC track includes APB/AXI integration, a generic 1RW SRAM-compiler wrapper, CPU pipeline control, and a progressive cache-design path. The CDC track includes a complete asynchronous FIFO.
+
+## CPU and cache practice
+
+The nine CPU/cache exercises are original Verilog-2005 labs with bilingual specifications, three progressive hints, self-checking simulation, and browser-rendered waveforms:
+
+| Area | Exercise | Main design or debug target |
+| --- | --- | --- |
+| CPU datapath | 32×32-bit register file | Two asynchronous reads, synchronous write, hard-wired x0 |
+| Pipeline | Forwarding unit | EX/MEM priority over MEM/WB and x0 exclusion |
+| Pipeline | Load-use and branch control | Stall versus bubble, branch-flush priority |
+| Prediction | Two-bit predictor | Saturation, hysteresis, prediction/update timing |
+| Cache | Direct mapped | Tag/index/offset and conflict eviction |
+| Cache | Two-way set associative | Parallel tag compares and way selection |
+| Cache | Fully associative | CAM-style all-entry lookup and priority |
+| Cache | Two-way LRU | Invalid-way priority and per-set replacement state |
+| Cache | Blocking miss controller | Hit, clean refill, dirty write-back, and back-pressure |
+
+These deliberately small models expose the architecture trade-offs: direct mapping uses one candidate and a short lookup path; set associativity adds comparators, a data mux, and replacement state to reduce conflict misses; fully associative lookup searches every entry and therefore fits only small structures. They are teaching components, not a complete ISA-compatible CPU, coherent cache, or production memory hierarchy.
 
 ## DFT and low-power practice
 
@@ -46,7 +64,7 @@ The SRAM integration challenge uses an original educational macro with a fiction
 
 The provided model is viewable in the exercise. It models a 0.35 ns clock-to-Q delay but does **not** enforce setup/hold timing checks. No technology-mapped macro area is available.
 
-The AXI labs use reduced, single-outstanding interfaces driven by testbench bus agents, not a bundled ARM core. Full protocol integration (response channels/attributes, strobes, IDs, errors, coherency and address-boundary rules) is outside this release.
+The AXI labs use reduced, single-outstanding interfaces driven by testbench bus agents, not a bundled ARM core. The CPU/cache labs are compact independent blocks rather than a complete pipeline or coherent hierarchy. Full protocol integration (response channels/attributes, strobes, IDs, errors, coherency and address-boundary rules) is outside this release.
 
 ## Area estimation
 

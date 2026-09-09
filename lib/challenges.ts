@@ -1,3 +1,5 @@
+import { cpuCacheChallenges } from './cpu-cache-challenges';
+
 export type Locale = 'zh' | 'en';
 
 export type Localized = { zh: string; en: string };
@@ -37,7 +39,7 @@ export const tracks: { id: TrackId; label: Localized; accent: string }[] = [
   { id: 'rtl', label: { zh: 'RTL 基礎', en: 'RTL Foundations' }, accent: 'bg-blue-500' },
   { id: 'cdc', label: { zh: 'CDC 與 Reset', en: 'CDC & Reset' }, accent: 'bg-cyan-500' },
   { id: 'timing', label: { zh: '時序收斂', en: 'Timing Closure' }, accent: 'bg-violet-500' },
-  { id: 'soc', label: { zh: 'SoC 介面', en: 'SoC Interfaces' }, accent: 'bg-amber-500' },
+  { id: 'soc', label: { zh: 'SoC／CPU／Cache', en: 'SoC, CPU & Cache' }, accent: 'bg-amber-500' },
   { id: 'verification', label: { zh: '驗證與 Debug', en: 'Verification & Debug' }, accent: 'bg-emerald-500' },
   { id: 'ppa', label: { zh: 'PPA 與面積', en: 'PPA & Area' }, accent: 'bg-rose-500' },
   { id: 'dft', label: { zh: 'DFT 與記憶體測試', en: 'DFT & Memory Test' }, accent: 'bg-orange-500' },
@@ -808,6 +810,8 @@ for(i=0;i<4;i=i+1)begin tick(1,0,0,0,1);tick(1,1,0,0,1);for(j=0;j<=i;j=j+1)tick(
 tick(1,1,0,0,1);tick(0,1,1,1,1);tick(1,0,0,0,0);$display("@@PASS@@");$finish;end endmodule`,
   }
 );
+
+challenges.push(...cpuCacheChallenges);
 
 export const difficultyLabel: Record<Challenge['difficulty'], Localized> = {
   beginner: { zh: '入門', en: 'Beginner' },

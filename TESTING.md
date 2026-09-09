@@ -6,7 +6,7 @@ Run `pnpm test`. The suite downloads SHA-256-verified upstream Icarus assets to 
 
 The current run passes 211 assertions:
 
-- 33 unique challenge IDs and bilingual titles/descriptions.
+- 42 unique challenge IDs and bilingual titles/descriptions, including nine CPU/cache labs.
 - Every Verilog starter is normalized to a multiline, one-port-per-line module header and the formatted code is compiled by the regression.
 - Public exercise copy is checked for interview-source, company-name and personal-name leakage.
 - 30 Verilog tasks: positive fixtures accepted, VCD produced, and starter verdicts checked.

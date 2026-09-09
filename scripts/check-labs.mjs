@@ -4,7 +4,11 @@ import { Worker } from 'node:worker_threads';
 import ts from 'typescript';
 import { solutions } from './test-solutions.mjs';
 async function loadTs(path) {
-  const source = await readFile(new URL(path, import.meta.url), 'utf8');
+  let source = await readFile(new URL(path, import.meta.url), 'utf8');
+  if (path.endsWith('/challenges.ts')) {
+    const cpuModule = await loadTs('../lib/cpu-cache-challenges.ts');
+    source = source.replace("import { cpuCacheChallenges } from './cpu-cache-challenges';", `const cpuCacheChallenges=${JSON.stringify(cpuModule.cpuCacheChallenges)};`);
+  }
   const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } });
   return import('data:text/javascript;base64,' + Buffer.from(outputText).toString('base64'));
 }
@@ -26,12 +30,13 @@ function simulate(design, testbench, timeout = 15000) {
     });
   });
 }
-verify(challenges.length === 33 && new Set(challenges.map((c) => c.id)).size === 33, '33 unique bilingual challenges');
+verify(challenges.length === 42 && new Set(challenges.map((c) => c.id)).size === 42, '42 unique bilingual challenges');
 verify(challenges.filter(c=>c.track==='dft').length===3, 'Three DFT exercises');
 verify(challenges.filter(c=>c.track==='low-power').length===4, 'Four low-power exercises');
+verify(challenges.filter(c=>/^soc-(?:cpu|cache)-/.test(c.id)).length===9, 'Nine CPU and cache exercises');
 for (const c of challenges) {
   verify(Boolean(c.title.zh && c.title.en && c.description.zh && c.description.en), c.id + ' bilingual content');
-  if(c.track==='dft'||c.track==='low-power') {
+  if(c.track==='dft'||c.track==='low-power'||/^soc-(?:cpu|cache)-/.test(c.id)) {
     const context=learningContext[c.id];
     verify(c.language==='Verilog-2005' && c.judge==='simulation' && c.hints.length===3
       && [...c.specs,...c.hints,...c.testGroups,context.why,context.roles].every(v=>v.zh&&v.en&&!/[\u4e00-\u9fff]/.test(v.en)), c.id+' three bilingual hints, rationale and role mapping');
@@ -57,6 +62,15 @@ const publicVisibleText = JSON.stringify({
 verify(!/(?:面試|interview|王璽鑄|MediaTek|Realtek|Qualcomm|Phison|NVIDIA|TSMC|聯發科|瑞昱|群聯|威宏|創星|台積電)/i.test(publicVisibleText), 'Public exercise text contains no interview source, employer name or personal name');
 // Deliberately broken versions must fail in simulation, not merely fail compilation.
 const mutationCases = [
+  ['soc-cpu-register-file','drop register writes','else if(we&&waddr!=0)','else if(1\'b0&&we&&waddr!=0)'],
+  ['soc-cpu-forwarding','let old WB data override EX/MEM','else if(wb_regwrite&&wb_rd!=0&&wb_rd==ex_rs1)forward_a=1;','if(wb_regwrite&&wb_rd!=0&&wb_rd==ex_rs1)forward_a=1;'],
+  ['soc-cpu-hazard-control','drop branch flush priority','if(branch_taken)begin','if(1\'b0&&branch_taken)begin'],
+  ['soc-cpu-branch-predictor','wrap strongly taken to not taken','update&&actual_taken&&state!=2\'b11','update&&actual_taken'],
+  ['soc-cache-direct-mapped','ignore tag during lookup','(tags[req_index]==req_addr[31:4])','1\'b1'],
+  ['soc-cache-two-way','ignore way one hit','assign hit=hit0||hit1;','assign hit=hit0;'],
+  ['soc-cache-fully-associative','skip entry three','if(req&&valid[3]&&tags[3]==req_tag)','if(1\'b0&&req&&valid[3]&&tags[3]==req_tag)'],
+  ['soc-cache-lru','share replacement state across sets','lru[touch_set]<=~touch_way','lru[0]<=~touch_way'],
+  ['soc-cache-miss-fsm','skip dirty write-back','next=victim_dirty?WRITEBACK:REFILL','next=REFILL'],
   ['dft-scan-capture','reverse scan direction','{q[6:0],scan_in}','{scan_in,q[7:1]}'],
   ['dft-scan-capture','wrong scan tap','scan_out=q[7]','scan_out=q[0]'],
   ['dft-scan-capture','functional enable masks scan','else if(scan_en)','else if(scan_en&&!func_en)'],
