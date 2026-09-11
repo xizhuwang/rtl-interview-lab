@@ -6,7 +6,7 @@ The current release contains 48 coding, debugging, constraint, and interactive c
 
 Timing-sensitive exercises now include bilingual golden behavior patterns before the editor. These cycle/event tables make latency, back-pressure, valid/data alignment, handshake completion, FIFO ordering, and SRAM timing expectations explicit without revealing a paste-ready RTL implementation. The patterns cover the CDC synchronizers and multi-bit handshake, pipelining, AXI-Lite/AXI read, async FIFO, SRAM wrapper, streaming interfaces, DMA, command FIFO, blocking-cache miss flow, and the streaming compute-tile capstone.
 
-An original penguin companion appears beside progressive hints and can be customized from the sidebar. Domain completions unlock four electronic-fantasy professions: CPU swordsman, SoC archer, DFT healer, and timing/low-power mage. Male and female choices use distinct emblems and complete, independently cropped character art, so bows, hats, weapons, and sleeves are not clipped by sprite boundaries. Purchased gear uses either its matching original artwork or a matching technical icon, and every equipped item appears beside the character. A run control beside the companion starts the same judge as the editor control. Beginner and intermediate challenges target the RTL training dummy, while advanced challenges summon a large gate-level timing boss with distinct hit, parry, and defeat animation. The battle stays inside the hint area and returns the companion to its normal position after the verdict; it never covers the editor, waveform, or diagnostics.
+An original penguin companion appears beside progressive hints and can be customized from the sidebar. Domain completions unlock four electronic-fantasy professions: CPU swordsman, SoC archer, DFT healer, and timing/low-power mage. Male and female choices use complete, independently cropped character art, so bows, hats, weapons, and sleeves are not clipped by sprite boundaries. The masculine SoC archer now has a broader silhouette, angular expression, ranger headband, heavier armor, and a sturdier bow, while the feminine archer keeps the softer original silhouette. Purchased gear uses either its matching original artwork or a matching technical icon, and every equipped item appears beside the character. A run control beside the companion starts the same judge as the editor control. Beginner and intermediate challenges target the RTL training dummy, while advanced challenges summon a large gate-level timing boss with distinct hit, parry, and defeat animation. The battle stays inside the hint area and returns the companion to its normal position after the verdict; it never covers the editor, waveform, or diagnostics.
 
 Earned points preserve rank/aura progress while a separate spendable balance buys common and profession-specific equipment. Shop items never require an unlock to purchase, but profession gear can only be equipped by its matching class. Store thumbnails and the visible item on the character use the same artwork. Fire, water, wind, and earth stones recolor the outfit trim and the attack effect; collecting all four unlocks a combined Four Roots effect. The four tiers add headwear, circuit ornaments, aura intensity, and richer skill effects without changing judging results.
 
@@ -19,6 +19,10 @@ See [MONETIZATION.md](MONETIZATION.md) for the paid-point architecture, suggeste
 ![Male electronic-fantasy penguin professions](public/mascot/penguin-classes-masculine.png)
 
 ![Female electronic-fantasy penguin professions](public/mascot/penguin-classes-feminine-v2.png)
+
+| Masculine SoC archer | Feminine SoC archer |
+| --- | --- |
+| ![Masculine SoC archer with angular ranger armor](public/mascot/penguin-masculine-soc-v2.png) | ![Feminine SoC archer with the original softer silhouette](public/mascot/penguin-feminine-soc.png) |
 
 ![Profession headwear: swordsman helmet, archer band, healer halo and mage hat](public/mascot/penguin-headgear.png)
 

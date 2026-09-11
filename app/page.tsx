@@ -581,7 +581,10 @@ function MascotAvatar({
   elements?: ElementLevels;
   className?: string;
 }) {
-  const image = `./mascot/penguin-${gender}-${profession}.png`;
+  const image =
+    gender === 'masculine' && profession === 'soc'
+      ? './mascot/penguin-masculine-soc-v2.png'
+      : `./mascot/penguin-${gender}-${profession}.png`;
   const activeElements = (Object.keys(elements) as ElementId[]).filter(
     (element) => elements[element] > 0,
   );
