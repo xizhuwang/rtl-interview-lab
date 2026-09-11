@@ -19,6 +19,7 @@ const { formatCodeForEditor } = await loadTs('../lib/code-format.ts');
 const { gradeXorCnf } = await loadTs('../lib/cnf.ts');
 const { patternFailures } = await loadTs('../lib/pattern-check.ts');
 const { learningContext } = await loadTs('../lib/learning-context.ts');
+const { goldenPatterns } = await loadTs('../lib/golden-patterns.ts');
 const { boardImplementationCompetencies } = await loadTs('../lib/readiness.ts');
 let checks = 0;
 function verify(ok, name) { assert.ok(ok, name); checks++; console.log('PASS ' + name); }
@@ -39,6 +40,14 @@ verify(challenges.filter(c=>c.track==='low-power').length===4, 'Four low-power e
 verify(challenges.filter(c=>/^soc-(?:cpu|cache)-/.test(c.id)).length===9, 'Nine CPU and cache exercises');
 verify(challenges.filter(c=>c.track==='cpu-cache').length===9, 'CPU/cache is an independent track');
 verify(challenges.filter(c=>c.track==='soc').length===11, 'Eleven SoC and accelerator exercises');
+const goldenPatternIds = Object.keys(goldenPatterns);
+verify(goldenPatternIds.length >= 15, 'Golden behavior patterns cover complex timing exercises');
+verify(goldenPatternIds.every(id=>challenges.some(c=>c.id===id)), 'Every golden behavior pattern maps to a challenge');
+for (const id of goldenPatternIds) {
+  const p = goldenPatterns[id];
+  verify(Boolean(p.title.zh&&p.title.en&&p.summary.zh&&p.summary.en), id+' golden pattern is bilingual');
+  verify(p.columns.length>=4&&p.rows.length>=4&&p.rows.every(row=>row.length===p.columns.length), id+' golden table is rectangular');
+}
 const competencyIds = boardImplementationCompetencies.flatMap(stage=>stage.challengeIds);
 verify(competencyIds.length===14 && competencyIds.every(id=>challenges.some(c=>c.id===id)), 'Board implementation competency set is complete');
 for (const c of challenges) {
@@ -65,6 +74,7 @@ for (const c of challenges) {
 const publicVisibleText = JSON.stringify({
   challenges: challenges.map(({ title, description, specs, hints, testGroups }) => ({ title, description, specs, hints, testGroups })),
   learningContext,
+  goldenPatterns,
 });
 verify(!/(?:面試|interview|王璽鑄|MediaTek|Realtek|Qualcomm|Phison|NVIDIA|TSMC|聯發科|瑞昱|群聯|威宏|創星|台積電)/i.test(publicVisibleText), 'Public exercise text contains no interview source, employer name or personal name');
 // Deliberately broken versions must fail in simulation, not merely fail compilation.

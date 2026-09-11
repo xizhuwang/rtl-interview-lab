@@ -39,6 +39,7 @@ Verified in Chromium through the visible UI of the production Pages build:
 
 - Incomplete pulse detector fails; correct solution passes and renders both DUT and expected waveforms.
 - Three hints can be opened; the fourth click is disabled.
+- Timing-sensitive exercises render a bilingual golden behavior table before the editor. Confirm the multi-bit CDC table shows source acceptance, held data, destination valid/data, acknowledgement, and return to idle without presenting RTL source code.
 - English switching and language/code/completion persistence survive reload.
 - Yosys width exercise: 38 user cells / 38 reference cells, delta 0. This is expected because unused bits are optimized away.
 - The browser loader was tested with upstream hash checks and blob-module URL resolution.
@@ -49,7 +50,7 @@ Verified in Chromium through the visible UI of the production Pages build:
 - Running a correct simulation makes the penguin attack the RTL training dummy inside the existing hint area, return to its original position after the verdict, and keep the editor, waveform, and diagnostics unobstructed.
 - The narrow-screen shop keeps class cards, equipment prices, element descriptions, and upgrade controls readable inside a scrollable dialog.
 - Existing solution/completion keys are unchanged. New equipment spend and element-state keys are additive; legacy equipment purchases migrate using their historical prices instead of the new catalog prices.
-- The ECPay control is an external support link only. The interface does not grant points or claim payment success, and no merchant secret is present in the browser bundle.
+- The PayPal.Me control is an external voluntary-support link only. The interface does not grant points or claim payment success, and no merchant secret is present in the browser bundle. Personal JKO Pay identifiers are not published.
 
 ## Additional manual acceptance checklist
 

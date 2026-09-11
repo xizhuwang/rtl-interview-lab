@@ -4,11 +4,32 @@ An original, bilingual (Traditional Chinese / English) hands-on practice site fo
 
 The current release contains 48 coding, debugging, constraint, and interactive challenges. CPU/cache is now an independent track, separate from SoC and accelerator integration. The SoC path progresses from software-visible control and ready/valid flow through AXI/DMA, SRAM/CDC, command queues, mixed-precision arithmetic, and a streaming compute-tile capstone. The CDC track includes a complete asynchronous FIFO.
 
-An original penguin companion appears beside progressive hints and can be customized from the sidebar. Domain completions unlock four electronic-fantasy professions: CPU swordsman, SoC archer, DFT healer, and timing/low-power mage. Running a test makes the companion attack an original RTL training dummy directly inside its existing hint area, then return to its normal position after the verdict; no separate battle panel covers the editor, waveform, or diagnostics. Earned points preserve rank/aura progress while a separate spendable balance buys common and profession-specific equipment. Fire, water, wind, and earth stones add visible debug-themed effects; collecting all four unlocks a combined Four Roots effect.
+Timing-sensitive exercises now include bilingual golden behavior patterns before the editor. These cycle/event tables make latency, back-pressure, valid/data alignment, handshake completion, FIFO ordering, and SRAM timing expectations explicit without revealing a paste-ready RTL implementation. The patterns cover the CDC synchronizers and multi-bit handshake, pipelining, AXI-Lite/AXI read, async FIFO, SRAM wrapper, streaming interfaces, DMA, command FIFO, blocking-cache miss flow, and the streaming compute-tile capstone.
 
-The ECPay button is currently a transparent support link only. It does not grant points. Automatic paid points and gifting are intentionally disabled until a server can create orders, verify ECPay callbacks, store entitlements and transaction records, and support refunds. Merchant secrets must never be placed in this public GitHub Pages repository.
+An original penguin companion appears beside progressive hints and can be customized from the sidebar. Domain completions unlock four electronic-fantasy professions: CPU swordsman, SoC archer, DFT healer, and timing/low-power mage. Male and female choices use distinct emblems and healthy blue/coral accents without recoloring the penguin's face. Each profession is drawn as a complete character instead of being assembled from oversized floating headwear, so the face remains unobstructed. The female timing mage now has a fitted pointed hat integrated into her sprite. Purchased profession headwear appears as a small class crest beside the character rather than being pasted across the face. A run control beside the companion starts the same judge as the editor control. Beginner and intermediate challenges target the RTL training dummy, while advanced challenges summon an original gate-level timing boss with distinct hit, parry, and defeat animation. The battle stays inside the hint area and returns the companion to its normal position after the verdict; it never covers the editor, waveform, or diagnostics.
+
+Earned points preserve rank/aura progress while a separate spendable balance buys common and profession-specific equipment. Shop items never require an unlock to purchase, but profession gear can only be equipped by its matching class. Store thumbnails and the visible item on the character use the same artwork. Fire, water, wind, and earth stones recolor the outfit trim and the attack effect; collecting all four unlocks a combined Four Roots effect. The four tiers add headwear, circuit ornaments, aura intensity, and richer skill effects without changing judging results.
+
+PayPal.Me is currently the only public voluntary-support option and does not grant points. The personal JKO Pay QR is intentionally excluded from the public site and Git history because it exposes stable recipient/account identifiers. JKO Pay can be added later with an approved merchant QR or hosted payment link. Automatic paid points and gifting remain disabled until a server can verify payments, store entitlements and transaction records, and support refunds.
 
 See [MONETIZATION.md](MONETIZATION.md) for the paid-point architecture, suggested packs, privacy boundaries, and launch checklist.
+
+## Penguin companion and profession guide
+
+![Male electronic-fantasy penguin professions](public/mascot/penguin-classes-masculine.png)
+
+![Female electronic-fantasy penguin professions](public/mascot/penguin-classes-feminine-v2.png)
+
+![Profession headwear: swordsman helmet, archer band, healer halo and mage hat](public/mascot/penguin-headgear.png)
+
+| Profession | Unlock route | Battle skill | How to train with it |
+| ---------- | ------------ | ------------ | -------------------- |
+| Circuit Swordsman / CPU Specialist | Solve 3 CPU/cache challenges | Sword swing and layered sword waves | Trace dependencies first; explain forwarding priority, stalls, flushes, tags and replacement state cycle by cycle. |
+| Circuit Archer / SoC Integration Specialist | Solve 3 SoC challenges | Staggered arrow rain | Follow one transaction across ready/valid, address mapping, AXI, DMA, SRAM latency and CDC boundaries. |
+| Silicon Healer / DFT Specialist | Solve 2 DFT challenges | Holy-light orb and diagnostic pulses | State the fault model, then connect controllability, observability, scan/MBIST sequencing and failure evidence. |
+| Timing Mage / Timing & Low-Power Specialist | Solve 3 timing or low-power challenges | Elemental burst whose color follows the strongest stone | Identify launch/capture clocks and path type before choosing a setup, hold, isolation, retention or power-sequence fix. |
+
+Tier 0 uses the clean base profession silhouette. Tier 1 strengthens the material and color treatment, tier 2 adds circuit ornaments and brighter trim, and tier 3 adds the strongest aura and skill presentation. Equipment can be purchased whenever the spendable balance is sufficient; a profession-specific item remains in the inventory until the matching class is selected. Enchantments are visual learning rewards only: fire highlights the first mismatch, water emphasizes cycle-to-cycle waveform flow, wind represents narrowing a regression quickly, and earth represents stable assertions and reproducible boundary tests.
 
 ## CPU and cache practice
 

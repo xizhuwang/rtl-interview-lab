@@ -34,6 +34,7 @@ import {
   Lightbulb,
   LoaderCircle,
   LockKeyhole,
+  Mars,
   Play,
   RotateCcw,
   Search,
@@ -44,9 +45,11 @@ import {
   ShoppingBag,
   Sparkles,
   Sword,
+  Swords,
   TerminalSquare,
   Target,
   Trophy,
+  Venus,
   Waves,
   Wind,
   XCircle,
@@ -80,6 +83,7 @@ import { formatCodeForEditor } from '@/lib/code-format';
 import { gradeXorCnf } from '@/lib/cnf';
 import { patternFailures } from '@/lib/pattern-check';
 import { learningContext, timingCommandGuide } from '@/lib/learning-context';
+import { goldenPatterns } from '@/lib/golden-patterns';
 import { speakingChecklist } from '@/lib/readiness';
 
 type Result = {
@@ -129,6 +133,7 @@ type EquipmentIconId =
   | 'battery';
 type ElementId = 'fire' | 'water' | 'wind' | 'earth';
 type ElementLevels = Record<ElementId, number>;
+type ArtworkSheet = 'equipment' | 'headgear';
 type BattleStatus = 'idle' | 'running' | 'success' | 'failure';
 const emptyElementLevels: ElementLevels = { fire: 0, water: 0, wind: 0, earth: 0 };
 const storageKeys = {
@@ -144,11 +149,10 @@ const storageKeys = {
   elementLevels: 'soc-rtl-lab:element-levels',
   elementSpend: 'soc-rtl-lab:element-spend',
 };
-// Public collection links are safe to keep in the client. Never place ECPay
-// MerchantID, HashKey, HashIV, or API credentials in this repository.
+// Public collection links/assets may be kept in the client. Never place API
+// credentials or merchant signing secrets in this repository.
 const supportConfig = {
-  ecpayUrl:
-    'https://cashier.ecpay.com.tw/omn/co14098/ac84586/order?portal=1',
+  paypalUrl: 'https://paypal.me/424242378',
 };
 const browserStorage = {
   getItem: (key: string) => {
@@ -183,6 +187,8 @@ const copy = {
     points: '分',
     task: '任務',
     constraints: '規格與限制',
+    goldenPattern: 'Golden pattern／預期行為',
+    goldenPatternNote: '表格描述外部可觀察行為，幫你先確認題意；它不是可直接貼上的 RTL 解答。',
     hint: '使用提示',
     hintsLeft: '次提示可用',
     reset: '重設程式',
@@ -234,7 +240,7 @@ const copy = {
     mascotProfession: '職業解鎖',
     mascotDone: '完成',
     mascotDescription:
-      '完成指定領域題目可解鎖職業；解題所得點數可購買裝備與附魔。消費不會降低總分與等級。',
+      '完成指定領域題目可解鎖並裝備職業；商店商品可直接購買，但職業專屬裝備只能由對應職業使用。消費不會降低總分與等級。',
     wallet: '可用點數',
     equipment: '裝備商店',
     buy: '購買',
@@ -243,6 +249,7 @@ const copy = {
     unequip: '卸下',
     owned: '已擁有',
     locked: '尚未解鎖',
+    professionRequired: '切換至對應職業後可裝備',
     solvedNeeded: '題完成',
     hintBuddy: '卡住時，我會陪你逐步拆解；先自己推一拍訊號，再使用提示。',
     enchantments: '屬性石附魔',
@@ -255,8 +262,8 @@ const copy = {
     battleFailure: '稻草人擋下攻擊；從第一個 mismatch 開始除錯。',
     mascotInteract: '點企鵝互動',
     support: '贊助開發',
-    supportBody: '目前可透過綠界自願支持本站，但不會自動增加點數，也不宣稱為可抵稅的公益捐款。付費點數與送禮需等帳號、後端驗簽、退款及交易紀錄完成後才會開放。',
-    supportAction: '前往綠界贊助',
+    supportBody: '目前僅透過 PayPal.Me 接受自願支持；款項不會增加遊戲點數，也不是可抵稅的公益捐款。基於隱私考量，本站不公開個人街口收款碼。',
+    paypalAction: '透過 PayPal 支持',
     paidPointsPending: '付費點數尚未開放',
   },
   en: {
@@ -268,6 +275,8 @@ const copy = {
     points: 'pts',
     task: 'Task',
     constraints: 'Requirements',
+    goldenPattern: 'Golden pattern / expected behavior',
+    goldenPatternNote: 'This table defines observable behavior so you can confirm the contract before coding. It is not a paste-ready RTL solution.',
     hint: 'Use hint',
     hintsLeft: 'hints left',
     reset: 'Reset code',
@@ -324,7 +333,7 @@ const copy = {
     mascotProfession: 'Profession unlocks',
     mascotDone: 'Done',
     mascotDescription:
-      'Solve domain challenges to unlock professions, then spend earned points on gear and enchantments. Spending never reduces your score or rank.',
+      'Solve domain challenges to unlock and equip professions. Any affordable shop item can be purchased, but profession gear can only be equipped by its matching class. Spending never reduces your score or rank.',
     wallet: 'Spendable points',
     equipment: 'Equipment shop',
     buy: 'Buy',
@@ -333,6 +342,7 @@ const copy = {
     unequip: 'Unequip',
     owned: 'Owned',
     locked: 'Locked',
+    professionRequired: 'Switch to the matching profession to equip',
     solvedNeeded: 'solved',
     hintBuddy:
       'When you get stuck, I will help you break it down. Trace one cycle yourself before using a hint.',
@@ -346,8 +356,8 @@ const copy = {
     battleFailure: 'The dummy blocked the attack. Debug from the first mismatch.',
     mascotInteract: 'Interact with the penguin',
     support: 'Support development',
-    supportBody: 'You can voluntarily support the site through ECPay, but payments do not automatically grant points and are not presented as tax-deductible charitable donations. Paid points and gifting will open only after accounts, server-side verification, refunds, and transaction records are ready.',
-    supportAction: 'Support via ECPay',
+    supportBody: 'Voluntary support is currently available only through PayPal.Me. Payments do not grant game points and are not tax-deductible charitable donations. A personal JKO Pay QR is not published for privacy reasons.',
+    paypalAction: 'Support via PayPal',
     paidPointsPending: 'Paid points are not available yet',
   },
 };
@@ -426,10 +436,12 @@ const equipmentCatalog: Record<
     profession: MascotProfession | 'all';
     name: { zh: string; en: string };
     effect: { zh: string; en: string };
+    artwork: { sheet: ArtworkSheet; index: number };
   }
 > = {
   visor: {
     icon: 'visor',
+    artwork: { sheet: 'equipment', index: 0 },
     cost: 600,
     profession: 'all',
     name: { zh: 'Debug 護目鏡', en: 'Debug Visor' },
@@ -440,6 +452,7 @@ const equipmentCatalog: Record<
   },
   crystal: {
     icon: 'crystal',
+    artwork: { sheet: 'equipment', index: 1 },
     cost: 900,
     profession: 'all',
     name: { zh: 'Timing 水晶', en: 'Timing Crystal' },
@@ -450,6 +463,7 @@ const equipmentCatalog: Record<
   },
   drone: {
     icon: 'drone',
+    artwork: { sheet: 'equipment', index: 2 },
     cost: 1200,
     profession: 'all',
     name: { zh: '晶片夥伴', en: 'Chip Companion' },
@@ -459,42 +473,42 @@ const equipmentCatalog: Record<
     },
   },
   cpuBlade: {
-    icon: 'sword', cost: 900, profession: 'cpu',
-    name: { zh: 'Forwarding 光刃', en: 'Forwarding Blade' },
+    icon: 'sword', artwork: { sheet: 'headgear', index: 0 }, cost: 900, profession: 'cpu',
+    name: { zh: 'Forwarding 戰盔', en: 'Forwarding Helm' },
     effect: { zh: '把資料相依化成可追蹤的旁路斬擊。', en: 'Turns data dependencies into a traceable bypass strike.' },
   },
   cpuShield: {
-    icon: 'shield', cost: 1450, profession: 'cpu',
+    icon: 'shield', artwork: { sheet: 'equipment', index: 1 }, cost: 1450, profession: 'cpu',
     name: { zh: 'Pipeline 護盾', en: 'Pipeline Shield' },
     effect: { zh: '提醒你同步檢查 stall、flush 與 valid。', en: 'Keeps stall, flush, and valid aligned during debug.' },
   },
   socQuiver: {
-    icon: 'target', cost: 950, profession: 'soc',
-    name: { zh: 'AXI 箭匣', en: 'AXI Quiver' },
+    icon: 'target', artwork: { sheet: 'headgear', index: 1 }, cost: 950, profession: 'soc',
+    name: { zh: 'AXI 獵手冠', en: 'AXI Ranger Band' },
     effect: { zh: '瞄準 ready／valid、burst 與 backpressure。', en: 'Targets ready/valid, bursts, and backpressure.' },
   },
   socCompass: {
-    icon: 'network', cost: 1500, profession: 'soc',
+    icon: 'network', artwork: { sheet: 'equipment', index: 2 }, cost: 1500, profession: 'soc',
     name: { zh: 'Interconnect 羅盤', en: 'Interconnect Compass' },
     effect: { zh: '沿著 address map 與資料流定位整合錯誤。', en: 'Traces integration faults through address maps and dataflow.' },
   },
   dftLantern: {
-    icon: 'healer', cost: 850, profession: 'dft',
-    name: { zh: 'Scan 診斷燈', en: 'Scan Diagnostic Lantern' },
+    icon: 'healer', artwork: { sheet: 'headgear', index: 2 }, cost: 850, profession: 'dft',
+    name: { zh: 'Scan 治癒冠', en: 'Scan Healer Halo' },
     effect: { zh: '照亮可控制性、可觀察性與未知值來源。', en: 'Illuminates controllability, observability, and X sources.' },
   },
   dftProbe: {
-    icon: 'scan', cost: 1400, profession: 'dft',
+    icon: 'scan', artwork: { sheet: 'equipment', index: 0 }, cost: 1400, profession: 'dft',
     name: { zh: 'Fault 探針', en: 'Fault Probe' },
     effect: { zh: '追蹤 stuck-at、transition 與 MBIST failure。', en: 'Tracks stuck-at, transition, and MBIST failures.' },
   },
   timingGrimoire: {
-    icon: 'book', cost: 1000, profession: 'timing',
-    name: { zh: 'STA 魔導書', en: 'STA Grimoire' },
+    icon: 'book', artwork: { sheet: 'headgear', index: 3 }, cost: 1000, profession: 'timing',
+    name: { zh: 'STA 魔導帽', en: 'STA Mage Hat' },
     effect: { zh: '把 clock、constraint 與 path report 串成因果。', en: 'Connects clocks, constraints, and path reports into one cause.' },
   },
   lowPowerCharm: {
-    icon: 'battery', cost: 1600, profession: 'timing',
+    icon: 'battery', artwork: { sheet: 'equipment', index: 1 }, cost: 1600, profession: 'timing',
     name: { zh: 'Low-Power 月墜', en: 'Low-Power Moon Charm' },
     effect: { zh: '守護 clock gating、isolation 與 retention 順序。', en: 'Guards clock gating, isolation, and retention sequencing.' },
   },
@@ -530,6 +544,31 @@ function EquipmentIcon({ id, className = '' }: { id: EquipmentIconId; className?
   return <Icon className={className} aria-hidden="true" />;
 }
 
+function EquipmentArtwork({
+  sheet,
+  index,
+  className = '',
+}: {
+  sheet: ArtworkSheet;
+  index: number;
+  className?: string;
+}) {
+  const frames = sheet === 'equipment' ? 3 : 4;
+  return (
+    <span
+      className={`equipment-artwork equipment-artwork-${sheet} ${className}`}
+      style={
+        {
+          backgroundImage: `url("./mascot/penguin-${sheet}.png")`,
+          backgroundSize: `${frames * 100}% auto`,
+          backgroundPosition: `${(index / Math.max(1, frames - 1)) * 100}% 50%`,
+        } as CSSProperties
+      }
+      aria-hidden="true"
+    />
+  );
+}
+
 const mascotTiers = {
   zh: ['見習', '進階', '菁英', '傳奇'],
   en: ['Apprentice', 'Advanced', 'Elite', 'Legendary'],
@@ -547,42 +586,83 @@ function MascotAvatar({
   profession,
   tier,
   equipment = null,
+  elements = emptyElementLevels,
   className = '',
 }: {
   gender: MascotGender;
   profession: MascotProfession;
   tier: number;
   equipment?: EquipmentId | null;
+  elements?: ElementLevels;
   className?: string;
 }) {
   const sprite = mascotProfessions[profession].sprite;
   const apprentice = profession === 'novice';
   const image = apprentice
     ? './mascot/penguin-evolution.png'
-    : `./mascot/penguin-classes-${gender}.png`;
+    : gender === 'feminine'
+      ? './mascot/penguin-classes-feminine-v2.png'
+      : './mascot/penguin-classes-masculine.png';
   const translate = apprentice
     ? gender === 'masculine'
       ? 0
       : 25
     : (sprite ?? 0) * 25;
+  const activeElements = (Object.keys(elements) as ElementId[]).filter(
+    (element) => elements[element] > 0,
+  );
+  const dominantElement = activeElements.reduce<ElementId | null>(
+    (best, element) =>
+      best === null || elements[element] > elements[best] ? element : best,
+    null,
+  );
+  const equippedArtwork = equipment ? equipmentCatalog[equipment].artwork : null;
+  const equippedHeadgear = equippedArtwork?.sheet === 'headgear';
   return (
     <div
-      className={`mascot-avatar mascot-tier-${tier} relative overflow-visible ${className}`}
+      className={`mascot-avatar mascot-tier-${tier} mascot-gender-${gender} mascot-profession-${profession} ${dominantElement ? `mascot-enchanted mascot-enchanted-${dominantElement}` : ''} relative overflow-visible ${className}`}
       aria-label={mascotProfessions[profession].title.en}
     >
       <div className="mascot-character-frame absolute inset-0 overflow-hidden">
-        <img
-          src={image}
-          alt=""
-          className="mascot-character absolute left-0 top-0 h-full w-auto max-w-none transition-transform duration-500 ease-out"
-          style={{ transform: `translateX(-${translate}%)` }}
-        />
+        {apprentice ? (
+          <img
+            src={image}
+            alt=""
+            className="mascot-character absolute left-0 top-0 h-full w-auto max-w-none transition-transform duration-500 ease-out"
+            style={{ transform: `translateX(-${translate}%)` }}
+          />
+        ) : (
+          <span
+            className="mascot-character mascot-character-sprite absolute inset-0 transition-transform duration-500 ease-out"
+            style={{
+              backgroundImage: `url("${image}")`,
+              backgroundPosition: `${((sprite ?? 0) / 3) * 100}% 50%`,
+            }}
+            aria-hidden="true"
+          />
+        )}
       </div>
-      {equipment && (
-        <div className={`mascot-equipment mascot-equipment-${equipmentCatalog[equipment].profession} absolute bottom-[14%] right-[2%] z-10 grid aspect-square w-[34%] place-items-center rounded-xl border border-cyan-200/80 bg-slate-950/88 text-cyan-200 shadow-lg`}>
-          <EquipmentIcon
-            id={equipmentCatalog[equipment].icon}
-            className="size-[68%] drop-shadow-[0_0_6px_currentColor]"
+      {equippedHeadgear && equippedArtwork && (
+        <EquipmentArtwork
+          sheet="headgear"
+          index={equippedArtwork.index}
+          className="mascot-class-crest"
+        />
+      )}
+      {dominantElement && <span className="mascot-element-cloak" aria-hidden="true" />}
+      <span className="mascot-tier-ornament" aria-hidden="true">
+        <i />
+        <i />
+        <i />
+      </span>
+      <span className="mascot-gender-emblem" aria-hidden="true">
+        {gender === 'masculine' ? <Mars /> : <Venus />}
+      </span>
+      {equipment && !equippedHeadgear && (
+        <div className={`mascot-equipment mascot-equipment-${equipmentCatalog[equipment].profession}`}>
+          <EquipmentArtwork
+            sheet={equipmentCatalog[equipment].artwork.sheet}
+            index={equipmentCatalog[equipment].artwork.index}
           />
         </div>
       )}
@@ -597,6 +677,7 @@ function BattleArena({
   equipment,
   elements,
   status,
+  isBoss,
 }: {
   gender: MascotGender;
   profession: MascotProfession;
@@ -604,11 +685,17 @@ function BattleArena({
   equipment: EquipmentId | null;
   elements: ElementLevels;
   status: BattleStatus;
+  isBoss: boolean;
 }) {
   const rootsUnlocked = Object.values(elements).every((level) => level > 0);
   const totalElementLevel = Object.values(elements).reduce((sum, level) => sum + level, 0);
   const activeElements = (Object.keys(elements) as ElementId[]).filter(
     (element) => elements[element] > 0,
+  );
+  const dominantElement = activeElements.reduce<ElementId | null>(
+    (best, element) =>
+      best === null || elements[element] > elements[best] ? element : best,
+    null,
   );
   const battleStyle = {
     '--effect-level': Math.min(5, Math.max(1, totalElementLevel)),
@@ -616,7 +703,7 @@ function BattleArena({
 
   return (
     <div
-      className={`mascot-battle-arena battle-${status} profession-${profession} ${rootsUnlocked ? 'four-roots-active' : ''}`}
+      className={`mascot-battle-arena battle-${status} profession-${profession} ${dominantElement ? `battle-element-${dominantElement}` : ''} ${isBoss ? 'boss-battle' : ''} ${rootsUnlocked ? 'four-roots-active' : ''}`}
       style={battleStyle}
       aria-hidden="true"
     >
@@ -626,6 +713,7 @@ function BattleArena({
           profession={profession}
           tier={tier}
           equipment={equipment}
+          elements={elements}
           className="h-[116px] w-[88px] sm:h-[132px] sm:w-[99px]"
         />
       </div>
@@ -633,6 +721,10 @@ function BattleArena({
         <span className="attack-core" />
         <span className="attack-trail attack-trail-a" />
         <span className="attack-trail attack-trail-b" />
+        <span className="profession-projectile projectile-a" />
+        <span className="profession-projectile projectile-b" />
+        <span className="profession-projectile projectile-c" />
+        <span className="profession-projectile projectile-d" />
         {activeElements.map((element) => (
           <span
             key={element}
@@ -641,10 +733,21 @@ function BattleArena({
           />
         ))}
       </div>
-      <div className="rtl-dummy-wrap" aria-hidden="true">
+      <div className={`rtl-dummy-wrap ${isBoss ? 'boss-target-wrap' : ''}`} aria-hidden="true">
         <span className="dummy-hit-ring" />
-        <img src="./mascot/rtl-training-dummy.png" alt="" className="rtl-dummy" />
-        <span className="rtl-dummy-label">RTL</span>
+        <img
+          src={isBoss ? './mascot/gate-level-timing-boss.png' : './mascot/rtl-training-dummy.png'}
+          alt=""
+          className={isBoss ? 'rtl-boss' : 'rtl-dummy'}
+        />
+        {isBoss && (
+          <>
+            <span className="boss-shard boss-shard-a" />
+            <span className="boss-shard boss-shard-b" />
+            <span className="boss-shard boss-shard-c" />
+          </>
+        )}
+        <span className="rtl-dummy-label">{isBoss ? 'BOSS' : 'RTL'}</span>
       </div>
     </div>
   );
@@ -689,6 +792,7 @@ export default function Home() {
   const current =
     challenges.find((item) => item.id === selectedId) ?? challenges[0];
   const context = learningContext[current.id];
+  const goldenPattern = goldenPatterns[current.id];
   const text = copy[locale];
   const starterCode = useMemo(
     () => formatCodeForEditor(current.starter, current.language),
@@ -1303,7 +1407,10 @@ export default function Home() {
       return;
     setOwnedEquipment((previous) => [...previous, id]);
     setEquipmentSpend((previous) => previous + equipmentCatalog[id].cost);
-    setEquippedEquipment(id);
+    const profession = equipmentCatalog[id].profession;
+    if (profession === 'all' || profession === activeMascotProfession) {
+      setEquippedEquipment(id);
+    }
   };
 
   const buyElementStone = (element: ElementId) => {
@@ -1505,6 +1612,7 @@ export default function Home() {
                   profession={activeMascotProfession}
                   tier={mascotStage}
                   equipment={activeEquipment}
+                  elements={elementLevels}
                   className="h-[93px] w-[70px]"
                 />
                 <div className="min-w-0">
@@ -1636,16 +1744,22 @@ export default function Home() {
                               const item = equipmentCatalog[id];
                               const owned = ownedEquipment.includes(id);
                               const equipped = activeEquipment === id;
-                              const classLocked =
+                              const classUnavailable =
                                 item.profession !== 'all' &&
                                 item.profession !== activeMascotProfession;
                               return (
                                 <div
                                   key={id}
-                                  className={`rounded-xl border p-3 ${equipped ? 'border-primary bg-primary/5' : 'border-border'} ${classLocked ? 'opacity-65' : ''}`}
+                                  className={`rounded-xl border p-3 ${equipped ? 'border-primary bg-primary/5' : 'border-border'}`}
                                 >
                                   <div className={`equipment-shop-icon equipment-${item.profession}`}>
-                                    <EquipmentIcon id={item.icon} className="size-10" />
+                                    <EquipmentArtwork
+                                      sheet={item.artwork.sheet}
+                                      index={item.artwork.index}
+                                    />
+                                    <span className="equipment-shop-role-icon">
+                                      <EquipmentIcon id={item.icon} className="size-3.5" />
+                                    </span>
                                   </div>
                                   <p className="mt-2 text-center text-sm font-semibold">
                                     {item.name[locale]}
@@ -1665,15 +1779,15 @@ export default function Home() {
                                       }
                                       size="sm"
                                       className="mt-2 w-full"
-                                      disabled={classLocked}
+                                      disabled={classUnavailable}
                                       onClick={() =>
                                         setEquippedEquipment(
                                           equipped ? null : id,
                                         )
                                       }
                                     >
-                                      {classLocked
-                                        ? text.locked
+                                      {classUnavailable
+                                        ? text.professionRequired
                                         : equipped
                                           ? text.unequip
                                           : text.equip}
@@ -1683,11 +1797,10 @@ export default function Home() {
                                       variant="outline"
                                       size="sm"
                                       className="mt-2 w-full"
-                                      disabled={walletPoints < item.cost || classLocked}
+                                      disabled={walletPoints < item.cost}
                                       onClick={() => buyEquipment(id)}
                                     >
-                                      {classLocked ? <LockKeyhole /> : <Coins />}
-                                      {classLocked ? text.locked : `${text.buy} · ${item.cost}`}
+                                      <Coins /> {text.buy} · {item.cost}
                                     </Button>
                                   )}
                                 </div>
@@ -1747,10 +1860,11 @@ export default function Home() {
                             <div className="mt-3 flex flex-wrap gap-2">
                               <Button
                                 size="sm"
+                                variant="outline"
                                 nativeButton={false}
-                                render={<a href={supportConfig.ecpayUrl} target="_blank" rel="noreferrer" aria-label={text.supportAction} />}
+                                render={<a href={supportConfig.paypalUrl} target="_blank" rel="noreferrer" aria-label={text.paypalAction} />}
                               >
-                                <ExternalLink /> {text.supportAction}
+                                <ExternalLink /> {text.paypalAction}
                               </Button>
                               <Button size="sm" variant="outline" disabled>
                                 <Coins /> {text.paidPointsPending}
@@ -1828,25 +1942,61 @@ export default function Home() {
                 ))}
               </ul>
             </div>
-            {context && (
-              <div className="mt-4 grid gap-3 border-t border-border pt-4 sm:grid-cols-[1fr_auto]">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-                    {text.whyTitle}
-                  </p>
-                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                    {localize(context.why, locale)}
-                  </p>
+            {goldenPattern && (
+              <section className="golden-pattern mt-4 border-t border-border pt-4" aria-labelledby="golden-pattern-title">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p id="golden-pattern-title" className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <Waves className="size-4 text-cyan-500" />
+                      {text.goldenPattern}
+                    </p>
+                    <p className="mt-1 text-sm font-medium text-cyan-800 dark:text-cyan-200">
+                      {localize(goldenPattern.title, locale)}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="border-cyan-300 text-cyan-700 dark:border-cyan-800 dark:text-cyan-200">
+                    {locale === 'zh' ? '行為範例' : 'Behavior example'}
+                  </Badge>
                 </div>
-                <div className="rounded-lg bg-muted px-3 py-2 sm:max-w-56">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-                    {text.rolesTitle}
-                  </p>
-                  <p className="mt-1 text-xs leading-5">
-                    {localize(context.roles, locale)}
-                  </p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  {localize(goldenPattern.summary, locale)}
+                </p>
+                <div className="golden-pattern-table mt-3 overflow-x-auto rounded-lg border border-cyan-200/80 dark:border-cyan-900">
+                  <table>
+                    <thead>
+                      <tr>
+                        {goldenPattern.columns.map((column, index) => (
+                          <th key={index} scope="col">{localize(column, locale)}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {goldenPattern.rows.map((row, rowIndex) => (
+                        <tr key={rowIndex}>
+                          {row.map((cell, cellIndex) => (
+                            <td key={cellIndex} className={cellIndex === 0 ? 'golden-event-cell' : undefined}>
+                              {typeof cell === 'string' ? cell : localize(cell, locale)}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
+                {goldenPattern.notes && goldenPattern.notes.length > 0 && (
+                  <ul className="mt-3 space-y-1.5 text-xs leading-5 text-muted-foreground">
+                    {goldenPattern.notes.map((note, index) => (
+                      <li key={index} className="flex gap-2">
+                        <ArrowRight className="mt-1 size-3 shrink-0 text-cyan-500" />
+                        {localize(note, locale)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <p className="mt-3 border-t border-cyan-200/70 pt-2 text-xs leading-5 text-muted-foreground dark:border-cyan-900">
+                  {text.goldenPatternNote}
+                </p>
+              </section>
             )}
             <div className="mascot-companion-stage mt-4 grid grid-cols-[84px_minmax(0,1fr)] items-end gap-3 border-t border-border pt-4 sm:grid-cols-[104px_minmax(0,1fr)]">
               <button
@@ -1861,6 +2011,7 @@ export default function Home() {
                   profession={activeMascotProfession}
                   tier={mascotStage}
                   equipment={activeEquipment}
+                  elements={elementLevels}
                   className="h-28 w-[84px] sm:h-[139px] sm:w-[104px]"
                 />
               </button>
@@ -1872,21 +2023,45 @@ export default function Home() {
                     </strong>{' '}
                     {text.hintBuddy}
                   </span>
+                  {context && (
+                    <span className="mascot-learning-context">
+                      <span><b>{text.whyTitle}</b> {localize(context.why, locale)}</span>
+                      <span><b>{text.rolesTitle}</b> {localize(context.roles, locale)}</span>
+                    </span>
+                  )}
                 </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setRevealedHints((value) => Math.min(3, value + 1))
-                  }
-                  disabled={revealedHints >= 3}
-                  className="mt-2 flex items-center gap-2 text-sm font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Lightbulb className="size-4" />
-                  {text.hint} · {3 - revealedHints} {text.hintsLeft}
-                  <ChevronDown
-                    className={`size-4 transition-transform ${revealedHints > 0 ? 'rotate-180' : ''}`}
-                  />
-                </button>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setRevealedHints((value) => Math.min(3, value + 1))
+                    }
+                    disabled={revealedHints >= 3}
+                    className="flex items-center gap-2 text-sm font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Lightbulb className="size-4" />
+                    {text.hint} · {3 - revealedHints} {text.hintsLeft}
+                    <ChevronDown
+                      className={`size-4 transition-transform ${revealedHints > 0 ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                  {current.judge !== 'interactive' && (
+                    <Button
+                      size="sm"
+                      onClick={run}
+                      disabled={running || (current.judge === 'simulation' && !engineReady)}
+                      className="mascot-run-button ml-auto"
+                    >
+                      {running ? <LoaderCircle className="animate-spin" /> : <Swords />}
+                      {running ? text.running : text.run}
+                    </Button>
+                  )}
+                  {current.difficulty === 'advanced' && (
+                    <Badge className="border-red-300 bg-red-500/10 text-red-700 dark:border-red-900 dark:text-red-200" variant="outline">
+                      BOSS
+                    </Badge>
+                  )}
+                </div>
                 {revealedHints > 0 && (
                   <ol className="mt-3 space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
                     {hintLayers.slice(0, revealedHints).map((hint, index) => (
@@ -1908,6 +2083,7 @@ export default function Home() {
                   equipment={activeEquipment}
                   elements={elementLevels}
                   status={battleStatus}
+                  isBoss={current.difficulty === 'advanced'}
                 />
               )}
             </div>
@@ -2386,10 +2562,10 @@ export default function Home() {
           </p>
           <p className="mt-2">
             {locale === 'zh'
-              ? '贊助按鈕會離開本站並前往綠界頁面；本站不接觸或保存信用卡、銀行帳戶等付款資料，且現階段付款不會增加遊戲點數。付款頁的資料處理由綠界隱私權政策規範。'
-              : 'The support button leaves this site for ECPay. This site does not receive or store card or bank data, and payments currently grant no game points. Data entered on the payment page is governed by ECPay’s privacy policy.'}{' '}
-            <a className="underline" href="https://support.ecpay.com.tw/18188/" target="_blank" rel="noreferrer">
-              ECPay privacy
+              ? 'PayPal.Me 僅供自願支持；本站不會因付款增加遊戲點數，也不會接觸或保存付款帳戶資料。個人街口收款碼不會放入公開網站或 Git 歷史。付款及個資處理由 PayPal 依其條款負責。'
+              : 'PayPal.Me is a voluntary-support option only. Payments do not grant game points, and this site does not receive or store payment-account data. A personal JKO Pay QR is not placed on the public site or in Git history. PayPal processes payment and personal data under its own terms.'}{' '}
+            <a className="underline" href="https://www.paypal.com/tw/legalhub/privacy-full" target="_blank" rel="noreferrer">
+              PayPal privacy
             </a>
           </p>
           <p className="mt-2">

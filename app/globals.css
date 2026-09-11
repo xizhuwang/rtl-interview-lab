@@ -58,6 +58,65 @@ body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
+.golden-pattern {
+  min-width: 0;
+}
+
+.golden-pattern-table table {
+  border-collapse: collapse;
+  min-width: 44rem;
+  width: 100%;
+}
+
+.golden-pattern-table th,
+.golden-pattern-table td {
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 78%, transparent);
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.golden-pattern-table th {
+  background: color-mix(in oklab, var(--primary) 8%, var(--card));
+  color: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.golden-pattern-table td {
+  color: var(--muted-foreground);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.golden-pattern-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.golden-pattern-table tbody tr:nth-child(even) td {
+  background: color-mix(in oklab, var(--primary) 3%, transparent);
+}
+
+.golden-pattern-table .golden-event-cell {
+  color: var(--foreground);
+  font-family: inherit;
+  font-weight: 650;
+}
+
+@media (max-width: 640px) {
+  .golden-pattern-table table {
+    min-width: 39rem;
+  }
+
+  .golden-pattern-table th,
+  .golden-pattern-table td {
+    padding: 0.55rem 0.65rem;
+  }
+}
+
 :root {
   --font-geist-sans:
     'Segoe UI', 'Microsoft JhengHei', 'PingFang TC', Arial, sans-serif;
@@ -207,9 +266,15 @@ body {
 
 .mascot-equipment {
   animation: mascot-equipment-pulse 2.4s ease-in-out infinite;
+  bottom: 7%;
   box-shadow:
     0 5px 12px oklch(0.18 0.04 245 / 35%),
     inset 0 0 10px oklch(0.74 0.15 205 / 18%);
+  height: 39%;
+  position: absolute;
+  right: -9%;
+  width: 43%;
+  z-index: 14;
 }
 
 .mascot-equipment-cpu {
@@ -223,6 +288,164 @@ body {
 }
 .mascot-equipment-timing {
   color: oklch(0.82 0.17 75);
+}
+
+.mascot-gender-emblem {
+  align-items: center;
+  backdrop-filter: blur(6px);
+  background: oklch(0.19 0.04 245 / 88%);
+  border: 1px solid oklch(0.75 0.14 215 / 60%);
+  border-radius: 999px;
+  color: oklch(0.83 0.15 215);
+  display: flex;
+  height: 24%;
+  justify-content: center;
+  left: 4%;
+  min-height: 18px;
+  min-width: 18px;
+  position: absolute;
+  top: 4%;
+  width: 24%;
+  z-index: 12;
+}
+
+.mascot-gender-emblem svg {
+  height: 66%;
+  width: 66%;
+}
+
+.mascot-gender-feminine .mascot-gender-emblem {
+  background: oklch(0.28 0.09 25 / 92%);
+  border-color: oklch(0.82 0.15 30 / 72%);
+  color: oklch(0.9 0.11 30);
+}
+
+.mascot-gender-masculine .mascot-gender-emblem {
+  background: oklch(0.22 0.07 235 / 90%);
+  border-color: oklch(0.76 0.16 225 / 70%);
+  color: oklch(0.87 0.14 220);
+}
+
+.mascot-gender-feminine .mascot-character {
+  filter: saturate(1.05) drop-shadow(0 0 5px oklch(0.78 0.14 28 / 20%));
+}
+
+.mascot-gender-masculine .mascot-character {
+  filter: saturate(1.08) drop-shadow(0 0 5px oklch(0.68 0.16 220 / 20%));
+}
+
+.mascot-gender-feminine .mascot-character-frame {
+  border-bottom: 3px solid oklch(0.76 0.15 28 / 52%);
+  border-radius: 45% 45% 30% 30%;
+}
+
+.mascot-gender-masculine .mascot-character-frame {
+  border-bottom: 3px solid oklch(0.69 0.16 225 / 45%);
+  border-radius: 45% 45% 30% 30%;
+}
+
+.mascot-character-sprite {
+  background-repeat: no-repeat;
+  background-size: 400% auto;
+  transform: scale(0.91);
+  transform-origin: center;
+}
+
+.mascot-profession-soc .mascot-character-sprite {
+  transform: scale(0.82);
+}
+
+.mascot-profession-timing .mascot-character-sprite {
+  transform: scale(0.84);
+}
+
+.equipment-artwork {
+  background-image: var(--artwork-image);
+  background-position: var(--artwork-position);
+  background-repeat: no-repeat;
+  background-size: var(--artwork-size);
+  display: block;
+  filter: drop-shadow(0 3px 5px oklch(0.08 0.02 250 / 42%));
+  height: 100%;
+  pointer-events: none;
+  width: 100%;
+}
+
+.mascot-class-crest {
+  filter: brightness(1.08) saturate(1.05)
+    drop-shadow(0 3px 6px oklch(0.08 0.02 250 / 44%));
+  height: 34%;
+  opacity: 0.94;
+  pointer-events: none;
+  position: absolute;
+  right: -5%;
+  top: -4%;
+  transform: rotate(7deg);
+  width: 34%;
+  z-index: 14;
+}
+
+.mascot-tier-2 .mascot-class-crest {
+  filter: brightness(1.12) saturate(1.08)
+    drop-shadow(0 0 7px oklch(0.76 0.16 205 / 56%));
+}
+
+.mascot-tier-3 .mascot-class-crest {
+  filter: brightness(1.18) saturate(1.12)
+    drop-shadow(0 0 11px oklch(0.78 0.18 205 / 72%));
+}
+
+.mascot-element-cloak {
+  background: linear-gradient(145deg, transparent 8%, var(--enchant-color) 48%, transparent 86%);
+  border-bottom: 3px solid var(--enchant-color);
+  border-radius: 30% 30% 46% 46%;
+  bottom: 8%;
+  height: 48%;
+  left: 10%;
+  mix-blend-mode: color;
+  opacity: calc(0.18 + var(--enchant-opacity, 0.12));
+  pointer-events: none;
+  position: absolute;
+  width: 80%;
+  z-index: 10;
+}
+
+.mascot-enchanted-fire { --enchant-color: #ff693d; --enchant-opacity: 0.16; }
+.mascot-enchanted-water { --enchant-color: #43a9ff; --enchant-opacity: 0.14; }
+.mascot-enchanted-wind { --enchant-color: #54e2ca; --enchant-opacity: 0.13; }
+.mascot-enchanted-earth { --enchant-color: #d3a743; --enchant-opacity: 0.14; }
+
+.mascot-tier-ornament {
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 13;
+}
+
+.mascot-tier-ornament i {
+  animation: tier-node-orbit 3.2s linear infinite;
+  background: oklch(0.82 0.16 205);
+  border-radius: 999px;
+  box-shadow: 0 0 7px currentColor;
+  display: none;
+  height: 6px;
+  left: 5%;
+  position: absolute;
+  top: 56%;
+  width: 6px;
+}
+
+.mascot-tier-2 .mascot-tier-ornament i:nth-child(-n + 2),
+.mascot-tier-3 .mascot-tier-ornament i {
+  display: block;
+}
+
+.mascot-tier-ornament i:nth-child(2) { animation-delay: -1.05s; left: 88%; top: 38%; }
+.mascot-tier-ornament i:nth-child(3) { animation-delay: -2.1s; left: 72%; top: 88%; }
+
+@keyframes tier-node-orbit {
+  0%, 100% { opacity: 0.45; transform: translateY(0) scale(0.8); }
+  50% { opacity: 1; transform: translateY(-7px) scale(1.25); }
 }
 
 .mascot-hint-button {
@@ -270,6 +493,7 @@ body {
   height: 5rem;
   justify-content: center;
   margin-inline: auto;
+  overflow: hidden;
   position: relative;
   width: 5rem;
 }
@@ -279,8 +503,30 @@ body {
   background-size: 10px 10px;
   content: '';
   inset: 8px;
-  opacity: 0.18;
+  opacity: 0.08;
   position: absolute;
+}
+
+.equipment-shop-icon .equipment-artwork {
+  height: 88%;
+  position: relative;
+  width: 88%;
+  z-index: 1;
+}
+
+.equipment-shop-role-icon {
+  align-items: center;
+  background: oklch(0.16 0.04 248 / 90%);
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  bottom: 0.25rem;
+  display: flex;
+  height: 1.45rem;
+  justify-content: center;
+  position: absolute;
+  right: 0.25rem;
+  width: 1.45rem;
+  z-index: 3;
 }
 
 .equipment-cpu { color: oklch(0.83 0.16 205); }
@@ -332,6 +578,25 @@ body {
   position: relative;
 }
 
+.mascot-learning-context {
+  border-top: 1px solid color-mix(in oklab, currentColor 14%, transparent);
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.6rem;
+  padding-top: 0.55rem;
+}
+
+.mascot-learning-context b {
+  color: var(--foreground);
+  font-weight: 700;
+  margin-right: 0.3rem;
+}
+
+.mascot-run-button {
+  box-shadow: 0 8px 20px oklch(0.55 0.17 220 / 22%);
+  min-width: 8.5rem;
+}
+
 .mascot-battle-arena {
   display: grid;
   grid-template-columns: 104px minmax(80px, 1fr) 98px;
@@ -380,12 +645,76 @@ body {
 
 .attack-core,
 .attack-trail,
-.element-particle {
+.element-particle,
+.profession-projectile {
   left: 0;
   opacity: 0;
   pointer-events: none;
   position: absolute;
   top: 50%;
+}
+
+.profession-projectile {
+  color: oklch(0.84 0.17 205);
+  height: 9px;
+  width: 42px;
+}
+
+.profession-cpu .profession-projectile {
+  background: linear-gradient(90deg, transparent, currentColor 42%, white 52%, transparent 72%);
+  border-radius: 90% 10%;
+  filter: drop-shadow(0 0 5px currentColor);
+  transform: rotate(-24deg);
+}
+
+.profession-soc .profession-projectile {
+  background: currentColor;
+  clip-path: polygon(0 42%, 72% 42%, 72% 15%, 100% 50%, 72% 85%, 72% 58%, 0 58%);
+  height: 12px;
+  width: 54px;
+}
+
+.profession-dft .profession-projectile {
+  background: radial-gradient(circle, white 0 15%, oklch(0.88 0.17 100) 30%, oklch(0.77 0.2 145 / 72%) 58%, transparent 72%);
+  border-radius: 999px;
+  box-shadow: 0 0 calc(9px + var(--effect-level) * 2px) oklch(0.82 0.18 110);
+  height: 28px;
+  width: 28px;
+}
+
+.profession-timing .profession-projectile {
+  background: conic-gradient(from 10deg, transparent, currentColor 8% 18%, transparent 22% 34%, currentColor 38% 48%, transparent 52% 66%, currentColor 70% 80%, transparent 84%);
+  border-radius: 999px;
+  box-shadow: 0 0 calc(9px + var(--effect-level) * 3px) currentColor;
+  height: calc(22px + var(--effect-level) * 2px);
+  width: calc(22px + var(--effect-level) * 2px);
+}
+
+.profession-projectile.projectile-a { top: 16%; }
+.profession-projectile.projectile-b { top: 38%; }
+.profession-projectile.projectile-c { top: 62%; }
+.profession-projectile.projectile-d { top: 84%; }
+
+.battle-running .profession-projectile,
+.battle-success .profession-projectile,
+.battle-failure .profession-projectile {
+  animation: profession-skill-flight 820ms ease-out infinite;
+}
+
+.battle-success .profession-projectile,
+.battle-failure .profession-projectile {
+  animation-iteration-count: 2;
+}
+
+.profession-projectile.projectile-b { animation-delay: 90ms !important; }
+.profession-projectile.projectile-c { animation-delay: 180ms !important; }
+.profession-projectile.projectile-d { animation-delay: 270ms !important; }
+
+@keyframes profession-skill-flight {
+  0% { opacity: 0; translate: 0 -50%; scale: 0.45; rotate: -8deg; }
+  24% { opacity: 1; }
+  82% { opacity: 0.95; }
+  100% { opacity: 0; translate: min(620%, 315px) -50%; scale: 1.15; rotate: 8deg; }
 }
 
 .attack-core {
@@ -422,6 +751,24 @@ body {
   clip-path: polygon(0 40%, 32% 34%, 42% 0, 55% 54%, 100% 46%, 64% 60%, 54% 100%, 42% 62%, 0 68%);
   color: oklch(0.82 0.18 78);
   height: 36px;
+}
+
+.battle-element-fire .attack-core,
+.battle-element-fire .profession-projectile { color: #ff6b3d; }
+.battle-element-fire .attack-core { background-color: #ff6b3d; }
+.battle-element-water .attack-core,
+.battle-element-water .profession-projectile { color: #47aaff; }
+.battle-element-water .attack-core { background-color: #47aaff; }
+.battle-element-wind .attack-core,
+.battle-element-wind .profession-projectile { color: #58e5c7; }
+.battle-element-wind .attack-core { background-color: #58e5c7; }
+.battle-element-earth .attack-core,
+.battle-element-earth .profession-projectile { color: #d8aa42; }
+.battle-element-earth .attack-core { background-color: #d8aa42; }
+
+.profession-timing[class*='battle-element-'] .attack-core,
+.profession-timing[class*='battle-element-'] .profession-projectile {
+  filter: drop-shadow(0 0 calc(7px + var(--effect-level) * 2px) currentColor);
 }
 
 .profession-novice .attack-core {
@@ -538,6 +885,55 @@ body {
   width: 100%;
 }
 
+.boss-battle {
+  grid-template-columns: 104px minmax(70px, 1fr) 124px;
+}
+
+.boss-target-wrap {
+  height: 132px;
+  width: 120px;
+}
+
+.rtl-boss {
+  filter:
+    drop-shadow(0 9px 12px oklch(0.05 0.03 20 / 58%))
+    drop-shadow(0 0 11px oklch(0.61 0.24 27 / 32%));
+  height: 100%;
+  object-fit: contain;
+  transform-origin: 55% 82%;
+  width: 100%;
+}
+
+.boss-target-wrap .rtl-dummy-label {
+  background: oklch(0.22 0.08 25 / 92%);
+  border-color: oklch(0.69 0.22 28 / 70%);
+  color: oklch(0.92 0.11 75);
+}
+
+.boss-shard {
+  background: linear-gradient(145deg, oklch(0.3 0.03 255), oklch(0.66 0.21 28));
+  clip-path: polygon(50% 0, 100% 100%, 0 72%);
+  height: 14px;
+  opacity: 0;
+  position: absolute;
+  right: 36%;
+  top: 40%;
+  width: 11px;
+  z-index: 6;
+}
+
+.boss-shard-b {
+  right: 17%;
+  top: 56%;
+  rotate: 70deg;
+}
+
+.boss-shard-c {
+  right: 54%;
+  top: 66%;
+  rotate: -48deg;
+}
+
 .rtl-dummy-label {
   background: oklch(0.17 0.04 250 / 88%);
   border: 1px solid oklch(0.75 0.15 205 / 55%);
@@ -582,6 +978,36 @@ body {
 
 .battle-success .rtl-dummy { animation: dummy-success 560ms ease-out 2; }
 .battle-failure .rtl-dummy { animation: dummy-failure 320ms ease-in-out 2; }
+.battle-running .rtl-boss { animation: boss-threat 720ms ease-in-out infinite alternate; }
+.battle-success .rtl-boss { animation: boss-break 1.25s cubic-bezier(0.2, 0.85, 0.25, 1) forwards; }
+.battle-failure .rtl-boss { animation: boss-parry 330ms ease-in-out 3; }
+.battle-success .boss-shard { animation: boss-shatter 900ms ease-out forwards; }
+.battle-success .boss-shard-b { animation-delay: 80ms; }
+.battle-success .boss-shard-c { animation-delay: 150ms; }
+
+@keyframes boss-threat {
+  from { transform: translateY(0) scale(1); }
+  to { transform: translateY(-3px) scale(1.025); }
+}
+
+@keyframes boss-break {
+  0% { opacity: 1; transform: rotate(0) scale(1); }
+  35% { filter: brightness(1.55) drop-shadow(0 0 22px oklch(0.75 0.22 45 / 75%)); transform: rotate(-3deg) scale(1.05); }
+  68% { opacity: 1; transform: rotate(6deg) translateY(4px) scale(0.96); }
+  100% { filter: grayscale(0.8) brightness(0.55); opacity: 0.32; transform: rotate(13deg) translateY(22px) scale(0.78); }
+}
+
+@keyframes boss-parry {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  35% { filter: drop-shadow(0 0 18px oklch(0.72 0.22 28 / 78%)); transform: translateX(-5px) rotate(-2deg); }
+  70% { transform: translateX(4px) rotate(2deg); }
+}
+
+@keyframes boss-shatter {
+  0% { opacity: 0; translate: 0 0; scale: 0.35; }
+  20% { opacity: 1; }
+  100% { opacity: 0; translate: 34px -42px; rotate: 190deg; scale: 1.2; }
+}
 
 @keyframes dummy-success {
   0%, 100% { transform: rotate(0); filter: drop-shadow(0 8px 10px oklch(0.05 0.02 250 / 45%)); }
@@ -597,9 +1023,16 @@ body {
   .mascot-battle-arena {
     grid-template-columns: 84px minmax(40px, 1fr) 72px;
   }
+  .boss-battle {
+    grid-template-columns: 84px minmax(30px, 1fr) 86px;
+  }
   .rtl-dummy-wrap {
     height: 92px;
     width: 70px;
+  }
+  .boss-target-wrap {
+    height: 102px;
+    width: 86px;
   }
   .mascot-battle-actor .mascot-avatar {
     height: 105px !important;
@@ -657,6 +1090,8 @@ body {
   .element-particle,
   .dummy-hit-ring,
   .rtl-dummy,
+  .rtl-boss,
+  .boss-shard,
   .four-roots-active .mascot-attack-path::after {
     animation: none;
   }
