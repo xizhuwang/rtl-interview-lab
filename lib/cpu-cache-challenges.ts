@@ -14,7 +14,7 @@ endtask
 
 export const cpuCacheChallenges: Challenge[] = [
   {
-    id: 'soc-cpu-register-file', order: 34, track: 'soc', difficulty: 'beginner', minutes: 25, points: 150,
+    id: 'soc-cpu-register-file', order: 34, track: 'cpu-cache', difficulty: 'beginner', minutes: 25, points: 150,
     kind: 'build', judge: 'simulation', language: 'Verilog-2005',
     title: { zh: 'CPU 兩讀一寫 Register File', en: 'CPU two-read, one-write register file' },
     description: { zh: '實作 32×32-bit register file：兩個組合讀取埠、一個同步寫入埠，並讓 x0 永遠讀回 0。', en: 'Build a 32×32-bit register file with two asynchronous read ports, one synchronous write port, and a hard-wired x0.' },
@@ -37,7 +37,7 @@ task write_reg;input[4:0]a;input[31:0]d;begin @(negedge clk);we=1;wa=a;wd=d;@(po
 initial begin repeat(2)@(posedge clk);#1;check(rd1===0&&rd2===0);rst_n=1;write_reg(5,32'h12345678);write_reg(9,32'hcafebabe);ra1=5;ra2=9;#1;check(rd1===32'h12345678&&rd2===32'hcafebabe);write_reg(0,32'hffffffff);ra1=0;#1;check(rd1===0);@(negedge clk);we=0;wa=5;wd=0;@(posedge clk);ra1=5;#1;check(rd1===32'h12345678);rst_n=0;@(posedge clk);#1;ra1=5;ra2=9;check(rd1===0&&rd2===0);$display("@@PASS@@");$finish;end endmodule`,
   },
   {
-    id: 'soc-cpu-forwarding', order: 35, track: 'soc', difficulty: 'intermediate', minutes: 25, points: 170,
+    id: 'soc-cpu-forwarding', order: 35, track: 'cpu-cache', difficulty: 'intermediate', minutes: 25, points: 170,
     kind: 'build', judge: 'simulation', language: 'Verilog-2005',
     title: { zh: '五級 Pipeline Forwarding Unit', en: 'Five-stage pipeline forwarding unit' },
     description: { zh: '為 EX stage 的兩個 source operand 選擇 register file、EX/MEM 或 MEM/WB 的結果，消除可轉送的 RAW data hazard。', en: 'Select register-file, EX/MEM, or MEM/WB data for both EX-stage operands to resolve forwardable RAW hazards.' },
@@ -60,7 +60,7 @@ task expect;input[1:0]a,b;begin #1;check(fa===a&&fb===b);end endtask
 initial begin expect(0,0);rs1=5;mw=1;mrd=5;expect(2,0);rs2=7;mw=0;ww=1;wrd=7;expect(0,1);mw=1;mrd=5;ww=1;wrd=5;rs1=5;rs2=5;expect(2,2);mrd=0;wrd=0;rs1=0;rs2=0;expect(0,0);rs1=3;rs2=4;mrd=4;wrd=3;expect(1,2);mw=0;ww=0;expect(0,0);$display("@@PASS@@");$finish;end endmodule`,
   },
   {
-    id: 'soc-cpu-hazard-control', order: 36, track: 'soc', difficulty: 'intermediate', minutes: 30, points: 190,
+    id: 'soc-cpu-hazard-control', order: 36, track: 'cpu-cache', difficulty: 'intermediate', minutes: 30, points: 190,
     kind: 'debug', judge: 'simulation', language: 'Verilog-2005',
     title: { zh: 'Load-use Stall 與 Branch Flush', en: 'Load-use stall and branch flush control' },
     description: { zh: '修正 pipeline control：load 的資料到 MEM 後才可 forwarding，因此下一條相依指令要 stall；taken branch 則要清掉錯路徑指令。', en: 'Repair pipeline control: a load result is not available soon enough for the following dependent instruction, while a taken branch must flush wrong-path work.' },
@@ -89,7 +89,7 @@ task expect;input a,b,c,d;begin #1;check({pw,iw,iff,idf}==={a,b,c,d});end endtas
 initial begin expect(1,1,0,0);mr=1;rd=5;r1=5;expect(0,0,0,1);r1=1;r2=5;expect(0,0,0,1);rd=0;r1=0;r2=0;expect(1,1,0,0);rd=5;r1=5;br=1;expect(1,1,1,1);br=0;mr=0;expect(1,1,0,0);$display("@@PASS@@");$finish;end endmodule`,
   },
   {
-    id: 'soc-cpu-branch-predictor', order: 37, track: 'soc', difficulty: 'beginner', minutes: 20, points: 140,
+    id: 'soc-cpu-branch-predictor', order: 37, track: 'cpu-cache', difficulty: 'beginner', minutes: 20, points: 140,
     kind: 'build', judge: 'simulation', language: 'Verilog-2005',
     title: { zh: '二位元飽和 Branch Predictor', en: 'Two-bit saturating branch predictor' },
     description: { zh: '用二位元飽和計數器記錄單一 branch 的歷史；最高位決定預測 taken/not-taken，降低一次偶發結果造成的預測翻轉。', en: 'Track one branch with a two-bit saturating counter; the MSB predicts taken/not-taken and resists one-off outcomes.' },
@@ -112,7 +112,7 @@ task train;input outcome;begin @(negedge clk);up=1;taken=outcome;@(posedge clk);
 initial begin repeat(2)@(posedge clk);#1;check(state===1&&pred===0);rst_n=1;train(1);check(state===2&&pred===1);train(1);train(1);check(state===3&&pred===1);train(0);check(state===2&&pred===1);train(0);check(state===1&&pred===0);train(0);train(0);check(state===0&&pred===0);@(negedge clk);up=0;taken=1;@(posedge clk);#1;check(state===0);rst_n=0;@(posedge clk);#1;check(state===1);$display("@@PASS@@");$finish;end endmodule`,
   },
   {
-    id: 'soc-cache-direct-mapped', order: 38, track: 'soc', difficulty: 'intermediate', minutes: 35, points: 220,
+    id: 'soc-cache-direct-mapped', order: 38, track: 'cpu-cache', difficulty: 'intermediate', minutes: 35, points: 220,
     kind: 'build', judge: 'simulation', language: 'Verilog-2005',
     title: { zh: 'Direct-mapped Cache：Tag／Index／Offset', en: 'Direct-mapped cache: tag, index, and offset' },
     description: { zh: '實作四列、每列一個 32-bit word 的 direct-mapped cache。用位址拆出 byte offset、index 與 tag，並觀察相同 index 的不同 tag 如何互相驅逐。', en: 'Build a four-line direct-mapped cache with one 32-bit word per line. Decode byte offset, index, and tag, then observe conflict eviction.' },
@@ -136,7 +136,7 @@ task lookup;input[31:0]a,d;input h;begin ra=a;req=1;#1;check(hit===h);check(rd==
 initial begin repeat(2)@(posedge clk);rst_n=1;lookup(4,0,0);fill(32'h00000004,32'h11112222);lookup(32'h00000004,32'h11112222,1);lookup(32'h00000005,32'h11112222,1);fill(32'h00000008,32'h33334444);lookup(8,32'h33334444,1);fill(32'h00000014,32'haabbccdd);lookup(4,0,0);lookup(32'h14,32'haabbccdd,1);lookup(8,32'h33334444,1);rst_n=0;@(posedge clk);#1;lookup(32'h14,0,0);$display("@@PASS@@");$finish;end endmodule`,
   },
   {
-    id: 'soc-cache-two-way', order: 39, track: 'soc', difficulty: 'advanced', minutes: 45, points: 280,
+    id: 'soc-cache-two-way', order: 39, track: 'cpu-cache', difficulty: 'advanced', minutes: 45, points: 280,
     kind: 'build', judge: 'simulation', language: 'Verilog-2005',
     title: { zh: '2-way Set-associative Cache Lookup', en: 'Two-way set-associative cache lookup' },
     description: { zh: '實作兩個 set、每個 set 兩個 way、每列一個 32-bit word 的 cache lookup。相同 set 的兩個 tag 可以同時存在。', en: 'Build lookup logic for a cache with two sets, two ways per set, and one 32-bit word per line. Two tags mapping to the same set can coexist.' },
@@ -160,7 +160,7 @@ task lookup;input[31:0]a,d;input h,w;begin req=1;ra=a;#1;check(hit===h);check(rd
 initial begin repeat(2)@(posedge clk);rst_n=1;fill(0,0,32'h11111111);fill(1,8,32'h22222222);lookup(0,32'h11111111,1,0);lookup(8,32'h22222222,1,1);fill(0,16,32'h33333333);lookup(0,0,0,0);lookup(8,32'h22222222,1,1);lookup(16,32'h33333333,1,0);fill(1,4,32'h44444444);lookup(4,32'h44444444,1,1);lookup(12,0,0,0);rst_n=0;@(posedge clk);#1;lookup(8,0,0,0);$display("@@PASS@@");$finish;end endmodule`,
   },
   {
-    id: 'soc-cache-fully-associative', order: 40, track: 'soc', difficulty: 'intermediate', minutes: 35, points: 220,
+    id: 'soc-cache-fully-associative', order: 40, track: 'cpu-cache', difficulty: 'intermediate', minutes: 35, points: 220,
     kind: 'build', judge: 'simulation', language: 'Verilog-2005',
     title: { zh: 'Fully-associative Cache／CAM Lookup', en: 'Fully associative cache / CAM lookup' },
     description: { zh: '建立四列 fully-associative lookup：request tag 可放在任一列，lookup 時同時搜尋全部 tag，不使用 index。', en: 'Build a four-entry fully associative lookup: a requested tag may reside in any entry, so every tag is searched without an index.' },
@@ -184,7 +184,7 @@ task lookup;input[7:0]t;input h;input[1:0]i;input[31:0]d;begin req=1;rt=t;#1;che
 initial begin repeat(2)@(posedge clk);rst_n=1;fill(2,8'haa,32'h22222222);fill(0,8'h11,32'h00000011);fill(3,8'hf0,32'h33333333);lookup(8'haa,1,2,32'h22222222);lookup(8'hf0,1,3,32'h33333333);lookup(8'h77,0,0,0);fill(1,8'haa,32'h11111111);lookup(8'haa,1,1,32'h11111111);fill(0,8'haa,32'h0000aaaa);lookup(8'haa,1,0,32'h0000aaaa);rst_n=0;@(posedge clk);#1;lookup(8'haa,0,0,0);$display("@@PASS@@");$finish;end endmodule`,
   },
   {
-    id: 'soc-cache-lru', order: 41, track: 'soc', difficulty: 'intermediate', minutes: 30, points: 190,
+    id: 'soc-cache-lru', order: 41, track: 'cpu-cache', difficulty: 'intermediate', minutes: 30, points: 190,
     kind: 'build', judge: 'simulation', language: 'Verilog-2005',
     title: { zh: '2-way Cache LRU Replacement', en: 'Two-way cache LRU replacement' },
     description: { zh: '為四個 set 分別追蹤 2-way LRU。若有 invalid way 就先使用；兩個 way 都 valid 時才選最久未使用者。', en: 'Track two-way LRU independently for four sets. Prefer an invalid way; use LRU only when both ways are valid.' },
@@ -207,7 +207,7 @@ task mark;input[1:0]s;input w;begin @(negedge clk);touch=1;ts=s;tw=w;@(posedge c
 initial begin repeat(2)@(posedge clk);rst_n=1;qs=0;v0=0;v1=0;#1;check(victim===0);v0=1;v1=0;#1;check(victim===1);v0=1;v1=1;#1;check(victim===0);mark(0,0);qs=0;#1;check(victim===1);mark(1,1);qs=1;#1;check(victim===0);qs=0;#1;check(victim===1);mark(0,1);#1;check(victim===0);qs=1;#1;check(victim===0);rst_n=0;@(posedge clk);#1;qs=0;check(victim===0);$display("@@PASS@@");$finish;end endmodule`,
   },
   {
-    id: 'soc-cache-miss-fsm', order: 42, track: 'soc', difficulty: 'advanced', minutes: 45, points: 290,
+    id: 'soc-cache-miss-fsm', order: 42, track: 'cpu-cache', difficulty: 'advanced', minutes: 45, points: 290,
     kind: 'build', judge: 'simulation', language: 'Verilog-2005',
     title: { zh: 'Blocking Cache Miss／Write-back FSM', en: 'Blocking cache miss / write-back FSM' },
     description: { zh: '實作簡化 blocking cache controller：hit 立即完成；clean miss 直接 refill；dirty miss 必須先 write-back，再 refill，最後回覆 CPU。', en: 'Build a simplified blocking cache controller: hits complete immediately, clean misses refill, and dirty misses write back before refill and CPU response.' },

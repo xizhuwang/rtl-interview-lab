@@ -1,10 +1,11 @@
 import { cpuCacheChallenges } from './cpu-cache-challenges';
+import { socAcceleratorChallenges } from './soc-accelerator-challenges';
 
 export type Locale = 'zh' | 'en';
 
 export type Localized = { zh: string; en: string };
 
-export type TrackId = 'rtl' | 'cdc' | 'timing' | 'soc' | 'verification' | 'ppa' | 'dft' | 'low-power';
+export type TrackId = 'rtl' | 'cdc' | 'timing' | 'cpu-cache' | 'soc' | 'verification' | 'ppa' | 'dft' | 'low-power';
 
 export type PatternRule = {
   pattern: string;
@@ -39,7 +40,8 @@ export const tracks: { id: TrackId; label: Localized; accent: string }[] = [
   { id: 'rtl', label: { zh: 'RTL 基礎', en: 'RTL Foundations' }, accent: 'bg-blue-500' },
   { id: 'cdc', label: { zh: 'CDC 與 Reset', en: 'CDC & Reset' }, accent: 'bg-cyan-500' },
   { id: 'timing', label: { zh: '時序收斂', en: 'Timing Closure' }, accent: 'bg-violet-500' },
-  { id: 'soc', label: { zh: 'SoC／CPU／Cache', en: 'SoC, CPU & Cache' }, accent: 'bg-amber-500' },
+  { id: 'cpu-cache', label: { zh: 'CPU 與 Cache', en: 'CPU & Cache' }, accent: 'bg-fuchsia-500' },
+  { id: 'soc', label: { zh: 'SoC 與加速器整合', en: 'SoC & Accelerator Integration' }, accent: 'bg-amber-500' },
   { id: 'verification', label: { zh: '驗證與 Debug', en: 'Verification & Debug' }, accent: 'bg-emerald-500' },
   { id: 'ppa', label: { zh: 'PPA 與面積', en: 'PPA & Area' }, accent: 'bg-rose-500' },
   { id: 'dft', label: { zh: 'DFT 與記憶體測試', en: 'DFT & Memory Test' }, accent: 'bg-orange-500' },
@@ -812,6 +814,7 @@ tick(1,1,0,0,1);tick(0,1,1,1,1);tick(1,0,0,0,0);$display("@@PASS@@");$finish;end
 );
 
 challenges.push(...cpuCacheChallenges);
+challenges.push(...socAcceleratorChallenges);
 
 export const difficultyLabel: Record<Challenge['difficulty'], Localized> = {
   beginner: { zh: '入門', en: 'Beginner' },

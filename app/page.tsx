@@ -19,6 +19,7 @@ import { formatCodeForEditor } from '@/lib/code-format';
 import { gradeXorCnf } from '@/lib/cnf';
 import { patternFailures } from '@/lib/pattern-check';
 import { learningContext, timingCommandGuide } from '@/lib/learning-context';
+import { speakingChecklist } from '@/lib/readiness';
 
 type Result = { ok: boolean; phase: 'compile' | 'simulate' | 'pattern' | 'engine' | 'interactive' | 'cnf'; console: string; elapsedMs?: number };
 type AreaResult = { total: number; counts: Record<string, number>; referenceTotal: number | null; elapsedMs: number };
@@ -45,6 +46,7 @@ const copy = {
     source: '原始碼', noMatch: '找不到符合條件的題目。',
     estimate: 'Yosys 泛用 Cell 統計', estimating: 'Yosys 合成中…', genericCells: '泛用 cells', areaError: 'Yosys 合成失敗',
     whyTitle: '為什麼要學？', rolesTitle: '對應工作', reference: 'Reference solution', userResult: '你的 RTL', delta: '差異', waveform: '波形', commandGuide: '三套 APR 工具指令速查', commandCaution: '這些是常見流程範例，不是可直接複製到所有專案的完整腳本；請依工具版本、MMMC scenario、PDK 與公司 flow 確認。',
+    speaking: '完成後請用自己的話說清楚',
   },
   en: {
     subtitle: 'Hands-on RTL, SoC, CDC, DFT and low-power practice', search: 'Search challenges', tracks: 'Learning tracks', all: 'All challenges',
@@ -60,8 +62,31 @@ const copy = {
     source: 'Source', noMatch: 'No challenge matches the current filters.',
     estimate: 'Yosys generic cell count', estimating: 'Synthesizing with Yosys…', genericCells: 'generic cells', areaError: 'Yosys synthesis failed',
     whyTitle: 'Why it matters', rolesTitle: 'Related roles', reference: 'Reference solution', userResult: 'Your RTL', delta: 'Delta', waveform: 'Waveform', commandGuide: 'APR command quick reference', commandCaution: 'These are common flow examples, not drop-in scripts for every project. Confirm tool release, MMMC scenarios, PDK, and company flow.',
+    speaking: 'Explain it in your own words after solving',
   },
 };
+
+const mascotStages = {
+  zh: [
+    { title: '邏輯學徒', message: '從第一個 always block 開始，我陪你。' },
+    { title: 'RTL Builder', message: '你已經能讓資料穩定地流動了。' },
+    { title: 'SoC Engineer', message: '把介面、CDC 與驗證串成一個系統。' },
+    { title: 'SoC Architect', message: '現在用數據與證據說服別人你的設計。' },
+  ],
+  en: [
+    { title: 'Logic Apprentice', message: 'I am with you from the first always block.' },
+    { title: 'RTL Builder', message: 'You can now keep data moving reliably.' },
+    { title: 'SoC Engineer', message: 'Connect interfaces, CDC, and verification into a system.' },
+    { title: 'SoC Architect', message: 'Now support your design with data and evidence.' },
+  ],
+};
+
+function mascotStageFor(points: number) {
+  if (points >= 1300) return 3;
+  if (points >= 700) return 2;
+  if (points >= 300) return 1;
+  return 0;
+}
 
 function rankFor(points: number, locale: Locale) {
   const ranks: [number, string][] = locale === 'zh'
@@ -257,6 +282,8 @@ export default function Home() {
   }), [track, query]);
   const points = solved.reduce((sum, id) => sum + (challenges.find((item) => item.id === id)?.points ?? 0), 0);
   const progress = Math.round((solved.length / challenges.length) * 100);
+  const mascotStage = mascotStageFor(points);
+  const mascot = mascotStages[locale][mascotStage];
   const currentIndex = challenges.findIndex((item) => item.id === current.id);
   const nextChallenge = challenges[(currentIndex + 1) % challenges.length];
   const editorFileName = current.language === 'CNF / DIMACS' ? 'formula.cnf' : current.language === 'SystemVerilog/UVM' ? 'scoreboard.sv' : 'solution.v';
@@ -290,13 +317,13 @@ export default function Home() {
             <button type="button" onClick={() => setTrack('all')} className={`flex min-h-10 items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${track === 'all' ? 'bg-sidebar-primary text-sidebar-primary-foreground' : 'hover:bg-sidebar-accent'}`}><span>{text.all}</span><span className="font-mono text-xs opacity-70">{challenges.length}</span></button>
             {tracks.map((item) => {
               const count = challenges.filter((challenge) => challenge.track === item.id).length;
-              return <button key={item.id} type="button" onClick={() => setTrack(item.id)} className={`flex min-h-10 items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${track === item.id ? 'bg-sidebar-primary text-sidebar-primary-foreground' : 'hover:bg-sidebar-accent'}`}><span className="flex items-center gap-2"><span className={`size-2 rounded-full ${item.accent}`} />{localize(item.label, locale)}</span><span className="font-mono text-xs opacity-70">{count}</span></button>;
+              return <button key={item.id} type="button" onClick={() => { setTrack(item.id); const first = challenges.find((challenge) => challenge.track === item.id); if (first) selectChallenge(first.id); }} className={`flex min-h-10 items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${track === item.id ? 'bg-sidebar-primary text-sidebar-primary-foreground' : 'hover:bg-sidebar-accent'}`}><span className="flex items-center gap-2"><span className={`size-2 rounded-full ${item.accent}`} />{localize(item.label, locale)}</span><span className="font-mono text-xs opacity-70">{count}</span></button>;
             })}
           </nav>
           <div className="mt-5 max-h-40 space-y-1 overflow-y-auto border-t border-sidebar-border pt-4 sm:max-h-56 xl:max-h-[calc(100vh-420px)]">
             {filtered.length ? filtered.map((item) => <button key={item.id} type="button" onClick={() => selectChallenge(item.id)} className={`flex w-full items-start gap-2 rounded-lg px-2.5 py-2 text-left text-sm ${current.id === item.id ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/60'}`}>{solved.includes(item.id) ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" /> : <Circle className="mt-0.5 size-4 shrink-0 text-muted-foreground/50" />}<span className="min-w-0"><span className="block truncate">{localize(item.title, locale)}</span><span className="font-mono text-[10px] text-muted-foreground">{item.id}</span></span></button>) : <p className="px-2 text-xs leading-5 text-muted-foreground">{text.noMatch}</p>}
           </div>
-          <div className="mt-5 border-t border-sidebar-border pt-4"><div className="mb-2 flex items-center justify-between text-xs"><span className="text-muted-foreground">{text.progress}</span><span className="font-mono">{solved.length} / {challenges.length}</span></div><Progress value={progress} className="h-1.5" /><div className="mt-3 flex items-center justify-between rounded-lg bg-sidebar-accent px-3 py-2"><span className="flex items-center gap-2 text-xs"><Trophy className="size-4 text-amber-500" />{rankFor(points, locale)}</span><span className="font-mono text-xs font-semibold">{points} {text.points}</span></div></div>
+          <div className="mt-5 border-t border-sidebar-border pt-4"><div className="mb-2 flex items-center justify-between text-xs"><span className="text-muted-foreground">{text.progress}</span><span className="font-mono">{solved.length} / {challenges.length}</span></div><Progress value={progress} className="h-1.5" /><div className="mt-3 overflow-hidden rounded-xl border border-sidebar-border bg-sidebar-accent"><div className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-3 p-2.5"><div className="mascot-float relative h-24 w-[72px] overflow-hidden" role="img" aria-label={mascot.title}><img src="./mascot/penguin-evolution.png" alt="" className="absolute left-0 top-0 h-full w-auto max-w-none transition-transform duration-500 ease-out" style={{ transform: `translateX(-${mascotStage * 25}%)` }} /></div><div className="min-w-0"><div className="flex flex-wrap items-center justify-between gap-1"><span className="flex items-center gap-1.5 text-xs font-semibold"><Trophy className="size-3.5 text-amber-500" />{mascot.title}</span><span className="font-mono text-xs font-semibold">{points} {text.points}</span></div><p className="mt-1 text-xs leading-5 text-muted-foreground">{mascot.message}</p><p className="mt-1 font-mono text-[11px] text-primary">{rankFor(points, locale)}</p></div></div></div></div>
         </aside>
 
         <section className="min-w-0 px-4 py-6 sm:px-7">
@@ -333,6 +360,7 @@ export default function Home() {
           {!result ? <div className="rounded-xl border border-dashed border-border p-4">{current.judge === 'simulation' && !engineReady ? <LoaderCircle className="mb-3 size-5 animate-spin text-primary" /> : <Circle className="mb-3 size-5 text-muted-foreground" />}<p className="text-sm font-medium">{current.judge === 'simulation' ? engineReady ? text.engineReady : text.engineLoading : current.judge === 'interactive' ? text.interactiveReady : current.judge === 'cnf' ? text.cnfReady : text.patternReady}</p><p className="mt-1 text-sm leading-6 text-muted-foreground">{text.waitingBody}</p></div> : result.ok ? <output className="block rounded-xl border border-success/30 bg-success/8 p-4"><div className="mb-2 flex items-center gap-2 font-medium text-success"><CheckCircle2 className="size-5" />{result.phase === 'pattern' ? (locale === 'zh' ? '結構檢查通過' : 'Structure checks passed') : text.passed}</div><p className="text-sm leading-6 text-muted-foreground">{result.phase === 'simulate' ? (locale === 'zh' ? '功能測試通過，不代表 CDC 結構、實體時序或 PPA 已 signoff。' : 'Functional tests passed; CDC structure, physical timing and PPA are not signed off.') : result.phase === 'pattern' ? (locale === 'zh' ? '未編譯或執行 UVM 模擬；此結果僅代表必要結構已找到。' : 'UVM was not compiled or simulated; only required structures were found.') : text.passedBody}</p>{result.elapsedMs !== undefined && <p className="mt-2 font-mono text-xs text-muted-foreground">{Math.round(result.elapsedMs)} ms</p>}</output> : <output className="block rounded-xl border border-destructive/30 bg-destructive/5 p-4"><div className="mb-2 flex items-center gap-2 font-medium text-destructive"><XCircle className="size-5" />{text.failed}</div><p className="text-xs uppercase tracking-wide text-muted-foreground">{result.phase}</p></output>}
           {result?.console && <pre className="mt-3 max-h-[290px] overflow-auto whitespace-pre-wrap rounded-lg bg-editor p-3 font-mono text-[11px] leading-5 text-editor-foreground">{result.console.replaceAll('@@PASS@@', '').replaceAll('@@FAIL@@', '').trim()}</pre>}
           <div className="mt-6"><p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">{text.testGroups}</p><ul className="space-y-3 text-sm">{current.testGroups.map((item, index) => <li key={index} className="flex items-start gap-2 text-muted-foreground"><span className={`mt-1.5 size-1.5 shrink-0 rounded-full ${result?.ok ? 'bg-success' : 'bg-border'}`} />{localize(item, locale)}</li>)}</ul></div>
+          <div className="mt-7 border-t border-border pt-5"><p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">{text.speaking}</p><ol className="space-y-3 text-sm">{speakingChecklist[current.track].map((item, index) => <li key={index} className="flex items-start gap-2 text-muted-foreground"><span className="grid size-5 shrink-0 place-items-center rounded-full bg-muted font-mono text-[10px] text-foreground">{index + 1}</span><span className="leading-5">{localize(item, locale)}</span></li>)}</ol></div>
           <div className="mt-7 border-t border-border pt-5"><div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-500" /><p className="text-xs leading-5 text-muted-foreground">{text.staticNote}</p></div></div>
         </aside>
       </div>

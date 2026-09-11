@@ -164,3 +164,17 @@ body {
   background: oklch(0.58 0.14 220 / 55%);
   -webkit-text-fill-color: transparent;
 }
+
+@keyframes mascot-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.mascot-float {
+  animation: mascot-float 3.6s ease-in-out infinite;
+  filter: drop-shadow(0 7px 8px oklch(0.22 0.04 240 / 18%));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot-float { animation: none; }
+}

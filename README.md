@@ -2,7 +2,9 @@
 
 An original, bilingual (Traditional Chinese / English) hands-on practice site for SoC and digital IC engineering.
 
-The current release contains 42 coding, debugging, constraint, and interactive challenges across RTL foundations, CDC/reset, timing closure, SoC/CPU/cache design, verification, PPA, DFT, and low power. The SoC track includes APB/AXI integration, a generic 1RW SRAM-compiler wrapper, CPU pipeline control, and a progressive cache-design path. The CDC track includes a complete asynchronous FIFO.
+The current release contains 48 coding, debugging, constraint, and interactive challenges. CPU/cache is now an independent track, separate from SoC and accelerator integration. The SoC path progresses from software-visible control and ready/valid flow through AXI/DMA, SRAM/CDC, command queues, mixed-precision arithmetic, and a streaming compute-tile capstone. The CDC track includes a complete asynchronous FIFO.
+
+An original penguin mascot evolves across four visual stages as local points increase, from logic apprentice to SoC architect.
 
 ## CPU and cache practice
 
@@ -21,6 +23,19 @@ The nine CPU/cache exercises are original Verilog-2005 labs with bilingual speci
 | Cache | Blocking miss controller | Hit, clean refill, dirty write-back, and back-pressure |
 
 These deliberately small models expose the architecture trade-offs: direct mapping uses one candidate and a short lookup path; set associativity adds comparators, a data mux, and replacement state to reduce conflict misses; fully associative lookup searches every entry and therefore fits only small structures. They are teaching components, not a complete ISA-compatible CPU, coherent cache, or production memory hierarchy.
+
+## SoC and accelerator integration practice
+
+The separate SoC track is organized around the boundaries a Linux-controlled FPGA accelerator must implement:
+
+| Stage | Exercises | Demonstrated capability |
+| --- | --- | --- |
+| Software control plane | APB register, AXI4-Lite register bank, W1C interrupt status | Explain register maps, start/status, sticky events and software-visible completion |
+| Data movement | Ready/valid register slice, AXI burst reader, strided DMA address generator, async FIFO, SRAM wrapper | Preserve payloads under back-pressure and align memory/CDC latency |
+| Compute | Signed INT8/INT4 dot product, streaming mixed-precision tile | Define packing, sign extension, accumulator width, job boundaries and throughput |
+| Scheduling and evidence | Round-robin arbiter, command FIFO, bit-true requantization and relative Yosys comparison | Queue multiple jobs and support design claims with automated evidence |
+
+Every track also includes a three-part speaking checklist. A solved badge is therefore only the first step: the learner should be able to state the cycle-level contract, identify a corner case and its verification evidence, and explain the relevant PPA or architecture trade-off without reading the solution.
 
 ## DFT and low-power practice
 

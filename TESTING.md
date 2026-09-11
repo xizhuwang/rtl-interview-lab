@@ -4,9 +4,9 @@
 
 Run `pnpm test`. The suite downloads SHA-256-verified upstream Icarus assets to an ignored `.engine-cache`, then uses the same compiler and simulator as the site, with a Node message-port shim around the browser worker. Nothing from this cache is published.
 
-The current run passes 211 assertions:
+The current run passes 314 assertions:
 
-- 42 unique challenge IDs and bilingual titles/descriptions, including nine CPU/cache labs.
+- 48 unique challenge IDs and bilingual titles/descriptions, including nine independent CPU/cache labs and eleven SoC/accelerator labs.
 - Every Verilog starter is normalized to a multiline, one-port-per-line module header and the formatted code is compiled by the regression.
 - Public exercise copy is checked for interview-source, company-name and personal-name leakage.
 - 30 Verilog tasks: positive fixtures accepted, VCD produced, and starter verdicts checked.

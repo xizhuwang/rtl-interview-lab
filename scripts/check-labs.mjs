@@ -7,7 +7,9 @@ async function loadTs(path) {
   let source = await readFile(new URL(path, import.meta.url), 'utf8');
   if (path.endsWith('/challenges.ts')) {
     const cpuModule = await loadTs('../lib/cpu-cache-challenges.ts');
+    const socAcceleratorModule = await loadTs('../lib/soc-accelerator-challenges.ts');
     source = source.replace("import { cpuCacheChallenges } from './cpu-cache-challenges';", `const cpuCacheChallenges=${JSON.stringify(cpuModule.cpuCacheChallenges)};`);
+    source = source.replace("import { socAcceleratorChallenges } from './soc-accelerator-challenges';", `const socAcceleratorChallenges=${JSON.stringify(socAcceleratorModule.socAcceleratorChallenges)};`);
   }
   const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } });
   return import('data:text/javascript;base64,' + Buffer.from(outputText).toString('base64'));
@@ -17,6 +19,7 @@ const { formatCodeForEditor } = await loadTs('../lib/code-format.ts');
 const { gradeXorCnf } = await loadTs('../lib/cnf.ts');
 const { patternFailures } = await loadTs('../lib/pattern-check.ts');
 const { learningContext } = await loadTs('../lib/learning-context.ts');
+const { boardImplementationCompetencies } = await loadTs('../lib/readiness.ts');
 let checks = 0;
 function verify(ok, name) { assert.ok(ok, name); checks++; console.log('PASS ' + name); }
 function simulate(design, testbench, timeout = 15000) {
@@ -30,13 +33,17 @@ function simulate(design, testbench, timeout = 15000) {
     });
   });
 }
-verify(challenges.length === 42 && new Set(challenges.map((c) => c.id)).size === 42, '42 unique bilingual challenges');
+verify(challenges.length === 48 && new Set(challenges.map((c) => c.id)).size === 48, '48 unique bilingual challenges');
 verify(challenges.filter(c=>c.track==='dft').length===3, 'Three DFT exercises');
 verify(challenges.filter(c=>c.track==='low-power').length===4, 'Four low-power exercises');
 verify(challenges.filter(c=>/^soc-(?:cpu|cache)-/.test(c.id)).length===9, 'Nine CPU and cache exercises');
+verify(challenges.filter(c=>c.track==='cpu-cache').length===9, 'CPU/cache is an independent track');
+verify(challenges.filter(c=>c.track==='soc').length===11, 'Eleven SoC and accelerator exercises');
+const competencyIds = boardImplementationCompetencies.flatMap(stage=>stage.challengeIds);
+verify(competencyIds.length===14 && competencyIds.every(id=>challenges.some(c=>c.id===id)), 'Board implementation competency set is complete');
 for (const c of challenges) {
   verify(Boolean(c.title.zh && c.title.en && c.description.zh && c.description.en), c.id + ' bilingual content');
-  if(c.track==='dft'||c.track==='low-power'||/^soc-(?:cpu|cache)-/.test(c.id)) {
+  if(c.track==='dft'||c.track==='low-power'||c.track==='cpu-cache'||c.order>=43) {
     const context=learningContext[c.id];
     verify(c.language==='Verilog-2005' && c.judge==='simulation' && c.hints.length===3
       && [...c.specs,...c.hints,...c.testGroups,context.why,context.roles].every(v=>v.zh&&v.en&&!/[\u4e00-\u9fff]/.test(v.en)), c.id+' three bilingual hints, rationale and role mapping');
