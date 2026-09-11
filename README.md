@@ -4,7 +4,7 @@ An original, bilingual (Traditional Chinese / English) hands-on practice site fo
 
 The current release contains 48 coding, debugging, constraint, and interactive challenges. CPU/cache is now an independent track, separate from SoC and accelerator integration. The SoC path progresses from software-visible control and ready/valid flow through AXI/DMA, SRAM/CDC, command queues, mixed-precision arithmetic, and a streaming compute-tile capstone. The CDC track includes a complete asynchronous FIFO.
 
-An original penguin mascot evolves across four visual stages as local points increase, from logic apprentice to SoC architect.
+An original penguin companion can be customized by gender and profession. Four electronic-fantasy professions map to real learning domains: CPU swordsman, SoC summoner, DFT healer, and timing/low-power mage. Local points unlock stronger rank and aura tiers; the preference remains in browser storage.
 
 ## CPU and cache practice
 

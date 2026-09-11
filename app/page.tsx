@@ -10,6 +10,7 @@ import {
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { WaveformViewer } from '@/components/waveform-viewer';
@@ -24,7 +25,9 @@ import { speakingChecklist } from '@/lib/readiness';
 type Result = { ok: boolean; phase: 'compile' | 'simulate' | 'pattern' | 'engine' | 'interactive' | 'cnf'; console: string; elapsedMs?: number };
 type AreaResult = { total: number; counts: Record<string, number>; referenceTotal: number | null; elapsedMs: number };
 type HoldLabState = { setup: number; hold: number; message: string; ok: boolean | null };
-const storageKeys = { locale: 'soc-rtl-lab:locale', solved: 'soc-rtl-lab:solved', code: 'soc-rtl-lab:solutions' };
+type MascotGender = 'masculine' | 'feminine';
+type MascotProfession = 'cpu' | 'soc' | 'dft' | 'timing';
+const storageKeys = { locale: 'soc-rtl-lab:locale', solved: 'soc-rtl-lab:solved', code: 'soc-rtl-lab:solutions', mascotGender: 'soc-rtl-lab:mascot-gender', mascotProfession: 'soc-rtl-lab:mascot-profession' };
 const browserStorage = {
   getItem: (key: string) => { try { return localStorage.getItem(key); } catch { return null; } },
   setItem: (key: string, value: string) => { try { localStorage.setItem(key, value); } catch { /* The session remains usable with storage disabled/full. */ } },
@@ -46,7 +49,7 @@ const copy = {
     source: '原始碼', noMatch: '找不到符合條件的題目。',
     estimate: 'Yosys 泛用 Cell 統計', estimating: 'Yosys 合成中…', genericCells: '泛用 cells', areaError: 'Yosys 合成失敗',
     whyTitle: '為什麼要學？', rolesTitle: '對應工作', reference: 'Reference solution', userResult: '你的 RTL', delta: '差異', waveform: '波形', commandGuide: '三套 APR 工具指令速查', commandCaution: '這些是常見流程範例，不是可直接複製到所有專案的完整腳本；請依工具版本、MMMC scenario、PDK 與公司 flow 確認。',
-    speaking: '完成後請用自己的話說清楚',
+    speaking: '完成後請用自己的話說清楚', mascotCustomize: '自訂企鵝', mascotGender: '企鵝性別', masculine: '男企鵝', feminine: '女企鵝', mascotProfession: '選擇職業', mascotDone: '完成', mascotDescription: '造型只增加學習樂趣；真正的能力仍以完成題目與說明設計取捨為準。',
   },
   en: {
     subtitle: 'Hands-on RTL, SoC, CDC, DFT and low-power practice', search: 'Search challenges', tracks: 'Learning tracks', all: 'All challenges',
@@ -62,22 +65,23 @@ const copy = {
     source: 'Source', noMatch: 'No challenge matches the current filters.',
     estimate: 'Yosys generic cell count', estimating: 'Synthesizing with Yosys…', genericCells: 'generic cells', areaError: 'Yosys synthesis failed',
     whyTitle: 'Why it matters', rolesTitle: 'Related roles', reference: 'Reference solution', userResult: 'Your RTL', delta: 'Delta', waveform: 'Waveform', commandGuide: 'APR command quick reference', commandCaution: 'These are common flow examples, not drop-in scripts for every project. Confirm tool release, MMMC scenarios, PDK, and company flow.',
-    speaking: 'Explain it in your own words after solving',
+    speaking: 'Explain it in your own words after solving', mascotCustomize: 'Customize penguin', mascotGender: 'Penguin gender', masculine: 'Male penguin', feminine: 'Female penguin', mascotProfession: 'Choose a profession', mascotDone: 'Done', mascotDescription: 'The mascot is for fun; real progress still comes from solving labs and explaining design trade-offs.',
   },
 };
 
-const mascotStages = {
+const mascotProfessions: Record<MascotProfession, { sprite: number; title: { zh: string; en: string }; field: { zh: string; en: string }; message: { zh: string; en: string } }> = {
+  cpu: { sprite: 0, title: { zh: '電子劍士', en: 'Circuit Swordsman' }, field: { zh: 'CPU 專家', en: 'CPU Specialist' }, message: { zh: '看清資料相依，再讓每一拍準確前進。', en: 'Resolve data dependencies and move every cycle forward precisely.' } },
+  soc: { sprite: 1, title: { zh: '電子召喚師', en: 'Silicon Summoner' }, field: { zh: 'SoC 整合專家', en: 'SoC Integration Specialist' }, message: { zh: '召集 IP、匯流排與記憶體，組成完整系統。', en: 'Bring IP, buses, and memory together as one system.' } },
+  dft: { sprite: 2, title: { zh: '電子補師', en: 'Silicon Healer' }, field: { zh: 'DFT 專家', en: 'DFT Specialist' }, message: { zh: '提高可控制性與可觀察性，把故障找出來。', en: 'Improve controllability and observability to expose faults.' } },
+  timing: { sprite: 3, title: { zh: '電子魔法師', en: 'Timing Mage' }, field: { zh: '時序與低功耗專家', en: 'Timing & Low-Power Specialist' }, message: { zh: '掌握 clock、slack 與功耗之間的平衡。', en: 'Balance clocks, slack, and power.' } },
+};
+
+const mascotTiers = {
   zh: [
-    { title: '邏輯學徒', message: '從第一個 always block 開始，我陪你。' },
-    { title: 'RTL Builder', message: '你已經能讓資料穩定地流動了。' },
-    { title: 'SoC Engineer', message: '把介面、CDC 與驗證串成一個系統。' },
-    { title: 'SoC Architect', message: '現在用數據與證據說服別人你的設計。' },
+    '見習', '進階', '菁英', '傳奇',
   ],
   en: [
-    { title: 'Logic Apprentice', message: 'I am with you from the first always block.' },
-    { title: 'RTL Builder', message: 'You can now keep data moving reliably.' },
-    { title: 'SoC Engineer', message: 'Connect interfaces, CDC, and verification into a system.' },
-    { title: 'SoC Architect', message: 'Now support your design with data and evidence.' },
+    'Apprentice', 'Advanced', 'Elite', 'Legendary',
   ],
 };
 
@@ -86,6 +90,11 @@ function mascotStageFor(points: number) {
   if (points >= 700) return 2;
   if (points >= 300) return 1;
   return 0;
+}
+
+function MascotAvatar({ gender, profession, tier, className = '' }: { gender: MascotGender; profession: MascotProfession; tier: number; className?: string }) {
+  const sprite = mascotProfessions[profession].sprite;
+  return <div className={`mascot-avatar mascot-tier-${tier} relative overflow-hidden ${className}`} role="img" aria-label={mascotProfessions[profession].title.en}><img src={`./mascot/penguin-classes-${gender}.png`} alt="" className="absolute left-0 top-0 h-full w-auto max-w-none transition-transform duration-500 ease-out" style={{ transform: `translateX(-${sprite * 25}%)` }} /></div>;
 }
 
 function rankFor(points: number, locale: Locale) {
@@ -111,6 +120,8 @@ export default function Home() {
   const [areaError, setAreaError] = useState('');
   const [estimating, setEstimating] = useState(false);
   const [waveformVcd, setWaveformVcd] = useState('');
+  const [mascotGender, setMascotGender] = useState<MascotGender>('masculine');
+  const [mascotProfession, setMascotProfession] = useState<MascotProfession>('soc');
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const pendingRequest = useRef<string | null>(null);
   const pendingSynth = useRef<string | null>(null);
@@ -145,7 +156,11 @@ export default function Home() {
       const savedLocale = browserStorage.getItem(storageKeys.locale) as Locale | null;
       const savedSolved = browserStorage.getItem(storageKeys.solved);
       const savedSolutions = browserStorage.getItem(storageKeys.code);
+      const savedMascotGender = browserStorage.getItem(storageKeys.mascotGender);
+      const savedMascotProfession = browserStorage.getItem(storageKeys.mascotProfession);
       if (savedLocale === 'zh' || savedLocale === 'en') setLocale(savedLocale);
+      if (savedMascotGender === 'masculine' || savedMascotGender === 'feminine') setMascotGender(savedMascotGender);
+      if (savedMascotProfession === 'cpu' || savedMascotProfession === 'soc' || savedMascotProfession === 'dft' || savedMascotProfession === 'timing') setMascotProfession(savedMascotProfession);
       try {
         const parsedSolved: unknown = JSON.parse(savedSolved ?? '[]');
         const parsedSolutions: unknown = JSON.parse(savedSolutions ?? '{}');
@@ -165,6 +180,8 @@ export default function Home() {
   }, []);
 
   useEffect(() => { if (storageLoaded.current) browserStorage.setItem(storageKeys.locale, locale); }, [locale]);
+  useEffect(() => { if (storageLoaded.current) browserStorage.setItem(storageKeys.mascotGender, mascotGender); }, [mascotGender]);
+  useEffect(() => { if (storageLoaded.current) browserStorage.setItem(storageKeys.mascotProfession, mascotProfession); }, [mascotProfession]);
   useEffect(() => { document.documentElement.lang = locale === 'zh' ? 'zh-Hant-TW' : 'en'; }, [locale]);
 
   useEffect(() => {
@@ -283,7 +300,8 @@ export default function Home() {
   const points = solved.reduce((sum, id) => sum + (challenges.find((item) => item.id === id)?.points ?? 0), 0);
   const progress = Math.round((solved.length / challenges.length) * 100);
   const mascotStage = mascotStageFor(points);
-  const mascot = mascotStages[locale][mascotStage];
+  const mascot = mascotProfessions[mascotProfession];
+  const mascotTitle = `${mascotTiers[locale][mascotStage]}${locale === 'zh' ? '' : ' '}${mascot.title[locale]}`;
   const currentIndex = challenges.findIndex((item) => item.id === current.id);
   const nextChallenge = challenges[(currentIndex + 1) % challenges.length];
   const editorFileName = current.language === 'CNF / DIMACS' ? 'formula.cnf' : current.language === 'SystemVerilog/UVM' ? 'scoreboard.sv' : 'solution.v';
@@ -323,7 +341,7 @@ export default function Home() {
           <div className="mt-5 max-h-40 space-y-1 overflow-y-auto border-t border-sidebar-border pt-4 sm:max-h-56 xl:max-h-[calc(100vh-420px)]">
             {filtered.length ? filtered.map((item) => <button key={item.id} type="button" onClick={() => selectChallenge(item.id)} className={`flex w-full items-start gap-2 rounded-lg px-2.5 py-2 text-left text-sm ${current.id === item.id ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/60'}`}>{solved.includes(item.id) ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" /> : <Circle className="mt-0.5 size-4 shrink-0 text-muted-foreground/50" />}<span className="min-w-0"><span className="block truncate">{localize(item.title, locale)}</span><span className="font-mono text-[10px] text-muted-foreground">{item.id}</span></span></button>) : <p className="px-2 text-xs leading-5 text-muted-foreground">{text.noMatch}</p>}
           </div>
-          <div className="mt-5 border-t border-sidebar-border pt-4"><div className="mb-2 flex items-center justify-between text-xs"><span className="text-muted-foreground">{text.progress}</span><span className="font-mono">{solved.length} / {challenges.length}</span></div><Progress value={progress} className="h-1.5" /><div className="mt-3 overflow-hidden rounded-xl border border-sidebar-border bg-sidebar-accent"><div className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-3 p-2.5"><div className="mascot-float relative h-24 w-[72px] overflow-hidden" role="img" aria-label={mascot.title}><img src="./mascot/penguin-evolution.png" alt="" className="absolute left-0 top-0 h-full w-auto max-w-none transition-transform duration-500 ease-out" style={{ transform: `translateX(-${mascotStage * 25}%)` }} /></div><div className="min-w-0"><div className="flex flex-wrap items-center justify-between gap-1"><span className="flex items-center gap-1.5 text-xs font-semibold"><Trophy className="size-3.5 text-amber-500" />{mascot.title}</span><span className="font-mono text-xs font-semibold">{points} {text.points}</span></div><p className="mt-1 text-xs leading-5 text-muted-foreground">{mascot.message}</p><p className="mt-1 font-mono text-[11px] text-primary">{rankFor(points, locale)}</p></div></div></div></div>
+          <div className="mt-5 border-t border-sidebar-border pt-4"><div className="mb-2 flex items-center justify-between text-xs"><span className="text-muted-foreground">{text.progress}</span><span className="font-mono">{solved.length} / {challenges.length}</span></div><Progress value={progress} className="h-1.5" /><div className="mt-3 overflow-hidden rounded-xl border border-sidebar-border bg-sidebar-accent"><div className="grid grid-cols-[78px_minmax(0,1fr)] items-center gap-3 p-2.5"><MascotAvatar gender={mascotGender} profession={mascotProfession} tier={mascotStage} className="h-[104px] w-[78px]" /><div className="min-w-0"><div className="flex flex-wrap items-center justify-between gap-1"><span className="flex items-center gap-1.5 text-xs font-semibold"><Trophy className="size-3.5 text-amber-500" />{mascotTitle}</span><span className="font-mono text-xs font-semibold">{points} {text.points}</span></div><p className="mt-1 text-[11px] font-medium text-primary">{mascot.field[locale]}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{mascot.message[locale]}</p><Dialog><DialogTrigger render={<button type="button" className="mt-2 text-xs font-medium text-primary hover:underline" />}>{text.mascotCustomize}</DialogTrigger><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"><DialogHeader><DialogTitle>{text.mascotCustomize}</DialogTitle><DialogDescription>{text.mascotDescription}</DialogDescription></DialogHeader><div><p className="mb-2 text-sm font-semibold">{text.mascotGender}</p><div className="grid grid-cols-2 gap-2">{(['masculine', 'feminine'] as MascotGender[]).map((gender) => <button key={gender} type="button" aria-pressed={mascotGender === gender} onClick={() => setMascotGender(gender)} className={`rounded-lg border px-3 py-2 text-sm transition-colors ${mascotGender === gender ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-muted'}`}>{gender === 'masculine' ? text.masculine : text.feminine}</button>)}</div></div><div><p className="mb-2 text-sm font-semibold">{text.mascotProfession}</p><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{(Object.keys(mascotProfessions) as MascotProfession[]).map((profession) => { const item = mascotProfessions[profession]; return <button key={profession} type="button" aria-pressed={mascotProfession === profession} onClick={() => setMascotProfession(profession)} className={`rounded-xl border p-2 text-center transition-colors ${mascotProfession === profession ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted'}`}><MascotAvatar gender={mascotGender} profession={profession} tier={mascotStage} className="mx-auto h-24 w-[72px]" /><span className="mt-1 block text-xs font-semibold">{item.title[locale]}</span><span className="mt-0.5 block text-[11px] leading-4 text-muted-foreground">{item.field[locale]}</span></button>; })}</div></div><DialogClose render={<Button className="w-full" />}>{text.mascotDone}</DialogClose></DialogContent></Dialog></div></div></div></div>
         </aside>
 
         <section className="min-w-0 px-4 py-6 sm:px-7">
