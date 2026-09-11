@@ -1,11 +1,20 @@
 'use client';
 /* eslint-disable next/no-html-link-for-pages, next/no-img-element -- Static public assets use CSS sprite sheets. */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react';
 import {
   AlertTriangle,
   ArrowRight,
+  BatteryCharging,
   BookOpen,
+  BookOpenCheck,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -16,7 +25,11 @@ import {
   Coins,
   Cpu,
   ExternalLink,
+  Flame,
   Gauge,
+  Gem,
+  Gift,
+  HeartPulse,
   Languages,
   Lightbulb,
   LoaderCircle,
@@ -24,10 +37,18 @@ import {
   Play,
   RotateCcw,
   Search,
+  ScanLine,
+  Share2,
   ShieldCheck,
+  Shield,
   ShoppingBag,
+  Sparkles,
+  Sword,
   TerminalSquare,
+  Target,
   Trophy,
+  Waves,
+  Wind,
   XCircle,
 } from 'lucide-react';
 
@@ -82,8 +103,36 @@ type HoldLabState = {
 type MascotGender = 'masculine' | 'feminine';
 type MascotProfession = 'novice' | 'cpu' | 'soc' | 'dft' | 'timing';
 type UnlockableProfession = Exclude<MascotProfession, 'novice'>;
-type EquipmentId = 'visor' | 'crystal' | 'drone';
+type EquipmentId =
+  | 'visor'
+  | 'crystal'
+  | 'drone'
+  | 'cpuBlade'
+  | 'cpuShield'
+  | 'socQuiver'
+  | 'socCompass'
+  | 'dftLantern'
+  | 'dftProbe'
+  | 'timingGrimoire'
+  | 'lowPowerCharm';
+type EquipmentIconId =
+  | 'visor'
+  | 'crystal'
+  | 'drone'
+  | 'sword'
+  | 'shield'
+  | 'target'
+  | 'network'
+  | 'healer'
+  | 'scan'
+  | 'book'
+  | 'battery';
+type ElementId = 'fire' | 'water' | 'wind' | 'earth';
+type ElementLevels = Record<ElementId, number>;
+type BattleStatus = 'idle' | 'running' | 'success' | 'failure';
+const emptyElementLevels: ElementLevels = { fire: 0, water: 0, wind: 0, earth: 0 };
 const storageKeys = {
+  schemaVersion: 'soc-rtl-lab:schema-version',
   locale: 'soc-rtl-lab:locale',
   solved: 'soc-rtl-lab:solved',
   code: 'soc-rtl-lab:solutions',
@@ -91,6 +140,9 @@ const storageKeys = {
   mascotProfession: 'soc-rtl-lab:mascot-profession',
   ownedEquipment: 'soc-rtl-lab:owned-equipment',
   equippedEquipment: 'soc-rtl-lab:equipped-equipment',
+  equipmentSpend: 'soc-rtl-lab:equipment-spend',
+  elementLevels: 'soc-rtl-lab:element-levels',
+  elementSpend: 'soc-rtl-lab:element-spend',
 };
 const browserStorage = {
   getItem: (key: string) => {
@@ -176,7 +228,7 @@ const copy = {
     mascotProfession: '職業解鎖',
     mascotDone: '完成',
     mascotDescription:
-      '完成指定領域題目可解鎖職業；解題所得點數可購買裝備。購買不會降低總分與等級。',
+      '完成指定領域題目可解鎖職業；解題所得點數可購買裝備與附魔。消費不會降低總分與等級。',
     wallet: '可用點數',
     equipment: '裝備商店',
     buy: '購買',
@@ -187,6 +239,19 @@ const copy = {
     locked: '尚未解鎖',
     solvedNeeded: '題完成',
     hintBuddy: '卡住時，我會陪你逐步拆解；先自己推一拍訊號，再使用提示。',
+    enchantments: '屬性石附魔',
+    enchantmentBody: '每次強化都會提高戰鬥特效強度；集齊火、水、風、土可解鎖四靈根融合特效。',
+    enhance: '強化',
+    level: '階',
+    fourRoots: '四靈根已解鎖',
+    battleRunning: '正在攻擊 RTL 稻草人，逐拍檢查你的電路…',
+    battleSuccess: '測試命中！所有測資通過。',
+    battleFailure: '稻草人擋下攻擊；從第一個 mismatch 開始除錯。',
+    mascotInteract: '點企鵝互動',
+    support: '贊助開發',
+    supportBody: '目前可透過綠界贊助本站，但不會自動增加點數。付費點數與送禮需等帳號、後端驗簽、退款及交易紀錄完成後才會開放。',
+    supportAction: '前往綠界贊助',
+    paidPointsPending: '付費點數尚未開放',
   },
   en: {
     subtitle: 'Hands-on RTL, SoC, CDC, DFT and low-power practice',
@@ -253,7 +318,7 @@ const copy = {
     mascotProfession: 'Profession unlocks',
     mascotDone: 'Done',
     mascotDescription:
-      'Solve domain challenges to unlock professions, then spend earned points on gear. Purchases never reduce your score or rank.',
+      'Solve domain challenges to unlock professions, then spend earned points on gear and enchantments. Spending never reduces your score or rank.',
     wallet: 'Spendable points',
     equipment: 'Equipment shop',
     buy: 'Buy',
@@ -265,6 +330,19 @@ const copy = {
     solvedNeeded: 'solved',
     hintBuddy:
       'When you get stuck, I will help you break it down. Trace one cycle yourself before using a hint.',
+    enchantments: 'Element stones',
+    enchantmentBody: 'Each upgrade intensifies the visible battle effect. Collect fire, water, wind, and earth to unlock the Four Roots fusion.',
+    enhance: 'Enhance',
+    level: 'Lv.',
+    fourRoots: 'Four Roots unlocked',
+    battleRunning: 'Attacking the RTL dummy and checking your design cycle by cycle…',
+    battleSuccess: 'Direct hit! Every test passed.',
+    battleFailure: 'The dummy blocked the attack. Debug from the first mismatch.',
+    mascotInteract: 'Interact with the penguin',
+    support: 'Support development',
+    supportBody: 'You can currently support the site through ECPay, but payments do not automatically grant points. Paid points and gifting will open only after accounts, server-side verification, refunds, and transaction records are ready.',
+    supportAction: 'Support via ECPay',
+    paidPointsPending: 'Paid points are not available yet',
   },
 };
 
@@ -337,15 +415,17 @@ const professionUnlocks: Record<
 const equipmentCatalog: Record<
   EquipmentId,
   {
-    sprite: number;
+    icon: EquipmentIconId;
     cost: number;
+    profession: MascotProfession | 'all';
     name: { zh: string; en: string };
     effect: { zh: string; en: string };
   }
 > = {
   visor: {
-    sprite: 0,
-    cost: 120,
+    icon: 'visor',
+    cost: 600,
+    profession: 'all',
     name: { zh: 'Debug 護目鏡', en: 'Debug Visor' },
     effect: {
       zh: '陪你看清波形與錯誤訊息。',
@@ -353,8 +433,9 @@ const equipmentCatalog: Record<
     },
   },
   crystal: {
-    sprite: 1,
-    cost: 220,
+    icon: 'crystal',
+    cost: 900,
+    profession: 'all',
     name: { zh: 'Timing 水晶', en: 'Timing Crystal' },
     effect: {
       zh: '提醒你同時檢查 setup 與 hold。',
@@ -362,15 +443,86 @@ const equipmentCatalog: Record<
     },
   },
   drone: {
-    sprite: 2,
-    cost: 350,
+    icon: 'drone',
+    cost: 1200,
+    profession: 'all',
     name: { zh: '晶片夥伴', en: 'Chip Companion' },
     effect: {
       zh: '在 SoC 整合與除錯時並肩偵察。',
       en: 'Scouts beside you during SoC integration and debug.',
     },
   },
+  cpuBlade: {
+    icon: 'sword', cost: 900, profession: 'cpu',
+    name: { zh: 'Forwarding 光刃', en: 'Forwarding Blade' },
+    effect: { zh: '把資料相依化成可追蹤的旁路斬擊。', en: 'Turns data dependencies into a traceable bypass strike.' },
+  },
+  cpuShield: {
+    icon: 'shield', cost: 1450, profession: 'cpu',
+    name: { zh: 'Pipeline 護盾', en: 'Pipeline Shield' },
+    effect: { zh: '提醒你同步檢查 stall、flush 與 valid。', en: 'Keeps stall, flush, and valid aligned during debug.' },
+  },
+  socQuiver: {
+    icon: 'target', cost: 950, profession: 'soc',
+    name: { zh: 'AXI 箭匣', en: 'AXI Quiver' },
+    effect: { zh: '瞄準 ready／valid、burst 與 backpressure。', en: 'Targets ready/valid, bursts, and backpressure.' },
+  },
+  socCompass: {
+    icon: 'network', cost: 1500, profession: 'soc',
+    name: { zh: 'Interconnect 羅盤', en: 'Interconnect Compass' },
+    effect: { zh: '沿著 address map 與資料流定位整合錯誤。', en: 'Traces integration faults through address maps and dataflow.' },
+  },
+  dftLantern: {
+    icon: 'healer', cost: 850, profession: 'dft',
+    name: { zh: 'Scan 診斷燈', en: 'Scan Diagnostic Lantern' },
+    effect: { zh: '照亮可控制性、可觀察性與未知值來源。', en: 'Illuminates controllability, observability, and X sources.' },
+  },
+  dftProbe: {
+    icon: 'scan', cost: 1400, profession: 'dft',
+    name: { zh: 'Fault 探針', en: 'Fault Probe' },
+    effect: { zh: '追蹤 stuck-at、transition 與 MBIST failure。', en: 'Tracks stuck-at, transition, and MBIST failures.' },
+  },
+  timingGrimoire: {
+    icon: 'book', cost: 1000, profession: 'timing',
+    name: { zh: 'STA 魔導書', en: 'STA Grimoire' },
+    effect: { zh: '把 clock、constraint 與 path report 串成因果。', en: 'Connects clocks, constraints, and path reports into one cause.' },
+  },
+  lowPowerCharm: {
+    icon: 'battery', cost: 1600, profession: 'timing',
+    name: { zh: 'Low-Power 月墜', en: 'Low-Power Moon Charm' },
+    effect: { zh: '守護 clock gating、isolation 與 retention 順序。', en: 'Guards clock gating, isolation, and retention sequencing.' },
+  },
 };
+
+const elementCatalog: Record<
+  ElementId,
+  { name: { zh: string; en: string }; effect: { zh: string; en: string }; className: string }
+> = {
+  fire: { name: { zh: '火屬性石', en: 'Fire Stone' }, effect: { zh: '失敗時標亮第一個 mismatch，像熱點一樣聚焦 root cause。', en: 'Highlights the first mismatch like a hotspot around the root cause.' }, className: 'element-fire' },
+  water: { name: { zh: '水屬性石', en: 'Water Stone' }, effect: { zh: '讓波形比較更清楚，強調訊號前後週期的流動。', en: 'Clarifies waveform comparison and cycle-to-cycle signal flow.' }, className: 'element-water' },
+  wind: { name: { zh: '風屬性石', en: 'Wind Stone' }, effect: { zh: '加強編譯與 regression 的速度感，提醒先縮小失敗範圍。', en: 'Adds regression speed and reminds you to narrow the failing scope.' }, className: 'element-wind' },
+  earth: { name: { zh: '土屬性石', en: 'Earth Stone' }, effect: { zh: '強調 assertion、邊界條件與可重現測資的穩定基礎。', en: 'Reinforces assertions, boundaries, and reproducible tests.' }, className: 'element-earth' },
+};
+
+const elementUpgradeCost = (level: number) => 450 + level * 350;
+
+function EquipmentIcon({ id, className = '' }: { id: EquipmentIconId; className?: string }) {
+  const icons = {
+    visor: Search,
+    crystal: Gem,
+    drone: Cpu,
+    sword: Sword,
+    shield: Shield,
+    target: Target,
+    network: Share2,
+    healer: HeartPulse,
+    scan: ScanLine,
+    book: BookOpenCheck,
+    battery: BatteryCharging,
+  };
+  const Icon = icons[id];
+  return <Icon className={className} aria-hidden="true" />;
+}
 
 const mascotTiers = {
   zh: ['見習', '進階', '菁英', '傳奇'],
@@ -412,7 +564,7 @@ function MascotAvatar({
       className={`mascot-avatar mascot-tier-${tier} relative overflow-visible ${className}`}
       aria-label={mascotProfessions[profession].title.en}
     >
-      <div className="absolute inset-0 overflow-hidden">
+      <div className="mascot-character-frame absolute inset-0 overflow-hidden">
         <img
           src={image}
           alt=""
@@ -421,18 +573,109 @@ function MascotAvatar({
         />
       </div>
       {equipment && (
-        <div className="mascot-equipment absolute -bottom-1 -right-2 z-10 aspect-square w-[38%] overflow-hidden rounded-full border border-white/70 bg-card/90 shadow-md">
-          <img
-            src="./mascot/penguin-equipment.png"
-            alt=""
-            className="absolute left-0 top-0 h-full w-auto max-w-none"
-            style={{
-              transform: `translateX(-${equipmentCatalog[equipment].sprite * (100 / 3)}%)`,
-            }}
+        <div className={`mascot-equipment mascot-equipment-${equipmentCatalog[equipment].profession} absolute bottom-[14%] right-[2%] z-10 grid aspect-square w-[34%] place-items-center rounded-xl border border-cyan-200/80 bg-slate-950/88 text-cyan-200 shadow-lg`}>
+          <EquipmentIcon
+            id={equipmentCatalog[equipment].icon}
+            className="size-[68%] drop-shadow-[0_0_6px_currentColor]"
           />
         </div>
       )}
     </div>
+  );
+}
+
+function BattleArena({
+  gender,
+  profession,
+  tier,
+  equipment,
+  elements,
+  status,
+  message,
+  interactionLabel,
+  locale,
+  tapNonce,
+  onInteract,
+}: {
+  gender: MascotGender;
+  profession: MascotProfession;
+  tier: number;
+  equipment: EquipmentId | null;
+  elements: ElementLevels;
+  status: BattleStatus;
+  message: string;
+  interactionLabel: string;
+  locale: Locale;
+  tapNonce: number;
+  onInteract: () => void;
+}) {
+  const rootsUnlocked = Object.values(elements).every((level) => level > 0);
+  const totalElementLevel = Object.values(elements).reduce((sum, level) => sum + level, 0);
+  const activeElements = (Object.keys(elements) as ElementId[]).filter(
+    (element) => elements[element] > 0,
+  );
+  const battleStyle = {
+    '--effect-level': Math.min(5, Math.max(1, totalElementLevel)),
+  } as CSSProperties;
+
+  return (
+    <section
+      className={`mascot-battle-arena battle-${status} profession-${profession} ${rootsUnlocked ? 'four-roots-active' : ''}`}
+      style={battleStyle}
+      aria-live="polite"
+    >
+      <div className="mascot-battle-grid" aria-hidden="true" />
+      <button
+        key={`fighter-${tapNonce}`}
+        type="button"
+        onClick={onInteract}
+        className="mascot-battle-actor mascot-tapped"
+        aria-label={interactionLabel}
+      >
+        <MascotAvatar
+          gender={gender}
+          profession={profession}
+          tier={tier}
+          equipment={equipment}
+          className="h-[116px] w-[88px] sm:h-[132px] sm:w-[99px]"
+        />
+      </button>
+      <div className="mascot-attack-path" aria-hidden="true">
+        <span className="attack-core" />
+        <span className="attack-trail attack-trail-a" />
+        <span className="attack-trail attack-trail-b" />
+        {activeElements.map((element) => (
+          <span
+            key={element}
+            className={`element-particle ${elementCatalog[element].className}`}
+            style={{ '--stone-level': Math.min(5, elements[element]) } as CSSProperties}
+          />
+        ))}
+      </div>
+      <div className="rtl-dummy-wrap" aria-hidden="true">
+        <span className="dummy-hit-ring" />
+        <img src="./mascot/rtl-training-dummy.png" alt="" className="rtl-dummy" />
+        <span className="rtl-dummy-label">RTL</span>
+      </div>
+      <div className="mascot-battle-copy">
+        <p className="text-sm font-semibold text-slate-100">{message}</p>
+        <div className="mt-1 flex flex-wrap gap-1.5">
+          {activeElements.map((element) => (
+            <span key={element} className={`element-chip ${elementCatalog[element].className}`}>
+              {locale === 'zh'
+                ? elementCatalog[element].name.zh.replace('屬性石', '')
+                : elementCatalog[element].name.en.replace(' Stone', '')}{' '}
+              {elements[element]}
+            </span>
+          ))}
+          {rootsUnlocked && (
+            <span className="four-roots-chip">
+              <Sparkles className="size-3" /> Four Roots
+            </span>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -458,9 +701,17 @@ export default function Home() {
   const [ownedEquipment, setOwnedEquipment] = useState<EquipmentId[]>([]);
   const [equippedEquipment, setEquippedEquipment] =
     useState<EquipmentId | null>(null);
+  const [equipmentSpend, setEquipmentSpend] = useState(0);
+  const [elementLevels, setElementLevels] = useState<ElementLevels>({
+    ...emptyElementLevels,
+  });
+  const [elementSpend, setElementSpend] = useState(0);
+  const [mascotTapNonce, setMascotTapNonce] = useState(0);
+  const [mascotInteraction, setMascotInteraction] = useState('');
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const pendingRequest = useRef<string | null>(null);
   const pendingSynth = useRef<string | null>(null);
+  const instantJudgeTimer = useRef<number | null>(null);
   const storageLoaded = useRef(false);
   const current =
     challenges.find((item) => item.id === selectedId) ?? challenges[0];
@@ -498,6 +749,11 @@ export default function Home() {
     setAreaError('');
     setRevealedHints(0);
     setHoldLab({ ...initialHoldLab });
+    setMascotInteraction('');
+    if (instantJudgeTimer.current !== null) {
+      window.clearTimeout(instantJudgeTimer.current);
+      instantJudgeTimer.current = null;
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
     return true;
   }, []);
@@ -521,6 +777,9 @@ export default function Home() {
       const savedEquippedEquipment = browserStorage.getItem(
         storageKeys.equippedEquipment,
       );
+      const savedEquipmentSpend = browserStorage.getItem(storageKeys.equipmentSpend);
+      const savedElementLevels = browserStorage.getItem(storageKeys.elementLevels);
+      const savedElementSpend = browserStorage.getItem(storageKeys.elementSpend);
       if (savedLocale === 'zh' || savedLocale === 'en') setLocale(savedLocale);
       if (savedMascotGender === 'masculine' || savedMascotGender === 'feminine')
         setMascotGender(savedMascotGender);
@@ -538,6 +797,9 @@ export default function Home() {
         const parsedOwnedEquipment: unknown = JSON.parse(
           savedOwnedEquipment ?? '[]',
         );
+        const parsedElementLevels: unknown = JSON.parse(
+          savedElementLevels ?? JSON.stringify(emptyElementLevels),
+        );
         if (Array.isArray(parsedSolved))
           setSolved([
             ...new Set(
@@ -549,20 +811,68 @@ export default function Home() {
             ),
           ]);
         if (Array.isArray(parsedOwnedEquipment))
-          setOwnedEquipment([
-            ...new Set(
-              parsedOwnedEquipment.filter(
-                (id): id is EquipmentId =>
-                  id === 'visor' || id === 'crystal' || id === 'drone',
+          {
+            const migratedOwned = [
+              ...new Set(
+                parsedOwnedEquipment.filter(
+                  (id): id is EquipmentId =>
+                    typeof id === 'string' && id in equipmentCatalog,
+                ),
               ),
-            ),
-          ]);
+            ];
+            setOwnedEquipment(migratedOwned);
+            const parsedSpend = Number(savedEquipmentSpend);
+            if (
+              savedEquipmentSpend !== null &&
+              Number.isFinite(parsedSpend) &&
+              parsedSpend >= 0
+            ) {
+              setEquipmentSpend(parsedSpend);
+            } else {
+              const legacyPrices: Partial<Record<EquipmentId, number>> = {
+                visor: 120,
+                crystal: 220,
+                drone: 350,
+              };
+              setEquipmentSpend(
+                migratedOwned.reduce(
+                  (sum, id) => sum + (legacyPrices[id] ?? equipmentCatalog[id].cost),
+                  0,
+                ),
+              );
+            }
+          }
         if (
-          savedEquippedEquipment === 'visor' ||
-          savedEquippedEquipment === 'crystal' ||
-          savedEquippedEquipment === 'drone'
+          savedEquippedEquipment &&
+          savedEquippedEquipment in equipmentCatalog
         )
-          setEquippedEquipment(savedEquippedEquipment);
+          setEquippedEquipment(savedEquippedEquipment as EquipmentId);
+        if (parsedElementLevels && typeof parsedElementLevels === 'object') {
+          const migratedElements = (Object.keys(emptyElementLevels) as ElementId[]).reduce(
+            (next, element) => {
+              const value = Number((parsedElementLevels as Record<string, unknown>)[element]);
+              next[element] = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+              return next;
+            },
+            { ...emptyElementLevels },
+          );
+          setElementLevels(migratedElements);
+          const parsedSpend = Number(savedElementSpend);
+          setElementSpend(
+            savedElementSpend !== null &&
+            Number.isFinite(parsedSpend) && parsedSpend >= 0
+              ? parsedSpend
+              : (Object.keys(migratedElements) as ElementId[]).reduce(
+                  (sum, element) => {
+                    let subtotal = 0;
+                    for (let level = 0; level < migratedElements[element]; level += 1)
+                      subtotal += elementUpgradeCost(level);
+                    return sum + subtotal;
+                  },
+                  0,
+                ),
+          );
+        }
         if (
           parsedSolutions &&
           typeof parsedSolutions === 'object' &&
@@ -590,6 +900,7 @@ export default function Home() {
         /* Ignore malformed saved data without overwriting it. */
       }
       storageLoaded.current = true;
+      browserStorage.setItem(storageKeys.schemaVersion, '2');
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
@@ -620,6 +931,18 @@ export default function Home() {
         equippedEquipment ?? '',
       );
   }, [equippedEquipment]);
+  useEffect(() => {
+    if (storageLoaded.current)
+      browserStorage.setItem(storageKeys.equipmentSpend, String(equipmentSpend));
+  }, [equipmentSpend]);
+  useEffect(() => {
+    if (storageLoaded.current)
+      browserStorage.setItem(storageKeys.elementLevels, JSON.stringify(elementLevels));
+  }, [elementLevels]);
+  useEffect(() => {
+    if (storageLoaded.current)
+      browserStorage.setItem(storageKeys.elementSpend, String(elementSpend));
+  }, [elementSpend]);
   useEffect(() => {
     document.documentElement.lang = locale === 'zh' ? 'zh-Hant-TW' : 'en';
   }, [locale]);
@@ -737,6 +1060,10 @@ export default function Home() {
       window.location.origin,
     );
     setRunning(false);
+    if (instantJudgeTimer.current !== null) {
+      window.clearTimeout(instantJudgeTimer.current);
+      instantJudgeTimer.current = null;
+    }
     setEstimating(false);
     setAreaResult(null);
     setAreaError('');
@@ -771,21 +1098,32 @@ export default function Home() {
   };
 
   const run = () => {
+    setMascotInteraction('');
     setResult(null);
     setWaveformVcd('');
     if (current.judge === 'pattern') {
-      gradePatterns();
+      setRunning(true);
+      instantJudgeTimer.current = window.setTimeout(() => {
+        gradePatterns();
+        setRunning(false);
+        instantJudgeTimer.current = null;
+      }, 650);
       return;
     }
     if (current.judge === 'cnf') {
-      const graded = gradeXorCnf(code, locale);
-      setResult({
-        ok: graded.ok,
-        phase: 'cnf',
-        console: graded.message,
-        elapsedMs: 0,
-      });
-      if (graded.ok) markSolved(current.id);
+      setRunning(true);
+      instantJudgeTimer.current = window.setTimeout(() => {
+        const graded = gradeXorCnf(code, locale);
+        setResult({
+          ok: graded.ok,
+          phase: 'cnf',
+          console: graded.message,
+          elapsedMs: 0,
+        });
+        setRunning(false);
+        instantJudgeTimer.current = null;
+        if (graded.ok) markSolved(current.id);
+      }, 650);
       return;
     }
     if (!engineReady || !iframeRef.current?.contentWindow) {
@@ -810,6 +1148,7 @@ export default function Home() {
   const runHoldAction = (
     action: 'delay' | 'pipeline' | 'false-path' | 'speed-up',
   ) => {
+    setMascotInteraction('');
     const messages =
       locale === 'zh'
         ? {
@@ -903,10 +1242,7 @@ export default function Home() {
       },
     ),
   ) as Record<UnlockableProfession, { count: number; unlocked: boolean }>;
-  const spentPoints = ownedEquipment.reduce(
-    (sum, id) => sum + equipmentCatalog[id].cost,
-    0,
-  );
+  const spentPoints = equipmentSpend + elementSpend;
   const walletPoints = Math.max(0, points - spentPoints);
   const progress = Math.round((solved.length / challenges.length) * 100);
   const mascotStage = mascotStageFor(points);
@@ -916,9 +1252,20 @@ export default function Home() {
       ? 'novice'
       : mascotProfession;
   const activeEquipment =
-    equippedEquipment && ownedEquipment.includes(equippedEquipment)
+    equippedEquipment &&
+    ownedEquipment.includes(equippedEquipment) &&
+    (equipmentCatalog[equippedEquipment].profession === 'all' ||
+      equipmentCatalog[equippedEquipment].profession === activeMascotProfession)
       ? equippedEquipment
       : null;
+  const battleStatus: BattleStatus = running
+    ? 'running'
+    : result
+      ? result.ok
+        ? 'success'
+        : 'failure'
+      : 'idle';
+  const battleVisible = running || result !== null;
   const mascot = mascotProfessions[activeMascotProfession];
   const mascotTitle =
     activeMascotProfession === 'novice'
@@ -952,8 +1299,45 @@ export default function Home() {
     if (ownedEquipment.includes(id) || walletPoints < equipmentCatalog[id].cost)
       return;
     setOwnedEquipment((previous) => [...previous, id]);
+    setEquipmentSpend((previous) => previous + equipmentCatalog[id].cost);
     setEquippedEquipment(id);
   };
+
+  const buyElementStone = (element: ElementId) => {
+    const cost = elementUpgradeCost(elementLevels[element]);
+    if (walletPoints < cost) return;
+    setElementSpend((previous) => previous + cost);
+    setElementLevels((previous) => ({
+      ...previous,
+      [element]: previous[element] + 1,
+    }));
+  };
+
+  const interactWithMascot = () => {
+    const lines =
+      locale === 'zh'
+        ? [
+            '先看第一個失敗 cycle，不要從最後一拍猜。',
+            '把 expected 與 actual 對齊同一筆 transaction。',
+            '先確認 reset、valid／ready 與 latency。',
+            '波形是證據；最後要能說出 root cause。',
+          ]
+        : [
+            'Start at the first failing cycle, not the final symptom.',
+            'Align expected and actual to the same transaction.',
+            'Check reset, valid/ready, and latency first.',
+            'Waveforms are evidence; finish with the root cause.',
+          ];
+    setMascotTapNonce((value) => value + 1);
+    setMascotInteraction(lines[mascotTapNonce % lines.length]);
+  };
+
+  const battleMessage = mascotInteraction ||
+    (battleStatus === 'running'
+      ? text.battleRunning
+      : battleStatus === 'success'
+        ? text.battleSuccess
+        : text.battleFailure);
 
   const selectProfession = (profession: MascotProfession) => {
     if (profession === 'novice' || professionProgress[profession].unlocked)
@@ -1253,24 +1637,25 @@ export default function Home() {
                               const item = equipmentCatalog[id];
                               const owned = ownedEquipment.includes(id);
                               const equipped = activeEquipment === id;
+                              const classLocked =
+                                item.profession !== 'all' &&
+                                item.profession !== activeMascotProfession;
                               return (
                                 <div
                                   key={id}
-                                  className={`rounded-xl border p-3 ${equipped ? 'border-primary bg-primary/5' : 'border-border'}`}
+                                  className={`rounded-xl border p-3 ${equipped ? 'border-primary bg-primary/5' : 'border-border'} ${classLocked ? 'opacity-65' : ''}`}
                                 >
-                                  <div className="mx-auto aspect-square w-20 overflow-hidden">
-                                    <img
-                                      src="./mascot/penguin-equipment.png"
-                                      alt=""
-                                      className="h-full w-auto max-w-none"
-                                      style={{
-                                        transform: `translateX(-${item.sprite * (100 / 3)}%)`,
-                                      }}
-                                    />
+                                  <div className={`equipment-shop-icon equipment-${item.profession}`}>
+                                    <EquipmentIcon id={item.icon} className="size-10" />
                                   </div>
                                   <p className="mt-2 text-center text-sm font-semibold">
                                     {item.name[locale]}
                                   </p>
+                                  {item.profession !== 'all' && (
+                                    <p className="mt-1 text-center text-[10px] font-semibold uppercase tracking-wide text-primary">
+                                      {mascotProfessions[item.profession].field[locale]}
+                                    </p>
+                                  )}
                                   <p className="mt-1 min-h-10 text-center text-xs leading-5 text-muted-foreground">
                                     {item.effect[locale]}
                                   </p>
@@ -1281,30 +1666,94 @@ export default function Home() {
                                       }
                                       size="sm"
                                       className="mt-2 w-full"
+                                      disabled={classLocked}
                                       onClick={() =>
                                         setEquippedEquipment(
                                           equipped ? null : id,
                                         )
                                       }
                                     >
-                                      {equipped ? text.unequip : text.equip}
+                                      {classLocked
+                                        ? text.locked
+                                        : equipped
+                                          ? text.unequip
+                                          : text.equip}
                                     </Button>
                                   ) : (
                                     <Button
                                       variant="outline"
                                       size="sm"
                                       className="mt-2 w-full"
-                                      disabled={walletPoints < item.cost}
+                                      disabled={walletPoints < item.cost || classLocked}
                                       onClick={() => buyEquipment(id)}
                                     >
-                                      <Coins />
-                                      {text.buy} · {item.cost}
+                                      {classLocked ? <LockKeyhole /> : <Coins />}
+                                      {classLocked ? text.locked : `${text.buy} · ${item.cost}`}
                                     </Button>
                                   )}
                                 </div>
                               );
                             },
                           )}
+                        </div>
+                      </div>
+                      <div className="border-t border-border pt-4">
+                        <div className="mb-3">
+                          <p className="text-sm font-semibold">{text.enchantments}</p>
+                          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                            {text.enchantmentBody}
+                          </p>
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                          {(Object.keys(elementCatalog) as ElementId[]).map((element) => {
+                            const item = elementCatalog[element];
+                            const level = elementLevels[element];
+                            const cost = elementUpgradeCost(level);
+                            const Icon = element === 'fire' ? Flame : element === 'water' ? Waves : element === 'wind' ? Wind : Shield;
+                            return (
+                              <div key={element} className={`element-stone-card ${item.className}`}>
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="element-stone-icon"><Icon className="size-6" /></span>
+                                  <span className="font-mono text-xs font-semibold">
+                                    {text.level} {level}
+                                  </span>
+                                </div>
+                                <p className="mt-3 text-sm font-semibold">{item.name[locale]}</p>
+                                <p className="mt-1 min-h-16 text-xs leading-5 text-muted-foreground">{item.effect[locale]}</p>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="mt-2 w-full"
+                                  disabled={walletPoints < cost}
+                                  onClick={() => buyElementStone(element)}
+                                >
+                                  <Gem /> {text.enhance} · {cost}
+                                </Button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {Object.values(elementLevels).every((level) => level > 0) && (
+                          <p className="mt-3 flex items-center justify-center gap-2 rounded-lg border border-fuchsia-300/50 bg-fuchsia-500/10 px-3 py-2 text-sm font-semibold text-fuchsia-700 dark:text-fuchsia-200">
+                            <Sparkles className="size-4" /> {text.fourRoots}
+                          </p>
+                        )}
+                      </div>
+                      <div className="rounded-xl border border-dashed border-border bg-muted/35 p-4">
+                        <div className="flex items-start gap-3">
+                          <Gift className="mt-0.5 size-5 shrink-0 text-primary" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold">{text.support}</p>
+                            <p className="mt-1 text-xs leading-5 text-muted-foreground">{text.supportBody}</p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <Button size="sm" render={<a href="https://cashier.ecpay.com.tw/omn/co14098/ac84586/order?portal=1" target="_blank" rel="noreferrer" aria-label={text.supportAction} />}>
+                                <ExternalLink /> {text.supportAction}
+                              </Button>
+                              <Button size="sm" variant="outline" disabled>
+                                <Coins /> {text.paidPointsPending}
+                              </Button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                       <DialogClose render={<Button className="w-full" />}>
@@ -1397,18 +1846,26 @@ export default function Home() {
               </div>
             )}
             <div className="mt-4 grid grid-cols-[84px_minmax(0,1fr)] items-end gap-3 border-t border-border pt-4 sm:grid-cols-[104px_minmax(0,1fr)]">
-              <MascotAvatar
-                gender={mascotGender}
-                profession={activeMascotProfession}
-                tier={mascotStage}
-                equipment={activeEquipment}
-                className="h-28 w-[84px] sm:h-[139px] sm:w-[104px]"
-              />
+              <button
+                key={`hint-${mascotTapNonce}`}
+                type="button"
+                onClick={interactWithMascot}
+                aria-label={text.mascotInteract}
+                className={`mascot-hint-button mascot-tapped ${battleVisible ? 'mascot-departed' : ''}`}
+              >
+                <MascotAvatar
+                  gender={mascotGender}
+                  profession={activeMascotProfession}
+                  tier={mascotStage}
+                  equipment={activeEquipment}
+                  className="h-28 w-[84px] sm:h-[139px] sm:w-[104px]"
+                />
+              </button>
               <div className="min-w-0">
                 <div className="relative rounded-xl rounded-bl-sm border border-primary/20 bg-primary/5 px-3 py-2.5 text-xs leading-5 text-muted-foreground before:absolute before:-left-2 before:bottom-3 before:size-4 before:rotate-45 before:border-b before:border-l before:border-primary/20 before:bg-card">
                   <span className="relative">
                     <strong className="font-semibold text-foreground">
-                      {mascot.message[locale]}
+                      {mascotInteraction || mascot.message[locale]}
                     </strong>{' '}
                     {text.hintBuddy}
                   </span>
@@ -1650,6 +2107,21 @@ export default function Home() {
                 </Button>
               </div>
             </div>
+          )}
+          {battleVisible && (
+            <BattleArena
+              gender={mascotGender}
+              profession={activeMascotProfession}
+              tier={mascotStage}
+              equipment={activeEquipment}
+              elements={elementLevels}
+              status={battleStatus}
+              message={battleMessage}
+              interactionLabel={text.mascotInteract}
+              locale={locale}
+              tapNonce={mascotTapNonce}
+              onInteract={interactWithMascot}
+            />
           )}
           {waveformVcd && <WaveformViewer vcd={waveformVcd} locale={locale} />}
           <div className="mt-6 rounded-xl border border-border bg-muted/30 p-4">
@@ -1913,6 +2385,14 @@ export default function Home() {
             {locale === 'zh'
               ? '題目採用自行撰寫的簡化模型，未附商用 PDK、SRAM IP、標準全文或公司內部資料。結果僅供教學，不等同正式 CDC／STA／APR／Formal signoff；公開測資與本機積分不具防作弊保證。'
               : 'Exercises use independently written simplified models, not commercial PDKs, SRAM IP, full standards or internal company materials. Results are educational, not CDC/STA/APR/formal signoff. Public tests and local scores are not cheat-resistant.'}
+          </p>
+          <p className="mt-2">
+            {locale === 'zh'
+              ? '贊助按鈕會離開本站並前往綠界頁面；本站不接觸或保存信用卡、銀行帳戶等付款資料，且現階段付款不會增加遊戲點數。付款頁的資料處理由綠界隱私權政策規範。'
+              : 'The support button leaves this site for ECPay. This site does not receive or store card or bank data, and payments currently grant no game points. Data entered on the payment page is governed by ECPay’s privacy policy.'}{' '}
+            <a className="underline" href="https://support.ecpay.com.tw/18188/" target="_blank" rel="noreferrer">
+              ECPay privacy
+            </a>
           </p>
           <p className="mt-2">
             <a className="underline" href="./THIRD_PARTY_NOTICES.txt">

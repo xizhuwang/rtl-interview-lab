@@ -197,11 +197,454 @@ body {
 }
 
 .mascot-character {
+  clip-path: inset(1px);
   filter: drop-shadow(0 7px 8px oklch(0.22 0.04 240 / 18%));
+}
+
+.mascot-character-frame {
+  inset: 2px;
 }
 
 .mascot-equipment {
   animation: mascot-equipment-pulse 2.4s ease-in-out infinite;
+  box-shadow:
+    0 5px 12px oklch(0.18 0.04 245 / 35%),
+    inset 0 0 10px oklch(0.74 0.15 205 / 18%);
+}
+
+.mascot-equipment-cpu {
+  color: oklch(0.82 0.17 205);
+}
+.mascot-equipment-soc {
+  color: oklch(0.83 0.15 180);
+}
+.mascot-equipment-dft {
+  color: oklch(0.82 0.2 145);
+}
+.mascot-equipment-timing {
+  color: oklch(0.82 0.17 75);
+}
+
+.mascot-hint-button {
+  align-self: end;
+  border-radius: 1rem;
+  cursor: pointer;
+  transition: filter 180ms ease, opacity 280ms ease, transform 280ms ease;
+}
+
+.mascot-hint-button:hover,
+.mascot-battle-actor:hover {
+  filter: brightness(1.08) drop-shadow(0 0 8px oklch(0.77 0.15 205 / 45%));
+  transform: translateY(-4px) rotate(-1deg);
+}
+
+.mascot-hint-button:focus-visible,
+.mascot-battle-actor:focus-visible {
+  outline: 3px solid oklch(0.67 0.15 215 / 55%);
+  outline-offset: 3px;
+}
+
+.mascot-departed {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(34px) scale(0.86);
+}
+
+@keyframes mascot-tap {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  32% { transform: translateY(-9px) rotate(-4deg); }
+  62% { transform: translateY(-3px) rotate(4deg); }
+}
+
+.mascot-tapped {
+  animation: mascot-tap 440ms cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+
+.equipment-shop-icon {
+  align-items: center;
+  background: linear-gradient(145deg, oklch(0.24 0.05 245), oklch(0.17 0.04 250));
+  border: 1px solid oklch(0.7 0.14 210 / 40%);
+  border-radius: 1rem;
+  color: oklch(0.82 0.16 205);
+  display: flex;
+  height: 5rem;
+  justify-content: center;
+  margin-inline: auto;
+  position: relative;
+  width: 5rem;
+}
+
+.equipment-shop-icon::after {
+  background: radial-gradient(circle, currentColor 0 1px, transparent 2px);
+  background-size: 10px 10px;
+  content: '';
+  inset: 8px;
+  opacity: 0.18;
+  position: absolute;
+}
+
+.equipment-cpu { color: oklch(0.83 0.16 205); }
+.equipment-soc { color: oklch(0.82 0.15 180); }
+.equipment-dft { color: oklch(0.82 0.2 145); }
+.equipment-timing { color: oklch(0.84 0.17 75); }
+
+.element-stone-card {
+  border: 1px solid var(--stone-border);
+  border-radius: 0.85rem;
+  background: linear-gradient(145deg, var(--stone-bg), transparent 70%);
+  padding: 0.8rem;
+}
+
+.element-stone-icon {
+  background: var(--stone-bg);
+  border: 1px solid var(--stone-border);
+  border-radius: 999px;
+  color: var(--stone-color);
+  display: grid;
+  height: 2.5rem;
+  place-items: center;
+  width: 2.5rem;
+}
+
+.element-fire {
+  --stone-color: oklch(0.68 0.23 35);
+  --stone-bg: oklch(0.68 0.23 35 / 12%);
+  --stone-border: oklch(0.68 0.23 35 / 35%);
+}
+.element-water {
+  --stone-color: oklch(0.66 0.18 238);
+  --stone-bg: oklch(0.66 0.18 238 / 12%);
+  --stone-border: oklch(0.66 0.18 238 / 35%);
+}
+.element-wind {
+  --stone-color: oklch(0.72 0.16 180);
+  --stone-bg: oklch(0.72 0.16 180 / 12%);
+  --stone-border: oklch(0.72 0.16 180 / 35%);
+}
+.element-earth {
+  --stone-color: oklch(0.64 0.15 105);
+  --stone-bg: oklch(0.64 0.15 105 / 12%);
+  --stone-border: oklch(0.64 0.15 105 / 35%);
+}
+
+.mascot-battle-arena {
+  background:
+    radial-gradient(circle at 16% 42%, oklch(0.7 0.14 215 / 10%), transparent 26%),
+    linear-gradient(135deg, oklch(0.2 0.035 247), oklch(0.15 0.025 255));
+  border: 1px solid oklch(0.5 0.07 225 / 48%);
+  border-radius: 1rem;
+  color: oklch(0.94 0.02 220);
+  display: grid;
+  grid-template-columns: 100px minmax(90px, 1fr) 112px;
+  isolation: isolate;
+  margin-top: 1rem;
+  min-height: 184px;
+  overflow: hidden;
+  padding: 0.75rem 0.9rem 0.8rem;
+  position: relative;
+}
+
+.mascot-battle-grid {
+  background-image:
+    linear-gradient(oklch(0.7 0.08 215 / 7%) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.7 0.08 215 / 7%) 1px, transparent 1px);
+  background-size: 22px 22px;
+  inset: 0;
+  mask-image: linear-gradient(to bottom, black, transparent 88%);
+  pointer-events: none;
+  position: absolute;
+  z-index: -1;
+}
+
+.mascot-battle-actor {
+  align-self: end;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  justify-self: start;
+  position: relative;
+  transition: filter 180ms ease, transform 180ms ease;
+  z-index: 4;
+}
+
+.battle-running .mascot-battle-actor {
+  animation: fighter-charge 780ms ease-in-out infinite alternate;
+}
+
+@keyframes fighter-charge {
+  from { transform: translateX(0) rotate(-1deg); }
+  to { transform: translateX(8px) translateY(-2px) rotate(2deg); }
+}
+
+.mascot-attack-path {
+  align-self: center;
+  height: 80px;
+  min-width: 0;
+  position: relative;
+  z-index: 3;
+}
+
+.attack-core,
+.attack-trail,
+.element-particle {
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+}
+
+.attack-core {
+  background: oklch(0.82 0.18 205);
+  box-shadow: 0 0 calc(6px + var(--effect-level) * 2px) currentColor;
+  color: oklch(0.82 0.18 205);
+  height: 5px;
+  transform-origin: left center;
+  width: min(86%, 310px);
+}
+
+.profession-cpu .attack-core {
+  border-radius: 100% 0;
+  height: 8px;
+  transform: rotate(-8deg);
+}
+
+.profession-soc .attack-core {
+  clip-path: polygon(0 38%, 82% 38%, 82% 0, 100% 50%, 82% 100%, 82% 62%, 0 62%);
+  height: 22px;
+}
+
+.profession-dft .attack-core {
+  background: transparent;
+  border: 4px solid oklch(0.78 0.2 145);
+  border-radius: 999px;
+  color: oklch(0.78 0.2 145);
+  height: 38px;
+  width: 38px;
+}
+
+.profession-timing .attack-core {
+  background: oklch(0.82 0.18 78);
+  clip-path: polygon(0 40%, 32% 34%, 42% 0, 55% 54%, 100% 46%, 64% 60%, 54% 100%, 42% 62%, 0 68%);
+  color: oklch(0.82 0.18 78);
+  height: 36px;
+}
+
+.profession-novice .attack-core {
+  background: repeating-linear-gradient(90deg, currentColor 0 8px, transparent 8px 14px);
+}
+
+.battle-running .attack-core,
+.battle-success .attack-core,
+.battle-failure .attack-core {
+  animation: attack-flight 720ms ease-out infinite;
+}
+
+.battle-success .attack-core,
+.battle-failure .attack-core {
+  animation-iteration-count: 2;
+}
+
+@keyframes attack-flight {
+  0% { opacity: 0; scale: 0.15 0.7; translate: 0 -50%; }
+  24% { opacity: 1; }
+  78% { opacity: 1; }
+  100% { opacity: 0; scale: 1 1; translate: 92% -50%; }
+}
+
+.profession-dft .attack-core {
+  animation-name: scan-pulse;
+}
+
+@keyframes scan-pulse {
+  0% { opacity: 0; scale: 0.3; translate: 0 -50%; }
+  30% { opacity: 1; }
+  100% { opacity: 0; scale: 1.4; translate: min(420%, 240px) -50%; }
+}
+
+.attack-trail {
+  background: linear-gradient(90deg, transparent, oklch(0.75 0.12 205 / 55%), transparent);
+  height: 2px;
+  width: 70%;
+}
+
+.attack-trail-a { transform: translateY(-18px) rotate(5deg); }
+.attack-trail-b { transform: translateY(18px) rotate(-5deg); }
+
+.battle-running .attack-trail,
+.battle-success .attack-trail,
+.battle-failure .attack-trail {
+  animation: trail-flight 680ms ease-in-out infinite;
+}
+.battle-success .attack-trail,
+.battle-failure .attack-trail { animation-iteration-count: 2; }
+
+@keyframes trail-flight {
+  0% { opacity: 0; translate: -12% -50%; }
+  45% { opacity: 0.8; }
+  100% { opacity: 0; translate: 65% -50%; }
+}
+
+.element-particle {
+  background: var(--stone-color);
+  border-radius: 999px;
+  box-shadow:
+    0 0 calc(5px + var(--stone-level) * 3px) var(--stone-color),
+    calc(12px + var(--stone-level) * 2px) -12px 0 -2px var(--stone-color),
+    calc(24px + var(--stone-level) * 4px) 12px 0 -3px var(--stone-color);
+  height: calc(5px + var(--stone-level) * 1px);
+  width: calc(5px + var(--stone-level) * 1px);
+}
+
+.battle-running .element-particle,
+.battle-success .element-particle,
+.battle-failure .element-particle {
+  animation: element-flight calc(880ms - var(--stone-level) * 35ms) linear infinite;
+}
+.battle-success .element-particle,
+.battle-failure .element-particle { animation-iteration-count: 2; }
+
+@keyframes element-flight {
+  0% { opacity: 0; translate: 0 -50%; rotate: 0deg; }
+  20% { opacity: 0.95; }
+  100% { opacity: 0; translate: min(900%, 320px) -50%; rotate: 300deg; }
+}
+
+.four-roots-active .mascot-attack-path::after {
+  animation: roots-fusion 1.1s linear infinite;
+  background: conic-gradient(from 0deg, #ff6b35, #49a9ff, #6ee7d2, #c3a33b, #ff6b35);
+  border-radius: 999px;
+  box-shadow: 0 0 calc(12px + var(--effect-level) * 3px) oklch(0.75 0.2 305 / 60%);
+  content: '';
+  height: 22px;
+  opacity: 0.9;
+  position: absolute;
+  right: 4%;
+  top: calc(50% - 11px);
+  width: 22px;
+}
+
+@keyframes roots-fusion {
+  to { rotate: 360deg; }
+}
+
+.rtl-dummy-wrap {
+  align-self: center;
+  height: 126px;
+  justify-self: end;
+  position: relative;
+  width: 108px;
+  z-index: 4;
+}
+
+.rtl-dummy {
+  filter: drop-shadow(0 8px 10px oklch(0.05 0.02 250 / 45%));
+  height: 100%;
+  object-fit: contain;
+  width: 100%;
+}
+
+.rtl-dummy-label {
+  background: oklch(0.17 0.04 250 / 88%);
+  border: 1px solid oklch(0.75 0.15 205 / 55%);
+  border-radius: 999px;
+  bottom: 10px;
+  color: oklch(0.87 0.12 205);
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 700;
+  left: 50%;
+  letter-spacing: 0.12em;
+  padding: 2px 7px;
+  position: absolute;
+  translate: -50% 0;
+}
+
+.dummy-hit-ring {
+  border: 3px solid oklch(0.82 0.17 205 / 70%);
+  border-radius: 999px;
+  height: 48px;
+  left: 50%;
+  opacity: 0;
+  position: absolute;
+  top: 42%;
+  translate: -50% -50%;
+  width: 48px;
+}
+
+.battle-running .dummy-hit-ring,
+.battle-success .dummy-hit-ring,
+.battle-failure .dummy-hit-ring {
+  animation: dummy-hit 720ms ease-out infinite;
+}
+.battle-success .dummy-hit-ring { border-color: oklch(0.78 0.21 145); }
+.battle-failure .dummy-hit-ring { border-color: oklch(0.68 0.22 25); }
+
+@keyframes dummy-hit {
+  35% { opacity: 0; scale: 0.5; }
+  70% { opacity: 1; }
+  100% { opacity: 0; scale: 1.7; }
+}
+
+.battle-success .rtl-dummy { animation: dummy-success 560ms ease-out 2; }
+.battle-failure .rtl-dummy { animation: dummy-failure 320ms ease-in-out 2; }
+
+@keyframes dummy-success {
+  0%, 100% { transform: rotate(0); filter: drop-shadow(0 8px 10px oklch(0.05 0.02 250 / 45%)); }
+  40% { transform: rotate(4deg) scale(1.03); filter: drop-shadow(0 0 13px oklch(0.78 0.21 145 / 70%)); }
+}
+@keyframes dummy-failure {
+  0%, 100% { transform: translateX(0); }
+  35% { transform: translateX(-3px) rotate(-2deg); }
+  70% { transform: translateX(3px) rotate(2deg); }
+}
+
+.mascot-battle-copy {
+  align-self: center;
+  background: oklch(0.13 0.025 250 / 76%);
+  border: 1px solid oklch(0.55 0.08 220 / 34%);
+  border-radius: 0.75rem;
+  grid-column: 1 / -1;
+  margin-top: 0.3rem;
+  padding: 0.65rem 0.75rem;
+  z-index: 5;
+}
+
+.element-chip,
+.four-roots-chip {
+  align-items: center;
+  background: var(--stone-bg);
+  border: 1px solid var(--stone-border);
+  border-radius: 999px;
+  color: var(--stone-color);
+  display: inline-flex;
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 700;
+  gap: 3px;
+  padding: 2px 7px;
+}
+
+.four-roots-chip {
+  --stone-color: oklch(0.86 0.17 315);
+  --stone-bg: oklch(0.6 0.2 315 / 15%);
+  --stone-border: oklch(0.7 0.2 315 / 45%);
+}
+
+@media (max-width: 520px) {
+  .mascot-battle-arena {
+    grid-template-columns: 82px minmax(50px, 1fr) 86px;
+    min-height: 176px;
+    padding-inline: 0.55rem;
+  }
+  .rtl-dummy-wrap {
+    height: 106px;
+    width: 82px;
+  }
+  .mascot-battle-actor .mascot-avatar {
+    height: 105px !important;
+    width: 78px !important;
+  }
 }
 
 @keyframes mascot-equipment-pulse {
@@ -246,7 +689,15 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .mascot-avatar,
   .mascot-tier-3::before,
-  .mascot-equipment {
+  .mascot-equipment,
+  .mascot-tapped,
+  .battle-running .mascot-battle-actor,
+  .attack-core,
+  .attack-trail,
+  .element-particle,
+  .dummy-hit-ring,
+  .rtl-dummy,
+  .four-roots-active .mascot-attack-path::after {
     animation: none;
   }
 }

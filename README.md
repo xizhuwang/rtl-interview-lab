@@ -4,7 +4,11 @@ An original, bilingual (Traditional Chinese / English) hands-on practice site fo
 
 The current release contains 48 coding, debugging, constraint, and interactive challenges. CPU/cache is now an independent track, separate from SoC and accelerator integration. The SoC path progresses from software-visible control and ready/valid flow through AXI/DMA, SRAM/CDC, command queues, mixed-precision arithmetic, and a streaming compute-tile capstone. The CDC track includes a complete asynchronous FIFO.
 
-An original penguin companion appears beside the progressive hints and can be customized from the sidebar. Domain completions unlock four electronic-fantasy professions: CPU swordsman, SoC archer, DFT healer, and timing/low-power mage. Earned points preserve rank/aura progress while a separate spendable balance buys one of three starter equipment items; profession, purchases, and equipped gear remain in browser storage.
+An original penguin companion appears beside progressive hints and can be customized from the sidebar. Domain completions unlock four electronic-fantasy professions: CPU swordsman, SoC archer, DFT healer, and timing/low-power mage. Running a test moves the companion into a reserved battle lane, where each profession uses a distinct attack against an original RTL training dummy without covering waveforms or diagnostics. Earned points preserve rank/aura progress while a separate spendable balance buys common and profession-specific equipment. Fire, water, wind, and earth stones add visible debug-themed effects; collecting all four unlocks a combined Four Roots effect.
+
+The ECPay button is currently a transparent support link only. It does not grant points. Automatic paid points and gifting are intentionally disabled until a server can create orders, verify ECPay callbacks, store entitlements and transaction records, and support refunds. Merchant secrets must never be placed in this public GitHub Pages repository.
+
+See [MONETIZATION.md](MONETIZATION.md) for the paid-point architecture, suggested packs, privacy boundaries, and launch checklist.
 
 ## CPU and cache practice
 
@@ -69,7 +73,7 @@ Public conceptual references (not copied exercise/test content): [OpenROAD DFT](
 - The UVM exercise is a structural code-review lab, not a substitute for compiling the full UVM library in VCS, Xcelium, or Questa.
 - A simulation pass is not CDC signoff, static timing closure, or a proof of physical PPA. The miter exercise enumerates all 16 combinational input patterns; it does not run an industrial formal engine.
 - Each challenge has three progressively revealed hints, inspired by coding-practice sites but implemented with original content and local-only progress.
-- Progress and points use `localStorage`; the application has no code-submission backend. GitHub Pages shares browser storage across projects on the same origin. Do not enter confidential RTL or personal data. GitHub/jsDelivr may receive request metadata when serving the site/tools.
+- Progress, earned points, equipment, element levels, and exact historical spend use stable, versioned `localStorage` keys. New releases migrate additively and do not clear existing solutions or completion records. The application has no code-submission backend. GitHub Pages shares browser storage across projects on the same origin. Do not enter confidential RTL or personal data. GitHub/jsDelivr may receive request metadata when serving the site/tools.
 
 Because GitHub Pages is static, bundled tests are inspectable. A trustworthy global leaderboard or truly hidden tests would require a separate sandboxed backend.
 

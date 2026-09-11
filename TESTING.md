@@ -44,6 +44,13 @@ Verified in Chromium through the visible UI of the production Pages build:
 - The browser loader was tested with upstream hash checks and blob-module URL resolution.
 - Public GitHub Pages: invalid syntax fails at compilation; valid RTL passes and renders expected/DUT signals. CNF XOR succeeds; all four hold choices produce the intended verdict; live Yosys returns 38/38 cells.
 
+## Mascot and persistence acceptance — 2026-09-11
+
+- Running a correct simulation moves the penguin into a separate battle lane, targets the RTL training dummy, shows the pass message, and keeps the waveform fully unobstructed.
+- The narrow-screen shop keeps class cards, equipment prices, element descriptions, and upgrade controls readable inside a scrollable dialog.
+- Existing solution/completion keys are unchanged. New equipment spend and element-state keys are additive; legacy equipment purchases migrate using their historical prices instead of the new catalog prices.
+- The ECPay control is an external support link only. The interface does not grant points or claim payment success, and no merchant secret is present in the browser bundle.
+
 ## Additional manual acceptance checklist
 
 These are not represented by the automated Node assertions:
@@ -56,6 +63,8 @@ These are not represented by the automated Node assertions:
 6. Open the read-only SRAM model. Confirm line numbers, syntax colors, multiline ports and horizontal scrolling remain readable; compare its port map against the wrapper interface.
 7. Run Yosys on both PPA exercises; confirm user/reference counts load and network failures show an error. Yosys downloads from an external CDN.
 8. In the hold lab, compare all four repair choices. These numbers are illustrative, not a live APR report.
+9. Unlock each profession and run one pass and one failure. Confirm sword slash, AXI arrow, scan pulse, and timing bolt are visually distinct and never cover editor, waveform, or diagnostics.
+10. Upgrade each element more than once. Confirm the visible particle intensity increases and the Four Roots fusion appears only after all four elements reach level 1.
 
 ## Scope and limitations
 
