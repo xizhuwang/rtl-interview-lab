@@ -144,6 +144,12 @@ const storageKeys = {
   elementLevels: 'soc-rtl-lab:element-levels',
   elementSpend: 'soc-rtl-lab:element-spend',
 };
+// Public collection links are safe to keep in the client. Never place ECPay
+// MerchantID, HashKey, HashIV, or API credentials in this repository.
+const supportConfig = {
+  ecpayUrl:
+    'https://cashier.ecpay.com.tw/omn/co14098/ac84586/order?portal=1',
+};
 const browserStorage = {
   getItem: (key: string) => {
     try {
@@ -249,7 +255,7 @@ const copy = {
     battleFailure: '稻草人擋下攻擊；從第一個 mismatch 開始除錯。',
     mascotInteract: '點企鵝互動',
     support: '贊助開發',
-    supportBody: '目前可透過綠界贊助本站，但不會自動增加點數。付費點數與送禮需等帳號、後端驗簽、退款及交易紀錄完成後才會開放。',
+    supportBody: '目前可透過綠界自願支持本站，但不會自動增加點數，也不宣稱為可抵稅的公益捐款。付費點數與送禮需等帳號、後端驗簽、退款及交易紀錄完成後才會開放。',
     supportAction: '前往綠界贊助',
     paidPointsPending: '付費點數尚未開放',
   },
@@ -340,7 +346,7 @@ const copy = {
     battleFailure: 'The dummy blocked the attack. Debug from the first mismatch.',
     mascotInteract: 'Interact with the penguin',
     support: 'Support development',
-    supportBody: 'You can currently support the site through ECPay, but payments do not automatically grant points. Paid points and gifting will open only after accounts, server-side verification, refunds, and transaction records are ready.',
+    supportBody: 'You can voluntarily support the site through ECPay, but payments do not automatically grant points and are not presented as tax-deductible charitable donations. Paid points and gifting will open only after accounts, server-side verification, refunds, and transaction records are ready.',
     supportAction: 'Support via ECPay',
     paidPointsPending: 'Paid points are not available yet',
   },
@@ -591,11 +597,6 @@ function BattleArena({
   equipment,
   elements,
   status,
-  message,
-  interactionLabel,
-  locale,
-  tapNonce,
-  onInteract,
 }: {
   gender: MascotGender;
   profession: MascotProfession;
@@ -603,11 +604,6 @@ function BattleArena({
   equipment: EquipmentId | null;
   elements: ElementLevels;
   status: BattleStatus;
-  message: string;
-  interactionLabel: string;
-  locale: Locale;
-  tapNonce: number;
-  onInteract: () => void;
 }) {
   const rootsUnlocked = Object.values(elements).every((level) => level > 0);
   const totalElementLevel = Object.values(elements).reduce((sum, level) => sum + level, 0);
@@ -619,19 +615,12 @@ function BattleArena({
   } as CSSProperties;
 
   return (
-    <section
+    <div
       className={`mascot-battle-arena battle-${status} profession-${profession} ${rootsUnlocked ? 'four-roots-active' : ''}`}
       style={battleStyle}
-      aria-live="polite"
+      aria-hidden="true"
     >
-      <div className="mascot-battle-grid" aria-hidden="true" />
-      <button
-        key={`fighter-${tapNonce}`}
-        type="button"
-        onClick={onInteract}
-        className="mascot-battle-actor mascot-tapped"
-        aria-label={interactionLabel}
-      >
+      <div className="mascot-battle-actor">
         <MascotAvatar
           gender={gender}
           profession={profession}
@@ -639,7 +628,7 @@ function BattleArena({
           equipment={equipment}
           className="h-[116px] w-[88px] sm:h-[132px] sm:w-[99px]"
         />
-      </button>
+      </div>
       <div className="mascot-attack-path" aria-hidden="true">
         <span className="attack-core" />
         <span className="attack-trail attack-trail-a" />
@@ -657,25 +646,7 @@ function BattleArena({
         <img src="./mascot/rtl-training-dummy.png" alt="" className="rtl-dummy" />
         <span className="rtl-dummy-label">RTL</span>
       </div>
-      <div className="mascot-battle-copy">
-        <p className="text-sm font-semibold text-slate-100">{message}</p>
-        <div className="mt-1 flex flex-wrap gap-1.5">
-          {activeElements.map((element) => (
-            <span key={element} className={`element-chip ${elementCatalog[element].className}`}>
-              {locale === 'zh'
-                ? elementCatalog[element].name.zh.replace('屬性石', '')
-                : elementCatalog[element].name.en.replace(' Stone', '')}{' '}
-              {elements[element]}
-            </span>
-          ))}
-          {rootsUnlocked && (
-            <span className="four-roots-chip">
-              <Sparkles className="size-3" /> Four Roots
-            </span>
-          )}
-        </div>
-      </div>
-    </section>
+    </div>
   );
 }
 
@@ -688,6 +659,7 @@ export default function Home() {
   const [solved, setSolved] = useState<string[]>([]);
   const [result, setResult] = useState<Result | null>(null);
   const [running, setRunning] = useState(false);
+  const [battleVisible, setBattleVisible] = useState(false);
   const [engineReady, setEngineReady] = useState(false);
   const [revealedHints, setRevealedHints] = useState(0);
   const [holdLab, setHoldLab] = useState<HoldLabState>({ ...initialHoldLab });
@@ -712,6 +684,7 @@ export default function Home() {
   const pendingRequest = useRef<string | null>(null);
   const pendingSynth = useRef<string | null>(null);
   const instantJudgeTimer = useRef<number | null>(null);
+  const battleReturnTimer = useRef<number | null>(null);
   const storageLoaded = useRef(false);
   const current =
     challenges.find((item) => item.id === selectedId) ?? challenges[0];
@@ -722,6 +695,22 @@ export default function Home() {
     [current.starter, current.language],
   );
   const code = solutions[current.id] ?? starterCode;
+
+  const startBattle = useCallback(() => {
+    if (battleReturnTimer.current !== null)
+      window.clearTimeout(battleReturnTimer.current);
+    battleReturnTimer.current = null;
+    setBattleVisible(true);
+  }, []);
+
+  const scheduleMascotReturn = useCallback(() => {
+    if (battleReturnTimer.current !== null)
+      window.clearTimeout(battleReturnTimer.current);
+    battleReturnTimer.current = window.setTimeout(() => {
+      setBattleVisible(false);
+      battleReturnTimer.current = null;
+    }, 1400);
+  }, []);
 
   const markSolved = useCallback((id: string) => {
     setSolved((previous) => {
@@ -741,6 +730,7 @@ export default function Home() {
       window.location.origin,
     );
     setRunning(false);
+    setBattleVisible(false);
     setEstimating(false);
     setSelectedId(id);
     setResult(null);
@@ -753,6 +743,10 @@ export default function Home() {
     if (instantJudgeTimer.current !== null) {
       window.clearTimeout(instantJudgeTimer.current);
       instantJudgeTimer.current = null;
+    }
+    if (battleReturnTimer.current !== null) {
+      window.clearTimeout(battleReturnTimer.current);
+      battleReturnTimer.current = null;
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
     return true;
@@ -984,11 +978,12 @@ export default function Home() {
       setResult(next);
       setWaveformVcd(String(event.data.vcd || ''));
       setRunning(false);
+      scheduleMascotReturn();
       if (next.ok) markSolved(current.id);
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [current.id, markSolved]);
+  }, [current.id, markSolved, scheduleMascotReturn]);
 
   useEffect(() => {
     const onSynthesis = (event: MessageEvent) => {
@@ -1060,6 +1055,11 @@ export default function Home() {
       window.location.origin,
     );
     setRunning(false);
+    setBattleVisible(false);
+    if (battleReturnTimer.current !== null) {
+      window.clearTimeout(battleReturnTimer.current);
+      battleReturnTimer.current = null;
+    }
     if (instantJudgeTimer.current !== null) {
       window.clearTimeout(instantJudgeTimer.current);
       instantJudgeTimer.current = null;
@@ -1101,11 +1101,13 @@ export default function Home() {
     setMascotInteraction('');
     setResult(null);
     setWaveformVcd('');
+    startBattle();
     if (current.judge === 'pattern') {
       setRunning(true);
       instantJudgeTimer.current = window.setTimeout(() => {
         gradePatterns();
         setRunning(false);
+        scheduleMascotReturn();
         instantJudgeTimer.current = null;
       }, 650);
       return;
@@ -1121,6 +1123,7 @@ export default function Home() {
           elapsedMs: 0,
         });
         setRunning(false);
+        scheduleMascotReturn();
         instantJudgeTimer.current = null;
         if (graded.ok) markSolved(current.id);
       }, 650);
@@ -1128,6 +1131,7 @@ export default function Home() {
     }
     if (!engineReady || !iframeRef.current?.contentWindow) {
       setResult({ ok: false, phase: 'engine', console: text.engineLoading });
+      scheduleMascotReturn();
       return;
     }
     const requestId = `${Date.now()}-${Math.random()}`;
@@ -1265,7 +1269,6 @@ export default function Home() {
         ? 'success'
         : 'failure'
       : 'idle';
-  const battleVisible = running || result !== null;
   const mascot = mascotProfessions[activeMascotProfession];
   const mascotTitle =
     activeMascotProfession === 'novice'
@@ -1331,13 +1334,6 @@ export default function Home() {
     setMascotTapNonce((value) => value + 1);
     setMascotInteraction(lines[mascotTapNonce % lines.length]);
   };
-
-  const battleMessage = mascotInteraction ||
-    (battleStatus === 'running'
-      ? text.battleRunning
-      : battleStatus === 'success'
-        ? text.battleSuccess
-        : text.battleFailure);
 
   const selectProfession = (profession: MascotProfession) => {
     if (profession === 'novice' || professionProgress[profession].unlocked)
@@ -1752,7 +1748,7 @@ export default function Home() {
                               <Button
                                 size="sm"
                                 nativeButton={false}
-                                render={<a href="https://cashier.ecpay.com.tw/omn/co14098/ac84586/order?portal=1" target="_blank" rel="noreferrer" aria-label={text.supportAction} />}
+                                render={<a href={supportConfig.ecpayUrl} target="_blank" rel="noreferrer" aria-label={text.supportAction} />}
                               >
                                 <ExternalLink /> {text.supportAction}
                               </Button>
@@ -1852,7 +1848,7 @@ export default function Home() {
                 </div>
               </div>
             )}
-            <div className="mt-4 grid grid-cols-[84px_minmax(0,1fr)] items-end gap-3 border-t border-border pt-4 sm:grid-cols-[104px_minmax(0,1fr)]">
+            <div className="mascot-companion-stage mt-4 grid grid-cols-[84px_minmax(0,1fr)] items-end gap-3 border-t border-border pt-4 sm:grid-cols-[104px_minmax(0,1fr)]">
               <button
                 key={`hint-${mascotTapNonce}`}
                 type="button"
@@ -1904,6 +1900,16 @@ export default function Home() {
                   </ol>
                 )}
               </div>
+              {battleVisible && (
+                <BattleArena
+                  gender={mascotGender}
+                  profession={activeMascotProfession}
+                  tier={mascotStage}
+                  equipment={activeEquipment}
+                  elements={elementLevels}
+                  status={battleStatus}
+                />
+              )}
             </div>
           </article>
           {current.supportCode && (
@@ -2114,21 +2120,6 @@ export default function Home() {
                 </Button>
               </div>
             </div>
-          )}
-          {battleVisible && (
-            <BattleArena
-              gender={mascotGender}
-              profession={activeMascotProfession}
-              tier={mascotStage}
-              equipment={activeEquipment}
-              elements={elementLevels}
-              status={battleStatus}
-              message={battleMessage}
-              interactionLabel={text.mascotInteract}
-              locale={locale}
-              tapNonce={mascotTapNonce}
-              onInteract={interactWithMascot}
-            />
           )}
           {waveformVcd && <WaveformViewer vcd={waveformVcd} locale={locale} />}
           <div className="mt-6 rounded-xl border border-border bg-muted/30 p-4">

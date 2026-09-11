@@ -46,7 +46,7 @@ Verified in Chromium through the visible UI of the production Pages build:
 
 ## Mascot and persistence acceptance — 2026-09-11
 
-- Running a correct simulation moves the penguin into a separate battle lane, targets the RTL training dummy, shows the pass message, and keeps the waveform fully unobstructed.
+- Running a correct simulation makes the penguin attack the RTL training dummy inside the existing hint area, return to its original position after the verdict, and keep the editor, waveform, and diagnostics unobstructed.
 - The narrow-screen shop keeps class cards, equipment prices, element descriptions, and upgrade controls readable inside a scrollable dialog.
 - Existing solution/completion keys are unchanged. New equipment spend and element-state keys are additive; legacy equipment purchases migrate using their historical prices instead of the new catalog prices.
 - The ECPay control is an external support link only. The interface does not grant points or claim payment success, and no merchant secret is present in the browser bundle.

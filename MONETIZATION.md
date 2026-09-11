@@ -9,6 +9,30 @@ The public GitHub Pages build is intentionally **not** allowed to grant paid poi
 - Card and bank information are entered only on ECPay; this site does not receive or store it.
 - Earned points, equipment, elements, solutions, and progress remain device-local.
 
+## Configure voluntary support now
+
+The current site uses one public ECPay collection URL in `supportConfig.ecpayUrl`
+inside `app/page.tsx`. A public collection URL is not a credential and may be
+linked from the browser. Never add MerchantID, HashKey, HashIV, or API keys to
+this public repository.
+
+Recommended ECPay setup:
+
+1. Sign in to the ECPay seller console and complete seller/bank verification.
+2. Open **Collection tools > Collection links** (or the streamer support tool
+   if that is the approved service on the account).
+3. Use a clear title such as **Support SoC RTL Lab development** and describe
+   the payment as voluntary support with no automatic points or merchandise.
+4. Use a practical minimum such as NT$50 because very small amounts may remove
+   payment methods and are inefficient after minimum processing fees.
+5. Enable only the payment methods approved for the seller account, create the
+   reusable link, then replace `supportConfig.ecpayUrl` with that public URL.
+6. Keep transaction review, disputes, refunds, and income records in the ECPay
+   console. Do not call it a tax-deductible charitable donation.
+
+If the existing URL remains active and belongs to the verified account, no
+additional front-end integration is required for voluntary support.
+
 ## Required architecture for paid points
 
 1. A signed-in user asks the server to create a point-pack order.

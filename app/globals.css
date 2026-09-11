@@ -327,40 +327,23 @@ body {
   --stone-border: oklch(0.64 0.15 105 / 35%);
 }
 
-.mascot-battle-arena {
-  background:
-    radial-gradient(circle at 16% 42%, oklch(0.7 0.14 215 / 10%), transparent 26%),
-    linear-gradient(135deg, oklch(0.2 0.035 247), oklch(0.15 0.025 255));
-  border: 1px solid oklch(0.5 0.07 225 / 48%);
-  border-radius: 1rem;
-  color: oklch(0.94 0.02 220);
-  display: grid;
-  grid-template-columns: 100px minmax(90px, 1fr) 112px;
+.mascot-companion-stage {
   isolation: isolate;
-  margin-top: 1rem;
-  min-height: 184px;
-  overflow: hidden;
-  padding: 0.75rem 0.9rem 0.8rem;
   position: relative;
 }
 
-.mascot-battle-grid {
-  background-image:
-    linear-gradient(oklch(0.7 0.08 215 / 7%) 1px, transparent 1px),
-    linear-gradient(90deg, oklch(0.7 0.08 215 / 7%) 1px, transparent 1px);
-  background-size: 22px 22px;
+.mascot-battle-arena {
+  display: grid;
+  grid-template-columns: 104px minmax(80px, 1fr) 98px;
   inset: 0;
-  mask-image: linear-gradient(to bottom, black, transparent 88%);
+  overflow: visible;
   pointer-events: none;
   position: absolute;
-  z-index: -1;
+  z-index: 8;
 }
 
 .mascot-battle-actor {
   align-self: end;
-  background: transparent;
-  border: 0;
-  cursor: pointer;
   justify-self: start;
   position: relative;
   transition: filter 180ms ease, transform 180ms ease;
@@ -371,9 +354,20 @@ body {
   animation: fighter-charge 780ms ease-in-out infinite alternate;
 }
 
+.battle-success .mascot-battle-actor,
+.battle-failure .mascot-battle-actor {
+  animation: fighter-return 1200ms cubic-bezier(0.22, 0.8, 0.25, 1) forwards;
+}
+
 @keyframes fighter-charge {
   from { transform: translateX(0) rotate(-1deg); }
-  to { transform: translateX(8px) translateY(-2px) rotate(2deg); }
+  to { transform: translateX(18px) translateY(-3px) rotate(2deg); }
+}
+
+@keyframes fighter-return {
+  0% { transform: translateX(26px) translateY(-3px) rotate(2deg); }
+  48% { transform: translateX(10px) translateY(-8px) rotate(-2deg); }
+  100% { transform: translateX(0) translateY(0) rotate(0); }
 }
 
 .mascot-attack-path {
@@ -530,10 +524,10 @@ body {
 
 .rtl-dummy-wrap {
   align-self: center;
-  height: 126px;
+  height: 118px;
   justify-self: end;
   position: relative;
-  width: 108px;
+  width: 94px;
   z-index: 4;
 }
 
@@ -599,47 +593,13 @@ body {
   70% { transform: translateX(3px) rotate(2deg); }
 }
 
-.mascot-battle-copy {
-  align-self: center;
-  background: oklch(0.13 0.025 250 / 76%);
-  border: 1px solid oklch(0.55 0.08 220 / 34%);
-  border-radius: 0.75rem;
-  grid-column: 1 / -1;
-  margin-top: 0.3rem;
-  padding: 0.65rem 0.75rem;
-  z-index: 5;
-}
-
-.element-chip,
-.four-roots-chip {
-  align-items: center;
-  background: var(--stone-bg);
-  border: 1px solid var(--stone-border);
-  border-radius: 999px;
-  color: var(--stone-color);
-  display: inline-flex;
-  font-family: var(--font-mono), monospace;
-  font-size: 10px;
-  font-weight: 700;
-  gap: 3px;
-  padding: 2px 7px;
-}
-
-.four-roots-chip {
-  --stone-color: oklch(0.86 0.17 315);
-  --stone-bg: oklch(0.6 0.2 315 / 15%);
-  --stone-border: oklch(0.7 0.2 315 / 45%);
-}
-
 @media (max-width: 520px) {
   .mascot-battle-arena {
-    grid-template-columns: 82px minmax(50px, 1fr) 86px;
-    min-height: 176px;
-    padding-inline: 0.55rem;
+    grid-template-columns: 84px minmax(40px, 1fr) 72px;
   }
   .rtl-dummy-wrap {
-    height: 106px;
-    width: 82px;
+    height: 92px;
+    width: 70px;
   }
   .mascot-battle-actor .mascot-avatar {
     height: 105px !important;
