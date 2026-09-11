@@ -1378,20 +1378,23 @@ export default function Home() {
             </div>
           </button>
           <div className="flex items-center gap-2">
-            <a
-              href="https://github.com/xizhuwang/rtl-interview-lab"
-              target="_blank"
-              rel="noreferrer"
+            <Button
+              variant="ghost"
+              size="sm"
+              className="hidden sm:inline-flex"
+              nativeButton={false}
+              render={
+                <a
+                  href="https://github.com/xizhuwang/rtl-interview-lab"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={text.source}
+                />
+              }
             >
-              <Button
-                variant="ghost"
-                size="sm"
-                className="hidden sm:inline-flex"
-              >
-                {text.source}
-                <ExternalLink />
-              </Button>
-            </a>
+              {text.source}
+              <ExternalLink />
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -1746,7 +1749,11 @@ export default function Home() {
                             <p className="text-sm font-semibold">{text.support}</p>
                             <p className="mt-1 text-xs leading-5 text-muted-foreground">{text.supportBody}</p>
                             <div className="mt-3 flex flex-wrap gap-2">
-                              <Button size="sm" render={<a href="https://cashier.ecpay.com.tw/omn/co14098/ac84586/order?portal=1" target="_blank" rel="noreferrer" aria-label={text.supportAction} />}>
+                              <Button
+                                size="sm"
+                                nativeButton={false}
+                                render={<a href="https://cashier.ecpay.com.tw/omn/co14098/ac84586/order?portal=1" target="_blank" rel="noreferrer" aria-label={text.supportAction} />}
+                              >
                                 <ExternalLink /> {text.supportAction}
                               </Button>
                               <Button size="sm" variant="outline" disabled>
