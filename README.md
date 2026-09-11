@@ -6,9 +6,7 @@ The current release contains 48 coding, debugging, constraint, and interactive c
 
 Timing-sensitive exercises now include bilingual golden behavior patterns before the editor. These cycle/event tables make latency, back-pressure, valid/data alignment, handshake completion, FIFO ordering, and SRAM timing expectations explicit without revealing a paste-ready RTL implementation. The patterns cover the CDC synchronizers and multi-bit handshake, pipelining, AXI-Lite/AXI read, async FIFO, SRAM wrapper, streaming interfaces, DMA, command FIFO, blocking-cache miss flow, and the streaming compute-tile capstone.
 
-An original penguin companion appears beside progressive hints and can be customized from the sidebar. Domain completions unlock four electronic-fantasy professions: CPU swordsman, SoC archer, DFT healer, and timing/low-power mage. Male and female choices use complete, independently cropped character art, so bows, hats, weapons, and sleeves are not clipped by sprite boundaries. The masculine SoC archer now has a broader silhouette, angular expression, ranger headband, heavier armor, and a sturdier bow, while the feminine archer keeps the softer original silhouette. Purchased gear uses either its matching original artwork or a matching technical icon, and every equipped item appears beside the character. A run control beside the companion starts the same judge as the editor control. Beginner and intermediate challenges target the RTL training dummy, while advanced challenges summon a large gate-level timing boss with distinct hit, parry, and defeat animation. The battle stays inside the hint area and returns the companion to its normal position after the verdict; it never covers the editor, waveform, or diagnostics.
-
-Earned points preserve rank/aura progress while a separate spendable balance buys common and profession-specific equipment. Shop items never require an unlock to purchase, but profession gear can only be equipped by its matching class. Store thumbnails and the visible item on the character use the same artwork. Fire, water, wind, and earth stones recolor the outfit trim and the attack effect; collecting all four unlocks a combined Four Roots effect. The four tiers add headwear, circuit ornaments, aura intensity, and richer skill effects without changing judging results.
+An optional game layer places an original penguin companion beside progressive hints and test feedback. Solving domain exercises unlocks four electronic-fantasy professions; points, equipment, elemental enchantments, training targets, and the advanced timing boss provide visible progression without changing the simulator or judging rules. All companion variants now use one consistent character scale and rendering family. Opponents use a separate mechanical-target family so allies and enemies remain visually distinct.
 
 PayPal.Me is the current public voluntary-support option and does not grant points. Visitors who need another support method can contact the author through the portfolio site. Automatic paid points and gifting remain disabled until a server can verify payments, store entitlements and transaction records, and support refunds.
 
@@ -16,15 +14,26 @@ See [MONETIZATION.md](MONETIZATION.md) for the paid-point architecture, suggeste
 
 ## Penguin companion and profession guide
 
-![Male electronic-fantasy penguin professions](public/mascot/penguin-classes-masculine.png)
+The four columns below are the definitive profession artwork used by the site. Each cell shows the masculine and feminine option at the same scale. Gender is cosmetic and never changes points, unlock conditions, equipment rules, hints, or judging.
 
-![Female electronic-fantasy penguin professions](public/mascot/penguin-classes-feminine-v2.png)
-
-| Masculine SoC archer | Feminine SoC archer |
-| --- | --- |
-| ![Masculine SoC archer with angular ranger armor](public/mascot/penguin-masculine-soc-v2.png) | ![Feminine SoC archer with the original softer silhouette](public/mascot/penguin-feminine-soc.png) |
-
-![Profession headwear: swordsman helmet, archer band, healer halo and mage hat](public/mascot/penguin-headgear.png)
+<table>
+  <thead>
+    <tr>
+      <th align="center">CPU swordsman</th>
+      <th align="center">SoC archer</th>
+      <th align="center">DFT healer</th>
+      <th align="center">Timing mage</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center"><img src="public/mascot/penguin-masculine-cpu.png" width="104" alt="Masculine CPU swordsman"><img src="public/mascot/penguin-feminine-cpu.png" width="104" alt="Feminine CPU swordsman"></td>
+      <td align="center"><img src="public/mascot/penguin-masculine-soc-v2.png" width="104" alt="Masculine SoC archer"><img src="public/mascot/penguin-feminine-soc.png" width="104" alt="Feminine SoC archer"></td>
+      <td align="center"><img src="public/mascot/penguin-masculine-dft.png" width="104" alt="Masculine DFT healer"><img src="public/mascot/penguin-feminine-dft.png" width="104" alt="Feminine DFT healer"></td>
+      <td align="center"><img src="public/mascot/penguin-masculine-timing.png" width="104" alt="Masculine timing mage"><img src="public/mascot/penguin-feminine-timing.png" width="104" alt="Feminine timing mage"></td>
+    </tr>
+  </tbody>
+</table>
 
 | Profession | Unlock route | Battle skill | How to train with it |
 | ---------- | ------------ | ------------ | -------------------- |
@@ -33,7 +42,36 @@ See [MONETIZATION.md](MONETIZATION.md) for the paid-point architecture, suggeste
 | Silicon Healer / DFT Specialist | Solve 2 DFT challenges | Holy-light orb and diagnostic pulses | State the fault model, then connect controllability, observability, scan/MBIST sequencing and failure evidence. |
 | Timing Mage / Timing & Low-Power Specialist | Solve 3 timing or low-power challenges | Elemental burst whose color follows the strongest stone | Identify launch/capture clocks and path type before choosing a setup, hold, isolation, retention or power-sequence fix. |
 
-Tier 0 uses the clean base profession silhouette. Tier 1 strengthens the material and color treatment, tier 2 adds circuit ornaments and brighter trim, and tier 3 adds the strongest aura and skill presentation. Equipment can be purchased whenever the spendable balance is sufficient; a profession-specific item remains in the inventory until the matching class is selected. Enchantments are visual learning rewards only: fire highlights the first mismatch, water emphasizes cycle-to-cycle waveform flow, wind represents narrowing a regression quickly, and earth represents stable assertions and reproducible boundary tests.
+### Progression, equipment, and enchantments
+
+- Profession unlocks depend on completed exercises in the matching domain. Changing gender or profession never resets progress.
+- Total earned points determine the visual tier: base below 300 points, tier 1 at 300, tier 2 at 700, and tier 3 at 1,300. Purchases use a separate spendable balance and therefore do not lower rank or remove an unlock.
+- Any affordable shop item can be purchased immediately. Common equipment can be worn by every profession; profession equipment stays in inventory and becomes wearable when its matching class is active.
+- Equipment and enchantments change only the companion and battle presentation. They never alter compilation, hidden checks, hints, PPA comparison, or the pass/fail verdict.
+
+<p align="center">
+  <img src="public/mascot/element-enchantments-guide.png" width="900" alt="Fire, water, wind, and earth enchantment stones">
+</p>
+
+| Stone | Visible treatment | Engineering learning cue |
+| ----- | ----------------- | ------------------------ |
+| Fire | Red-orange outfit trim, particles, and attack color | Focus on the first mismatch and isolate the root cause. |
+| Water | Blue flowing trim and waveform-like particles | Follow valid/data alignment and signal movement cycle by cycle. |
+| Wind | Mint-green motion accents and faster-looking trails | Narrow the failing regression and reduce the debug search space. |
+| Earth | Amber-gold stable aura and heavier impact | Build reproducible boundary tests, assertions, and stable checks. |
+
+Repeated purchases increase that stone's visual intensity. The highest-level stone becomes the active outfit and attack color; owning at least one of all four unlocks the combined **Four Roots** spectrum effect. This is a visual reward, not an electrical model or gameplay advantage.
+
+### Battle targets and verdict animation
+
+| RTL training dummy | Gate-level timing boss |
+| ------------------ | ---------------------- |
+| <img src="public/mascot/rtl-training-dummy-display.png" width="260" alt="RTL training dummy with circuit board target"> | <img src="public/mascot/gate-level-timing-boss-display.png" width="360" alt="Gate-level timing boss built from damaged chips, gears, and timing traces"> |
+| Beginner and intermediate exercises use a readable circuit-board target. | Advanced exercises summon the larger timing boss to mark a harder design or debug task. |
+
+Pressing **Run tests** moves the active companion into the hint-area arena and triggers the profession-specific attack: sword wave, arrow rain, holy-light pulse, or elemental burst. A passing result produces the hit/defeat animation; a failing result produces a block/parry animation and points the learner back to the first useful diagnostic. The companion then returns to its normal position. The arena never covers the editor, waveform, or debug output, and the animation is only a visualization of the real judge result.
+
+The companion, enchantment, training-target, and boss visuals are project-specific artwork and contain no vendor logos, commercial game characters, foundry material, or proprietary IP.
 
 ## CPU and cache practice
 
