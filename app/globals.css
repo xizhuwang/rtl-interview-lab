@@ -59,9 +59,12 @@ body {
 }
 
 :root {
-  --font-geist-sans: 'Segoe UI', 'Microsoft JhengHei', 'PingFang TC', Arial, sans-serif;
-  --font-geist-mono: 'Cascadia Code', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
-  --font-geist-code: 'Cascadia Code', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --font-geist-sans:
+    'Segoe UI', 'Microsoft JhengHei', 'PingFang TC', Arial, sans-serif;
+  --font-geist-mono:
+    'Cascadia Code', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --font-geist-code:
+    'Cascadia Code', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
   --background: oklch(0.975 0.008 235);
   --foreground: oklch(0.2 0.025 245);
   --card: oklch(0.995 0.003 235);
@@ -166,8 +169,13 @@ body {
 }
 
 @keyframes mascot-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
 }
 
 .mascot-avatar {
@@ -176,7 +184,11 @@ body {
 }
 
 .mascot-avatar::before {
-  background: radial-gradient(circle at 50% 62%, oklch(0.76 0.16 205 / var(--mascot-aura, 0%)), transparent 64%);
+  background: radial-gradient(
+    circle at 50% 62%,
+    oklch(0.76 0.16 205 / var(--mascot-aura, 0%)),
+    transparent 64%
+  );
   content: '';
   inset: 7% 0 0;
   pointer-events: none;
@@ -184,24 +196,57 @@ body {
   z-index: -1;
 }
 
-.mascot-avatar img {
+.mascot-character {
   filter: drop-shadow(0 7px 8px oklch(0.22 0.04 240 / 18%));
 }
 
-.mascot-tier-0 { --mascot-aura: 0%; }
-.mascot-tier-1 { --mascot-aura: 12%; }
-.mascot-tier-2 { --mascot-aura: 22%; }
-.mascot-tier-3 { --mascot-aura: 34%; }
+.mascot-equipment {
+  animation: mascot-equipment-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes mascot-equipment-pulse {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-2px) scale(1.05);
+  }
+}
+
+.mascot-tier-0 {
+  --mascot-aura: 0%;
+}
+.mascot-tier-1 {
+  --mascot-aura: 12%;
+}
+.mascot-tier-2 {
+  --mascot-aura: 22%;
+}
+.mascot-tier-3 {
+  --mascot-aura: 34%;
+}
 
 .mascot-tier-3::before {
   animation: mascot-aura 1.9s ease-in-out infinite;
 }
 
 @keyframes mascot-aura {
-  0%, 100% { opacity: 0.65; transform: scale(0.94); }
-  50% { opacity: 1; transform: scale(1.06); }
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mascot-avatar, .mascot-tier-3::before { animation: none; }
+  .mascot-avatar,
+  .mascot-tier-3::before,
+  .mascot-equipment {
+    animation: none;
+  }
 }

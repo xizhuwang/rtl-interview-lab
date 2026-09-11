@@ -4,23 +4,23 @@ An original, bilingual (Traditional Chinese / English) hands-on practice site fo
 
 The current release contains 48 coding, debugging, constraint, and interactive challenges. CPU/cache is now an independent track, separate from SoC and accelerator integration. The SoC path progresses from software-visible control and ready/valid flow through AXI/DMA, SRAM/CDC, command queues, mixed-precision arithmetic, and a streaming compute-tile capstone. The CDC track includes a complete asynchronous FIFO.
 
-An original penguin companion can be customized by gender and profession. Four electronic-fantasy professions map to real learning domains: CPU swordsman, SoC summoner, DFT healer, and timing/low-power mage. Local points unlock stronger rank and aura tiers; the preference remains in browser storage.
+An original penguin companion appears beside the progressive hints and can be customized from the sidebar. Domain completions unlock four electronic-fantasy professions: CPU swordsman, SoC archer, DFT healer, and timing/low-power mage. Earned points preserve rank/aura progress while a separate spendable balance buys one of three starter equipment items; profession, purchases, and equipped gear remain in browser storage.
 
 ## CPU and cache practice
 
 The nine CPU/cache exercises are original Verilog-2005 labs with bilingual specifications, three progressive hints, self-checking simulation, and browser-rendered waveforms:
 
-| Area | Exercise | Main design or debug target |
-| --- | --- | --- |
-| CPU datapath | 32×32-bit register file | Two asynchronous reads, synchronous write, hard-wired x0 |
-| Pipeline | Forwarding unit | EX/MEM priority over MEM/WB and x0 exclusion |
-| Pipeline | Load-use and branch control | Stall versus bubble, branch-flush priority |
-| Prediction | Two-bit predictor | Saturation, hysteresis, prediction/update timing |
-| Cache | Direct mapped | Tag/index/offset and conflict eviction |
-| Cache | Two-way set associative | Parallel tag compares and way selection |
-| Cache | Fully associative | CAM-style all-entry lookup and priority |
-| Cache | Two-way LRU | Invalid-way priority and per-set replacement state |
-| Cache | Blocking miss controller | Hit, clean refill, dirty write-back, and back-pressure |
+| Area         | Exercise                    | Main design or debug target                              |
+| ------------ | --------------------------- | -------------------------------------------------------- |
+| CPU datapath | 32×32-bit register file     | Two asynchronous reads, synchronous write, hard-wired x0 |
+| Pipeline     | Forwarding unit             | EX/MEM priority over MEM/WB and x0 exclusion             |
+| Pipeline     | Load-use and branch control | Stall versus bubble, branch-flush priority               |
+| Prediction   | Two-bit predictor           | Saturation, hysteresis, prediction/update timing         |
+| Cache        | Direct mapped               | Tag/index/offset and conflict eviction                   |
+| Cache        | Two-way set associative     | Parallel tag compares and way selection                  |
+| Cache        | Fully associative           | CAM-style all-entry lookup and priority                  |
+| Cache        | Two-way LRU                 | Invalid-way priority and per-set replacement state       |
+| Cache        | Blocking miss controller    | Hit, clean refill, dirty write-back, and back-pressure   |
 
 These deliberately small models expose the architecture trade-offs: direct mapping uses one candidate and a short lookup path; set associativity adds comparators, a data mux, and replacement state to reduce conflict misses; fully associative lookup searches every entry and therefore fits only small structures. They are teaching components, not a complete ISA-compatible CPU, coherent cache, or production memory hierarchy.
 
@@ -28,12 +28,12 @@ These deliberately small models expose the architecture trade-offs: direct mappi
 
 The separate SoC track is organized around the boundaries a Linux-controlled FPGA accelerator must implement:
 
-| Stage | Exercises | Demonstrated capability |
-| --- | --- | --- |
-| Software control plane | APB register, AXI4-Lite register bank, W1C interrupt status | Explain register maps, start/status, sticky events and software-visible completion |
-| Data movement | Ready/valid register slice, AXI burst reader, strided DMA address generator, async FIFO, SRAM wrapper | Preserve payloads under back-pressure and align memory/CDC latency |
-| Compute | Signed INT8/INT4 dot product, streaming mixed-precision tile | Define packing, sign extension, accumulator width, job boundaries and throughput |
-| Scheduling and evidence | Round-robin arbiter, command FIFO, bit-true requantization and relative Yosys comparison | Queue multiple jobs and support design claims with automated evidence |
+| Stage                   | Exercises                                                                                             | Demonstrated capability                                                            |
+| ----------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Software control plane  | APB register, AXI4-Lite register bank, W1C interrupt status                                           | Explain register maps, start/status, sticky events and software-visible completion |
+| Data movement           | Ready/valid register slice, AXI burst reader, strided DMA address generator, async FIFO, SRAM wrapper | Preserve payloads under back-pressure and align memory/CDC latency                 |
+| Compute                 | Signed INT8/INT4 dot product, streaming mixed-precision tile                                          | Define packing, sign extension, accumulator width, job boundaries and throughput   |
+| Scheduling and evidence | Round-robin arbiter, command FIFO, bit-true requantization and relative Yosys comparison              | Queue multiple jobs and support design claims with automated evidence              |
 
 Every track also includes a three-part speaking checklist. A solved badge is therefore only the first step: the learner should be able to state the cycle-level contract, identify a corner case and its verification evidence, and explain the relevant PPA or architecture trade-off without reading the solution.
 
@@ -41,15 +41,15 @@ Every track also includes a three-part speaking checklist. A solved badge is the
 
 These seven original Verilog-2005 exercises each include a bilingual specification, three hints, role/rationale notes, self-checking simulation and VCD signals. They build on memory reliability, accelerator activity and SoC integration concepts:
 
-| Track | Exercise | Main debug target |
-| --- | --- | --- |
-| DFT | Scan shift/capture | Serial direction, capture/shift priority, reset |
-| DFT | SRAM MBIST | Four ascending phases: w0, r0, w1, r1; read latency and sticky failure |
-| DFT | Spare-row remapping | Consistent read/write redirection and exclusive bank enables |
-| Low power | Clock gate with test override | Low-level latch, full clock pulses, scan accessibility |
-| Low power | Operand isolation | Hold multiplier operands during invalid cycles |
-| Low power | Retention register | Keep saved state powered and define save/restore/write priority |
-| Low power | Power sequencer and isolation | Drain work, save, isolate, power off, wait for power-good, restore |
+| Track     | Exercise                      | Main debug target                                                      |
+| --------- | ----------------------------- | ---------------------------------------------------------------------- |
+| DFT       | Scan shift/capture            | Serial direction, capture/shift priority, reset                        |
+| DFT       | SRAM MBIST                    | Four ascending phases: w0, r0, w1, r1; read latency and sticky failure |
+| DFT       | Spare-row remapping           | Consistent read/write redirection and exclusive bank enables           |
+| Low power | Clock gate with test override | Low-level latch, full clock pulses, scan accessibility                 |
+| Low power | Operand isolation             | Hold multiplier operands during invalid cycles                         |
+| Low power | Retention register            | Keep saved state powered and define save/restore/write priority        |
+| Low power | Power sequencer and isolation | Drain work, save, isolate, power off, wait for power-good, restore     |
 
 The MBIST fixture injects one stuck-at bit (bit 2) at each of eight addresses, in both polarities. This is a destructive teaching test, **not** full March C-, ATPG/fault coverage, physical BISR, flash programming, or a yield measurement. The remapper assumes stable repair configuration and a combinational interface; a real synchronous SRAM needs bank-selection latency alignment.
 
