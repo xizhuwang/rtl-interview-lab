@@ -1,5 +1,5 @@
 'use client';
-/* eslint-disable next/no-html-link-for-pages, next/no-img-element -- Static public assets use CSS sprite sheets. */
+/* eslint-disable next/no-html-link-for-pages, next/no-img-element -- Static mascot assets are optimized for this client-only build. */
 
 import {
   useCallback,
@@ -133,7 +133,6 @@ type EquipmentIconId =
   | 'battery';
 type ElementId = 'fire' | 'water' | 'wind' | 'earth';
 type ElementLevels = Record<ElementId, number>;
-type ArtworkSheet = 'equipment' | 'headgear';
 type BattleStatus = 'idle' | 'running' | 'success' | 'failure';
 const emptyElementLevels: ElementLevels = { fire: 0, water: 0, wind: 0, earth: 0 };
 const storageKeys = {
@@ -262,8 +261,9 @@ const copy = {
     battleFailure: '稻草人擋下攻擊；從第一個 mismatch 開始除錯。',
     mascotInteract: '點企鵝互動',
     support: '贊助開發',
-    supportBody: '目前僅透過 PayPal.Me 接受自願支持；款項不會增加遊戲點數，也不是可抵稅的公益捐款。基於隱私考量，本站不公開個人街口收款碼。',
+    supportBody: '目前可透過 PayPal.Me 自願支持；款項不會增加遊戲點數，也不是可抵稅的公益捐款。如需其他贊助管道，歡迎透過作者網站聯絡。',
     paypalAction: '透過 PayPal 支持',
+    contactSupport: '聯絡作者',
     paidPointsPending: '付費點數尚未開放',
   },
   en: {
@@ -356,8 +356,9 @@ const copy = {
     battleFailure: 'The dummy blocked the attack. Debug from the first mismatch.',
     mascotInteract: 'Interact with the penguin',
     support: 'Support development',
-    supportBody: 'Voluntary support is currently available only through PayPal.Me. Payments do not grant game points and are not tax-deductible charitable donations. A personal JKO Pay QR is not published for privacy reasons.',
+    supportBody: 'Voluntary support is available through PayPal.Me. Payments do not grant game points and are not tax-deductible charitable donations. Contact the author through the portfolio site if you need another support method.',
     paypalAction: 'Support via PayPal',
+    contactSupport: 'Contact the author',
     paidPointsPending: 'Paid points are not available yet',
   },
 };
@@ -365,14 +366,12 @@ const copy = {
 const mascotProfessions: Record<
   MascotProfession,
   {
-    sprite: number | null;
     title: { zh: string; en: string };
     field: { zh: string; en: string };
     message: { zh: string; en: string };
   }
 > = {
   novice: {
-    sprite: null,
     title: { zh: '邏輯學徒', en: 'Logic Apprentice' },
     field: { zh: '尚未選定專精', en: 'Undeclared specialty' },
     message: {
@@ -381,7 +380,6 @@ const mascotProfessions: Record<
     },
   },
   cpu: {
-    sprite: 0,
     title: { zh: '電子劍士', en: 'Circuit Swordsman' },
     field: { zh: 'CPU 專家', en: 'CPU Specialist' },
     message: {
@@ -390,7 +388,6 @@ const mascotProfessions: Record<
     },
   },
   soc: {
-    sprite: 1,
     title: { zh: '電子弓箭手', en: 'Circuit Archer' },
     field: { zh: 'SoC 整合專家', en: 'SoC Integration Specialist' },
     message: {
@@ -399,7 +396,6 @@ const mascotProfessions: Record<
     },
   },
   dft: {
-    sprite: 2,
     title: { zh: '電子補師', en: 'Silicon Healer' },
     field: { zh: 'DFT 專家', en: 'DFT Specialist' },
     message: {
@@ -408,7 +404,6 @@ const mascotProfessions: Record<
     },
   },
   timing: {
-    sprite: 3,
     title: { zh: '電子魔法師', en: 'Timing Mage' },
     field: { zh: '時序與低功耗專家', en: 'Timing & Low-Power Specialist' },
     message: {
@@ -436,12 +431,12 @@ const equipmentCatalog: Record<
     profession: MascotProfession | 'all';
     name: { zh: string; en: string };
     effect: { zh: string; en: string };
-    artwork: { sheet: ArtworkSheet; index: number };
+    artwork?: { src: string };
   }
 > = {
   visor: {
     icon: 'visor',
-    artwork: { sheet: 'equipment', index: 0 },
+    artwork: { src: './mascot/equipment-visor.png' },
     cost: 600,
     profession: 'all',
     name: { zh: 'Debug 護目鏡', en: 'Debug Visor' },
@@ -452,7 +447,7 @@ const equipmentCatalog: Record<
   },
   crystal: {
     icon: 'crystal',
-    artwork: { sheet: 'equipment', index: 1 },
+    artwork: { src: './mascot/equipment-crystal.png' },
     cost: 900,
     profession: 'all',
     name: { zh: 'Timing 水晶', en: 'Timing Crystal' },
@@ -463,7 +458,7 @@ const equipmentCatalog: Record<
   },
   drone: {
     icon: 'drone',
-    artwork: { sheet: 'equipment', index: 2 },
+    artwork: { src: './mascot/equipment-drone.png' },
     cost: 1200,
     profession: 'all',
     name: { zh: '晶片夥伴', en: 'Chip Companion' },
@@ -473,42 +468,42 @@ const equipmentCatalog: Record<
     },
   },
   cpuBlade: {
-    icon: 'sword', artwork: { sheet: 'headgear', index: 0 }, cost: 900, profession: 'cpu',
-    name: { zh: 'Forwarding 戰盔', en: 'Forwarding Helm' },
+    icon: 'sword', cost: 900, profession: 'cpu',
+    name: { zh: 'Forwarding 光刃', en: 'Forwarding Blade' },
     effect: { zh: '把資料相依化成可追蹤的旁路斬擊。', en: 'Turns data dependencies into a traceable bypass strike.' },
   },
   cpuShield: {
-    icon: 'shield', artwork: { sheet: 'equipment', index: 1 }, cost: 1450, profession: 'cpu',
+    icon: 'shield', cost: 1450, profession: 'cpu',
     name: { zh: 'Pipeline 護盾', en: 'Pipeline Shield' },
     effect: { zh: '提醒你同步檢查 stall、flush 與 valid。', en: 'Keeps stall, flush, and valid aligned during debug.' },
   },
   socQuiver: {
-    icon: 'target', artwork: { sheet: 'headgear', index: 1 }, cost: 950, profession: 'soc',
-    name: { zh: 'AXI 獵手冠', en: 'AXI Ranger Band' },
+    icon: 'target', cost: 950, profession: 'soc',
+    name: { zh: 'AXI 箭匣', en: 'AXI Quiver' },
     effect: { zh: '瞄準 ready／valid、burst 與 backpressure。', en: 'Targets ready/valid, bursts, and backpressure.' },
   },
   socCompass: {
-    icon: 'network', artwork: { sheet: 'equipment', index: 2 }, cost: 1500, profession: 'soc',
+    icon: 'network', cost: 1500, profession: 'soc',
     name: { zh: 'Interconnect 羅盤', en: 'Interconnect Compass' },
     effect: { zh: '沿著 address map 與資料流定位整合錯誤。', en: 'Traces integration faults through address maps and dataflow.' },
   },
   dftLantern: {
-    icon: 'healer', artwork: { sheet: 'headgear', index: 2 }, cost: 850, profession: 'dft',
-    name: { zh: 'Scan 治癒冠', en: 'Scan Healer Halo' },
+    icon: 'healer', cost: 850, profession: 'dft',
+    name: { zh: 'Scan 診斷燈', en: 'Scan Diagnostic Lantern' },
     effect: { zh: '照亮可控制性、可觀察性與未知值來源。', en: 'Illuminates controllability, observability, and X sources.' },
   },
   dftProbe: {
-    icon: 'scan', artwork: { sheet: 'equipment', index: 0 }, cost: 1400, profession: 'dft',
+    icon: 'scan', cost: 1400, profession: 'dft',
     name: { zh: 'Fault 探針', en: 'Fault Probe' },
     effect: { zh: '追蹤 stuck-at、transition 與 MBIST failure。', en: 'Tracks stuck-at, transition, and MBIST failures.' },
   },
   timingGrimoire: {
-    icon: 'book', artwork: { sheet: 'headgear', index: 3 }, cost: 1000, profession: 'timing',
-    name: { zh: 'STA 魔導帽', en: 'STA Mage Hat' },
+    icon: 'book', cost: 1000, profession: 'timing',
+    name: { zh: 'STA 魔導書', en: 'STA Grimoire' },
     effect: { zh: '把 clock、constraint 與 path report 串成因果。', en: 'Connects clocks, constraints, and path reports into one cause.' },
   },
   lowPowerCharm: {
-    icon: 'battery', artwork: { sheet: 'equipment', index: 1 }, cost: 1600, profession: 'timing',
+    icon: 'battery', cost: 1600, profession: 'timing',
     name: { zh: 'Low-Power 月墜', en: 'Low-Power Moon Charm' },
     effect: { zh: '守護 clock gating、isolation 與 retention 順序。', en: 'Guards clock gating, isolation, and retention sequencing.' },
   },
@@ -544,26 +539,16 @@ function EquipmentIcon({ id, className = '' }: { id: EquipmentIconId; className?
   return <Icon className={className} aria-hidden="true" />;
 }
 
-function EquipmentArtwork({
-  sheet,
-  index,
-  className = '',
-}: {
-  sheet: ArtworkSheet;
-  index: number;
-  className?: string;
-}) {
-  const frames = sheet === 'equipment' ? 3 : 4;
+function EquipmentArtwork({ src, className = '' }: { src: string; className?: string }) {
   return (
-    <span
-      className={`equipment-artwork equipment-artwork-${sheet} ${className}`}
-      style={
-        {
-          backgroundImage: `url("./mascot/penguin-${sheet}.png")`,
-          backgroundSize: `${frames * 100}% auto`,
-          backgroundPosition: `${(index / Math.max(1, frames - 1)) * 100}% 50%`,
-        } as CSSProperties
-      }
+    <img
+      src={src}
+      alt=""
+      width={256}
+      height={256}
+      loading="lazy"
+      decoding="async"
+      className={`equipment-artwork ${className}`}
       aria-hidden="true"
     />
   );
@@ -596,18 +581,7 @@ function MascotAvatar({
   elements?: ElementLevels;
   className?: string;
 }) {
-  const sprite = mascotProfessions[profession].sprite;
-  const apprentice = profession === 'novice';
-  const image = apprentice
-    ? './mascot/penguin-evolution.png'
-    : gender === 'feminine'
-      ? './mascot/penguin-classes-feminine-v2.png'
-      : './mascot/penguin-classes-masculine.png';
-  const translate = apprentice
-    ? gender === 'masculine'
-      ? 0
-      : 25
-    : (sprite ?? 0) * 25;
+  const image = `./mascot/penguin-${gender}-${profession}.png`;
   const activeElements = (Object.keys(elements) as ElementId[]).filter(
     (element) => elements[element] > 0,
   );
@@ -616,39 +590,22 @@ function MascotAvatar({
       best === null || elements[element] > elements[best] ? element : best,
     null,
   );
-  const equippedArtwork = equipment ? equipmentCatalog[equipment].artwork : null;
-  const equippedHeadgear = equippedArtwork?.sheet === 'headgear';
+  const equippedItem = equipment ? equipmentCatalog[equipment] : null;
   return (
     <div
       className={`mascot-avatar mascot-tier-${tier} mascot-gender-${gender} mascot-profession-${profession} ${dominantElement ? `mascot-enchanted mascot-enchanted-${dominantElement}` : ''} relative overflow-visible ${className}`}
       aria-label={mascotProfessions[profession].title.en}
     >
-      <div className="mascot-character-frame absolute inset-0 overflow-hidden">
-        {apprentice ? (
-          <img
-            src={image}
-            alt=""
-            className="mascot-character absolute left-0 top-0 h-full w-auto max-w-none transition-transform duration-500 ease-out"
-            style={{ transform: `translateX(-${translate}%)` }}
-          />
-        ) : (
-          <span
-            className="mascot-character mascot-character-sprite absolute inset-0 transition-transform duration-500 ease-out"
-            style={{
-              backgroundImage: `url("${image}")`,
-              backgroundPosition: `${((sprite ?? 0) / 3) * 100}% 50%`,
-            }}
-            aria-hidden="true"
-          />
-        )}
-      </div>
-      {equippedHeadgear && equippedArtwork && (
-        <EquipmentArtwork
-          sheet="headgear"
-          index={equippedArtwork.index}
-          className="mascot-class-crest"
+      <div className="mascot-character-frame absolute inset-0 overflow-visible">
+        <img
+          src={image}
+          alt=""
+          width={360}
+          height={480}
+          decoding="async"
+          className="mascot-character absolute inset-0 h-full w-full object-contain transition-transform duration-500 ease-out"
         />
-      )}
+      </div>
       {dominantElement && <span className="mascot-element-cloak" aria-hidden="true" />}
       <span className="mascot-tier-ornament" aria-hidden="true">
         <i />
@@ -658,12 +615,13 @@ function MascotAvatar({
       <span className="mascot-gender-emblem" aria-hidden="true">
         {gender === 'masculine' ? <Mars /> : <Venus />}
       </span>
-      {equipment && !equippedHeadgear && (
-        <div className={`mascot-equipment mascot-equipment-${equipmentCatalog[equipment].profession}`}>
-          <EquipmentArtwork
-            sheet={equipmentCatalog[equipment].artwork.sheet}
-            index={equipmentCatalog[equipment].artwork.index}
-          />
+      {equipment && equippedItem && (
+        <div className={`mascot-equipment mascot-equipment-${equippedItem.profession}`}>
+          {equippedItem.artwork ? (
+            <EquipmentArtwork src={equippedItem.artwork.src} />
+          ) : (
+            <EquipmentIcon id={equippedItem.icon} className="mascot-equipment-icon" />
+          )}
         </div>
       )}
     </div>
@@ -736,8 +694,11 @@ function BattleArena({
       <div className={`rtl-dummy-wrap ${isBoss ? 'boss-target-wrap' : ''}`} aria-hidden="true">
         <span className="dummy-hit-ring" />
         <img
-          src={isBoss ? './mascot/gate-level-timing-boss.png' : './mascot/rtl-training-dummy.png'}
+          src={isBoss ? './mascot/gate-level-timing-boss-display.png' : './mascot/rtl-training-dummy-display.png'}
           alt=""
+          width={isBoss ? 560 : 360}
+          height={isBoss ? 512 : 360}
+          decoding="async"
           className={isBoss ? 'rtl-boss' : 'rtl-dummy'}
         />
         {isBoss && (
@@ -1753,13 +1714,11 @@ export default function Home() {
                                   className={`rounded-xl border p-3 ${equipped ? 'border-primary bg-primary/5' : 'border-border'}`}
                                 >
                                   <div className={`equipment-shop-icon equipment-${item.profession}`}>
-                                    <EquipmentArtwork
-                                      sheet={item.artwork.sheet}
-                                      index={item.artwork.index}
-                                    />
-                                    <span className="equipment-shop-role-icon">
-                                      <EquipmentIcon id={item.icon} className="size-3.5" />
-                                    </span>
+                                    {item.artwork ? (
+                                      <EquipmentArtwork src={item.artwork.src} />
+                                    ) : (
+                                      <EquipmentIcon id={item.icon} className="equipment-shop-main-icon" />
+                                    )}
                                   </div>
                                   <p className="mt-2 text-center text-sm font-semibold">
                                     {item.name[locale]}
@@ -1865,6 +1824,14 @@ export default function Home() {
                                 render={<a href={supportConfig.paypalUrl} target="_blank" rel="noreferrer" aria-label={text.paypalAction} />}
                               >
                                 <ExternalLink /> {text.paypalAction}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                nativeButton={false}
+                                render={<a href="https://xizhuwang.github.io/" target="_blank" rel="noreferrer" aria-label={text.contactSupport} />}
+                              >
+                                <ExternalLink /> {text.contactSupport}
                               </Button>
                               <Button size="sm" variant="outline" disabled>
                                 <Coins /> {text.paidPointsPending}
@@ -2562,8 +2529,8 @@ export default function Home() {
           </p>
           <p className="mt-2">
             {locale === 'zh'
-              ? 'PayPal.Me 僅供自願支持；本站不會因付款增加遊戲點數，也不會接觸或保存付款帳戶資料。個人街口收款碼不會放入公開網站或 Git 歷史。付款及個資處理由 PayPal 依其條款負責。'
-              : 'PayPal.Me is a voluntary-support option only. Payments do not grant game points, and this site does not receive or store payment-account data. A personal JKO Pay QR is not placed on the public site or in Git history. PayPal processes payment and personal data under its own terms.'}{' '}
+              ? 'PayPal.Me 僅供自願支持；本站不會因付款增加遊戲點數，也不會接觸或保存付款帳戶資料。如需其他贊助管道，歡迎透過作者網站聯絡。付款及個資處理由 PayPal 依其條款負責。'
+              : 'PayPal.Me is a voluntary-support option only. Payments do not grant game points, and this site does not receive or store payment-account data. Contact the author through the portfolio site if you need another support method. PayPal processes payment and personal data under its own terms.'}{' '}
             <a className="underline" href="https://www.paypal.com/tw/legalhub/privacy-full" target="_blank" rel="noreferrer">
               PayPal privacy
             </a>

@@ -50,7 +50,7 @@ Verified in Chromium through the visible UI of the production Pages build:
 - Running a correct simulation makes the penguin attack the RTL training dummy inside the existing hint area, return to its original position after the verdict, and keep the editor, waveform, and diagnostics unobstructed.
 - The narrow-screen shop keeps class cards, equipment prices, element descriptions, and upgrade controls readable inside a scrollable dialog.
 - Existing solution/completion keys are unchanged. New equipment spend and element-state keys are additive; legacy equipment purchases migrate using their historical prices instead of the new catalog prices.
-- The PayPal.Me control is an external voluntary-support link only. The interface does not grant points or claim payment success, and no merchant secret is present in the browser bundle. Personal JKO Pay identifiers are not published.
+- The PayPal.Me control is an external voluntary-support link only. The interface does not grant points or claim payment success, and no merchant secret is present in the browser bundle. The alternative-support copy directs visitors to contact the author without exposing payment identifiers.
 
 ## Additional manual acceptance checklist
 

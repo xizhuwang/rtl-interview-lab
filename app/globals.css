@@ -252,29 +252,44 @@ body {
   inset: 7% 0 0;
   pointer-events: none;
   position: absolute;
-  z-index: -1;
+  z-index: 0;
 }
 
 .mascot-character {
-  clip-path: inset(1px);
   filter: drop-shadow(0 7px 8px oklch(0.22 0.04 240 / 18%));
 }
 
 .mascot-character-frame {
-  inset: 2px;
+  inset: 0;
+  z-index: 2;
 }
 
 .mascot-equipment {
+  align-items: center;
   animation: mascot-equipment-pulse 2.4s ease-in-out infinite;
-  bottom: 7%;
+  backdrop-filter: blur(4px);
+  background: oklch(0.17 0.04 248 / 90%);
+  border: 1px solid currentColor;
+  border-radius: 0.7rem;
+  bottom: 4%;
   box-shadow:
     0 5px 12px oklch(0.18 0.04 245 / 35%),
     inset 0 0 10px oklch(0.74 0.15 205 / 18%);
-  height: 39%;
+  display: flex;
+  height: 34%;
+  justify-content: center;
+  overflow: hidden;
   position: absolute;
-  right: -9%;
-  width: 43%;
+  right: -5%;
+  width: 38%;
   z-index: 14;
+}
+
+.mascot-equipment-icon {
+  height: 68%;
+  filter: drop-shadow(0 0 5px currentColor);
+  stroke-width: 1.8;
+  width: 68%;
 }
 
 .mascot-equipment-cpu {
@@ -344,76 +359,35 @@ body {
   border-radius: 45% 45% 30% 30%;
 }
 
-.mascot-character-sprite {
-  background-repeat: no-repeat;
-  background-size: 400% auto;
-  transform: scale(0.91);
-  transform-origin: center;
-}
-
-.mascot-profession-soc .mascot-character-sprite {
-  transform: scale(0.82);
-}
-
-.mascot-profession-timing .mascot-character-sprite {
-  transform: scale(0.84);
-}
-
 .equipment-artwork {
-  background-image: var(--artwork-image);
-  background-position: var(--artwork-position);
-  background-repeat: no-repeat;
-  background-size: var(--artwork-size);
   display: block;
   filter: drop-shadow(0 3px 5px oklch(0.08 0.02 250 / 42%));
   height: 100%;
+  object-fit: contain;
   pointer-events: none;
   width: 100%;
 }
 
-.mascot-class-crest {
-  filter: brightness(1.08) saturate(1.05)
-    drop-shadow(0 3px 6px oklch(0.08 0.02 250 / 44%));
-  height: 34%;
-  opacity: 0.94;
-  pointer-events: none;
-  position: absolute;
-  right: -5%;
-  top: -4%;
-  transform: rotate(7deg);
-  width: 34%;
-  z-index: 14;
-}
-
-.mascot-tier-2 .mascot-class-crest {
-  filter: brightness(1.12) saturate(1.08)
-    drop-shadow(0 0 7px oklch(0.76 0.16 205 / 56%));
-}
-
-.mascot-tier-3 .mascot-class-crest {
-  filter: brightness(1.18) saturate(1.12)
-    drop-shadow(0 0 11px oklch(0.78 0.18 205 / 72%));
-}
-
 .mascot-element-cloak {
-  background: linear-gradient(145deg, transparent 8%, var(--enchant-color) 48%, transparent 86%);
-  border-bottom: 3px solid var(--enchant-color);
-  border-radius: 30% 30% 46% 46%;
-  bottom: 8%;
-  height: 48%;
-  left: 10%;
-  mix-blend-mode: color;
-  opacity: calc(0.18 + var(--enchant-opacity, 0.12));
+  background:
+    radial-gradient(circle at 50% 84%, transparent 48%, var(--enchant-color) 51% 54%, transparent 58%),
+    radial-gradient(circle at 50% 72%, var(--enchant-color) 0 2px, transparent 3px);
+  border: 1px solid color-mix(in srgb, var(--enchant-color) 68%, transparent);
+  border-radius: 48%;
+  box-shadow:
+    0 0 calc(8px + var(--enchant-strength, 4px)) color-mix(in srgb, var(--enchant-color) 52%, transparent),
+    inset 0 -8px 16px color-mix(in srgb, var(--enchant-color) 18%, transparent);
+  inset: 8% 3% 2%;
+  opacity: 0.78;
   pointer-events: none;
   position: absolute;
-  width: 80%;
-  z-index: 10;
+  z-index: 1;
 }
 
-.mascot-enchanted-fire { --enchant-color: #ff693d; --enchant-opacity: 0.16; }
-.mascot-enchanted-water { --enchant-color: #43a9ff; --enchant-opacity: 0.14; }
-.mascot-enchanted-wind { --enchant-color: #54e2ca; --enchant-opacity: 0.13; }
-.mascot-enchanted-earth { --enchant-color: #d3a743; --enchant-opacity: 0.14; }
+.mascot-enchanted-fire { --enchant-color: #ff693d; --enchant-strength: 8px; }
+.mascot-enchanted-water { --enchant-color: #43a9ff; --enchant-strength: 7px; }
+.mascot-enchanted-wind { --enchant-color: #54e2ca; --enchant-strength: 6px; }
+.mascot-enchanted-earth { --enchant-color: #d3a743; --enchant-strength: 7px; }
 
 .mascot-tier-ornament {
   inset: 0;
@@ -424,9 +398,10 @@ body {
 
 .mascot-tier-ornament i {
   animation: tier-node-orbit 3.2s linear infinite;
-  background: oklch(0.82 0.16 205);
-  border-radius: 999px;
+  background: currentColor;
+  border-radius: 2px;
   box-shadow: 0 0 7px currentColor;
+  color: var(--enchant-color, oklch(0.82 0.16 88));
   display: none;
   height: 6px;
   left: 5%;
@@ -512,6 +487,15 @@ body {
   position: relative;
   width: 88%;
   z-index: 1;
+}
+
+.equipment-shop-main-icon {
+  filter: drop-shadow(0 0 9px currentColor);
+  height: 58%;
+  position: relative;
+  stroke-width: 1.55;
+  width: 58%;
+  z-index: 2;
 }
 
 .equipment-shop-role-icon {
@@ -886,12 +870,13 @@ body {
 }
 
 .boss-battle {
-  grid-template-columns: 104px minmax(70px, 1fr) 124px;
+  grid-template-columns: 104px minmax(64px, 1fr) 188px;
 }
 
 .boss-target-wrap {
-  height: 132px;
-  width: 120px;
+  height: 178px;
+  margin-top: -34px;
+  width: 184px;
 }
 
 .rtl-boss {
@@ -1024,15 +1009,16 @@ body {
     grid-template-columns: 84px minmax(40px, 1fr) 72px;
   }
   .boss-battle {
-    grid-template-columns: 84px minmax(30px, 1fr) 86px;
+    grid-template-columns: 84px minmax(24px, 1fr) 122px;
   }
   .rtl-dummy-wrap {
     height: 92px;
     width: 70px;
   }
   .boss-target-wrap {
-    height: 102px;
-    width: 86px;
+    height: 130px;
+    margin-top: -18px;
+    width: 120px;
   }
   .mascot-battle-actor .mascot-avatar {
     height: 105px !important;
