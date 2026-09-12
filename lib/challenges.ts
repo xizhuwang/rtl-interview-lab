@@ -309,7 +309,11 @@ initial begin expected_valid=0;expected=0;repeat(2)@(negedge clk);rst_n=1;@(nege
     description: { zh: '實作簡化 APB slave。0x00 是可讀寫 control，0x04 是唯讀 status。write transfer 在 PSEL && PENABLE && PWRITE 時完成。', en: 'Implement a simplified APB slave. 0x00 is read/write control and 0x04 is read-only status.' },
     specs: [{ zh: 'PREADY 固定為 1；非法位址讀回 0。', en: 'PREADY is always 1; unmapped reads return 0.' }, { zh: 'status 不能被 bus write 改變。', en: 'Bus writes must not modify status.' }],
     testGroups: [{ zh: 'APB write', en: 'APB write' }, { zh: 'APB read', en: 'APB read' }, { zh: 'Address decode', en: 'Address decode' }],
-    hints: [{ zh: '寫入是 sequential；read mux 與 PREADY 可用 combinational assignment。', en: 'Writes are sequential; read mux and PREADY can be combinational.' }],
+    hints: [
+      { zh: '先定義一次真正完成的寫入：write_fire = PSEL && PENABLE && PWRITE && PREADY。只有 write_fire 且 PADDR==8\'h00 時才能更新 control。', en: 'First define a completed write: write_fire = PSEL && PENABLE && PWRITE && PREADY. Update control only when write_fire and PADDR==8\'h00.' },
+      { zh: '把工作拆成兩塊：always @(posedge PCLK) 只處理 reset/control write；always @* 只處理 PRDATA address decode。不要在組合 read mux 裡寫 control。', en: 'Split the design: always @(posedge PCLK) handles reset/control writes, while always @* handles PRDATA address decode. Never write control from the read mux.' },
+      { zh: '組合區先給 PRDATA=0，再用 case(PADDR) 覆蓋 0x00→control、0x04→status；PREADY 可直接 assign 1\'b1。這樣非法位址自然讀回 0，也不會推導 latch。', en: 'Default PRDATA to zero, then use case(PADDR) for 0x00→control and 0x04→status. Assign PREADY=1\'b1. Unmapped addresses then return zero without inferring a latch.' },
+    ],
     starter: `module apb_regs(input wire PCLK,input wire PRESETn,input wire PSEL,input wire PENABLE,input wire PWRITE,input wire [7:0] PADDR,input wire [31:0] PWDATA,input wire [31:0] status,output reg [31:0] PRDATA,output wire PREADY,output reg [31:0] control);
   // TODO
 endmodule`,
@@ -323,7 +327,11 @@ initial begin repeat(2) @(posedge clk); rst_n<=1; @(negedge clk); sel=1;en=1;wr=
     description: { zh: '兩個 master 同時 request 時，grant 要輪流，避免 starvation。單一 request 則立即服務。', en: 'Alternate grants when both masters request to avoid starvation; serve a lone requester immediately.' },
     specs: [{ zh: 'grant 必須 one-hot 或全 0。', en: 'Grant must be one-hot or zero.' }, { zh: '只有真的 grant 後才更新優先權。', en: 'Update priority only after a grant.' }],
     testGroups: [{ zh: 'Mutual exclusion', en: 'Mutual exclusion' }, { zh: '同時 request 公平性', en: 'Fairness under simultaneous requests' }, { zh: '單一 request', en: 'Single requester' }],
-    hints: [{ zh: '保存 last_grant；兩者同時要求時選另一方。', en: 'Track last_grant and choose the other requester on a tie.' }],
+    hints: [
+      { zh: '先列 req truth table：00→grant=00、01→01、10→10；只有 req=11 才需要查公平性狀態。', en: 'Start with the req truth table: 00→grant=00, 01→01, 10→10. Only req=11 needs fairness state.' },
+      { zh: '加入 1-bit last_grant，記錄上一個真正被服務的是 0 還是 1。req=11 時輸出相反的 grant，單一路 request 則直接服務該路。', en: 'Add a one-bit last_grant recording which requester was actually served last. For req=11 grant the opposite requester; serve a lone requester immediately.' },
+      { zh: 'grant 可用組合 case(req) 產生；在 sequential block 中只有 grant==01 或 10 時才更新 last_grant。req=00 時不要翻轉優先權。', en: 'Generate grant with a combinational case(req). In the sequential block update last_grant only for grant==01 or 10; do not rotate priority while req=00.' },
+    ],
     starter: `module rr_arbiter(input wire clk,input wire rst_n,input wire [1:0] req,output reg [1:0] grant);
   // TODO
 endmodule`,
@@ -425,7 +433,11 @@ endmodule`,
     description: { zh: '實作加速器的 memory-mapped 控制暫存器。ARM core 透過 AXI4-Lite 寫入來源位址、目的位址與長度，再寫 CTRL.start 啟動；STATUS.done 可供軟體輪詢。', en: 'Build a memory-mapped accelerator control block. An ARM core writes source, destination, and length registers over AXI4-Lite, then starts the accelerator and polls STATUS.done.' },
     specs: [{ zh: 'AW 與 W channel 必須分開握手，不能假設同一拍抵達。', en: 'AW and W channels handshake independently; do not assume same-cycle arrival.' }, { zh: 'Register map：0x00 CTRL、0x04 STATUS、0x08 SRC、0x0C DST、0x10 LEN。', en: 'Register map: 0x00 CTRL, 0x04 STATUS, 0x08 SRC, 0x0C DST, 0x10 LEN.' }, { zh: 'CTRL bit[0] 寫 1 時，accel_start 只維持一拍。', en: 'Writing CTRL bit[0]=1 creates a one-cycle accel_start pulse.' }],
     testGroups: [{ zh: 'AW/W 獨立握手', en: 'Independent AW/W handshakes' }, { zh: 'Register map', en: 'Register map' }, { zh: 'Start pulse 與 status read', en: 'Start pulse and status read' }],
-    hints: [{ zh: '分別保存 AWADDR 與 WDATA；兩者都收到後才真正執行 write 並回 BVALID。', en: 'Capture AWADDR and WDATA separately; commit the write and raise BVALID only after both arrive.' }],
+    hints: [
+      { zh: '先把五條 channel 分開想：AW 只交位址、W 只交資料、B 回寫入完成；AR 交讀位址、R 回讀資料。每條 channel 都只有 VALID&&READY 才發生 transfer。', en: 'Treat the five channels independently: AW carries the write address, W the data, B the write response, AR the read address, and R the read response. A transfer occurs only on VALID&&READY.' },
+      { zh: '為 write path 準備 aw_pending/awaddr_q 與 w_pending/wdata_q。AW handshake 只設定前者，W handshake 只設定後者；兩份資料都到齊且沒有 pending B response 才執行 address decode。', en: 'Create aw_pending/awaddr_q and w_pending/wdata_q. An AW handshake fills only the first pair and a W handshake fills only the second. Decode and commit only after both are present and no B response is pending.' },
+      { zh: 'BVALID 拉高後保持到 BREADY；RVALID/RDATA 也保持到 RREADY。accel_start 每拍先預設為 0，只在 commit 到 0x00 且 WDATA[0]=1 的那拍設為 1。記得處理 AW 與 W 同拍抵達。', en: 'Hold BVALID until BREADY and hold RVALID/RDATA until RREADY. Default accel_start to zero each cycle and pulse it only when a committed write to 0x00 has WDATA[0]=1. Handle AW and W arriving in the same cycle.' },
+    ],
     starter: `module axi_lite_accel_regs(
   input wire ACLK,input wire ARESETn,
   input wire AWVALID,input wire [5:0] AWADDR,output reg AWREADY,
@@ -452,7 +464,11 @@ initial begin repeat(2)@(negedge clk);rst_n=1;send_aw(6'h08);repeat(2)@(negedge 
     description: { zh: '實作簡化的 AXI4 read master。收到 start 後送出一筆 AR request，再把每個 R beat 轉成加速器內部 stream，最後以 RLAST 結束。', en: 'Build a simplified AXI4 read master. Launch one AR request after start, stream each R beat into the accelerator, and finish on RLAST.' },
     specs: [{ zh: 'ARVALID 必須保持到 ARREADY handshake。', en: 'Hold ARVALID until the ARREADY handshake.' }, { zh: 'ARLEN = beats - 1；AXI4 的 burst length 是 beat 數減一。', en: 'ARLEN = beats - 1; AXI4 encodes burst length as beat count minus one.' }, { zh: 'RREADY 必須反映內部 stream_ready，支援 back-pressure。', en: 'RREADY must honor internal stream_ready for back-pressure.' }],
     testGroups: [{ zh: 'AR handshake', en: 'AR handshake' }, { zh: '四拍 burst 與 RLAST', en: 'Four-beat burst and RLAST' }, { zh: 'Back-pressure', en: 'Back-pressure' }],
-    hints: [{ zh: 'FSM 可分成 IDLE、SEND_AR、RECEIVE_R；只在 RVALID && RREADY && RLAST 時完成。', en: 'Use IDLE, SEND_AR, and RECEIVE_R states; finish only on RVALID && RREADY && RLAST.' }],
+    hints: [
+      { zh: '先畫三個 state：IDLE 等 start；SEND_AR 保持 ARVALID；RECEIVE_R 接收資料。start 時鎖住 base_addr 與 beats-1，不能直接持續讀外部輸入。', en: 'Draw three states first: IDLE waits for start, SEND_AR holds ARVALID, and RECEIVE_R accepts data. Capture base_addr and beats-1 on start instead of continuously using external inputs.' },
+      { zh: '可用組合連線：RREADY = (state==RECEIVE_R) && stream_ready；stream_valid = (state==RECEIVE_R) && RVALID；stream_data = RDATA。這會把下游 back-pressure 原路傳回 AXI。', en: 'Useful combinational wiring is RREADY=(state==RECEIVE_R)&&stream_ready, stream_valid=(state==RECEIVE_R)&&RVALID, and stream_data=RDATA. This propagates downstream back-pressure to AXI.' },
+      { zh: 'SEND_AR 只有 ARVALID&&ARREADY 才轉 RECEIVE_R；RECEIVE_R 只有 RVALID&&RREADY&&RLAST 才 busy<=0、done<=1 並回 IDLE。done 每個一般週期先清 0，才能形成單拍 pulse。', en: 'Leave SEND_AR only on ARVALID&&ARREADY. Finish RECEIVE_R only on RVALID&&RREADY&&RLAST, clearing busy, pulsing done, and returning to IDLE. Default done low each normal cycle to make a one-cycle pulse.' },
+    ],
     starter: `module axi_burst_reader(
   input wire ACLK,input wire ARESETn,input wire start,input wire [31:0] base_addr,input wire [7:0] beats,
   output reg ARVALID,input wire ARREADY,output reg [31:0] ARADDR,output reg [7:0] ARLEN,
@@ -493,7 +509,11 @@ initial begin repeat(2)@(negedge wclk);wrst_n=1;rrst_n=1;check(empty);check(!ful
     description: { zh: '用乾淨的 req/write/byte-enable 介面包裝一顆同步單埠 SRAM macro，並正確對齊一拍 read latency 與 rvalid。題目使用自訂 educational macro，不含任何晶圓廠機密資料。', en: 'Wrap a synchronous single-port SRAM macro with a clean request/write/byte-enable interface and align its one-cycle read latency with rvalid. The educational macro is original and contains no foundry-confidential data.' },
     specs: [{ zh: '虛構 timing contract：tCK ≥ 2.0 ns、input setup 0.15 ns、hold 0.05 ns、clock-to-Q 0.35 ns；只用來學會閱讀 macro timing，不代表任何商用製程 library。', en: 'Fictional timing contract: tCK ≥ 2.0 ns, input setup 0.15 ns, hold 0.05 ns, clock-to-Q 0.35 ns. It teaches timing interpretation and does not represent a commercial process library.' }, { zh: 'CEN_n、WEN_n、BWEN_n 都是 active-low；request 在上升沿 t 接受，Q 在 t+0.35 ns 更新，rvalid 在同一上升沿註冊（不額外延後一個 clock）。', en: 'CEN_n/WEN_n/BWEN_n are active-low. A request samples at edge t; Q updates at t+0.35 ns. Register rvalid at that same edge, not one additional clock later.' }, { zh: 'byte enable 必須能只修改選定 byte，未選擇的 byte 保持原值。reset 時禁止 memory request。模型只模擬 clock-to-Q 延遲，沒有 setup/hold 違反偵測；不提供此 macro 的 Yosys 面積估算。', en: 'Byte enable updates only selected bytes. Block memory requests during reset. Only clock-to-Q delay is simulated; setup/hold checks and macro area estimation are not implemented.' }],
     testGroups: [{ zh: 'Active-low macro controls', en: 'Active-low macro controls' }, { zh: '一拍 read latency／rvalid', en: 'One-cycle read latency/rvalid' }, { zh: 'Byte write 與 readback', en: 'Byte write and readback' }],
-    hints: [{ zh: '通常 CEN_n=~req、WEN_n=~(req&&write)、BWEN_n=~byte_en；rvalid 必須由「上一拍是 read request」產生。', en: 'Typically CEN_n=~req, WEN_n=~(req&&write), BWEN_n=~byte_en; rvalid comes from the previous read request.' }],
+    hints: [
+      { zh: '先把上層語意翻成低有效腳位：reset 時 CEN_n 必須為 1；一般情況 CEN_n=~req、WEN_n=~(req&&write)、BWEN_n=~byte_en。read 時 WEN_n 必須是 1。', en: 'Translate the friendly interface into active-low pins: force CEN_n high during reset; otherwise CEN_n=~req, WEN_n=~(req&&write), and BWEN_n=~byte_en. WEN_n must be high for reads.' },
+      { zh: '例化名稱必須是 edu_sram_1rw_256x32，依序連接 .CLK(clk)、.CEN_n(...)、.WEN_n(...)、.BWEN_n(...)、.A(addr)、.D(wdata)、.Q(rdata)。不要重新宣告這個 IP。', en: 'Instantiate edu_sram_1rw_256x32 and connect .CLK(clk), .CEN_n(...), .WEN_n(...), .BWEN_n(...), .A(addr), .D(wdata), and .Q(rdata). Do not redefine the supplied IP.' },
+      { zh: '這個教學 macro 在接受 read 的上升沿後 0.35 ns 更新 Q，因此 rvalid 在同一個上升沿註冊成 req&&!write；下一個上升沿若沒有 read 就清 0。不要再額外 delay 一整拍。', en: 'The teaching macro updates Q 0.35 ns after the accepted read edge, so register rvalid as req&&!write on that same edge and clear it on the next edge without a read. Do not add another full-cycle delay.' },
+    ],
     supportCode: educationalSram,
     starter: `module sram_port_adapter(
   input wire clk,input wire rst_n,input wire req,input wire write,input wire [3:0] byte_en,

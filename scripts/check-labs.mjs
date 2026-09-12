@@ -20,6 +20,7 @@ const { gradeXorCnf } = await loadTs('../lib/cnf.ts');
 const { patternFailures } = await loadTs('../lib/pattern-check.ts');
 const { learningContext } = await loadTs('../lib/learning-context.ts');
 const { goldenPatterns } = await loadTs('../lib/golden-patterns.ts');
+const { socLearningAids } = await loadTs('../lib/soc-learning-aids.ts');
 const { boardImplementationCompetencies } = await loadTs('../lib/readiness.ts');
 let checks = 0;
 function verify(ok, name) { assert.ok(ok, name); checks++; console.log('PASS ' + name); }
@@ -40,6 +41,23 @@ verify(challenges.filter(c=>c.track==='low-power').length===4, 'Four low-power e
 verify(challenges.filter(c=>/^soc-(?:cpu|cache)-/.test(c.id)).length===9, 'Nine CPU and cache exercises');
 verify(challenges.filter(c=>c.track==='cpu-cache').length===9, 'CPU/cache is an independent track');
 verify(challenges.filter(c=>c.track==='soc').length===11, 'Eleven SoC and accelerator exercises');
+const socChallenges = challenges.filter(c=>c.track==='soc');
+verify(Object.keys(socLearningAids).length===socChallenges.length, 'Every SoC exercise has exactly one interface guide');
+verify(socChallenges.every(c=>socLearningAids[c.id]), 'Every SoC exercise maps to a system architecture guide');
+function starterPorts(starter) {
+  const header = starter.match(/module\s+[A-Za-z_]\w*\s*\(([\s\S]*?)\);/)?.[1] ?? '';
+  return [...new Set(header.split(',').map(part=>part.match(/([A-Za-z_]\w*)\s*$/)?.[1]).filter(Boolean))];
+}
+for (const c of socChallenges) {
+  const aid = socLearningAids[c.id];
+  const documentedPorts = new Set(aid.ports.map(port=>port.name.replace(/\[.*$/, '')));
+  const missingPorts = starterPorts(c.starter).filter(port=>!documentedPorts.has(port));
+  verify(missingPorts.length===0, c.id+' documents every top-level port'+(missingPorts.length?': '+missingPorts.join(', '):''));
+  verify(Boolean(aid.context.zh&&aid.context.en&&aid.architecture.focus.zh&&aid.architecture.focus.en
+    &&aid.architecture.flow.zh&&aid.architecture.flow.en&&aid.architecture.sources.length&&aid.architecture.sinks.length), c.id+' has bilingual architecture and data flow');
+  verify(aid.ports.length>0&&aid.ports.every(port=>port.name&&port.width&&port.timing.zh&&port.timing.en&&port.purpose.zh&&port.purpose.en), c.id+' has complete bilingual port contracts');
+  verify(c.hints.length===3&&c.hints.every(hint=>hint.zh&&hint.en&&!/[\u4e00-\u9fff]/.test(hint.en)), c.id+' has three concrete bilingual hints');
+}
 const goldenPatternIds = Object.keys(goldenPatterns);
 verify(goldenPatternIds.length >= 15, 'Golden behavior patterns cover complex timing exercises');
 verify(goldenPatternIds.every(id=>challenges.some(c=>c.id===id)), 'Every golden behavior pattern maps to a challenge');
@@ -75,6 +93,7 @@ const publicVisibleText = JSON.stringify({
   challenges: challenges.map(({ title, description, specs, hints, testGroups }) => ({ title, description, specs, hints, testGroups })),
   learningContext,
   goldenPatterns,
+  socLearningAids,
 });
 verify(!/(?:面試|interview|王璽鑄|MediaTek|Realtek|Qualcomm|Phison|NVIDIA|TSMC|聯發科|瑞昱|群聯|威宏|創星|台積電)/i.test(publicVisibleText), 'Public exercise text contains no interview source, employer name or personal name');
 // Deliberately broken versions must fail in simulation, not merely fail compilation.

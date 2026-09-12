@@ -70,6 +70,7 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { WaveformViewer } from '@/components/waveform-viewer';
 import { CodeEditor, ReadOnlyCodeBlock } from '@/components/code-editor';
+import { SocInterfaceGuide } from '@/components/soc-interface-guide';
 import {
   challenges,
   difficultyLabel,
@@ -85,6 +86,7 @@ import { patternFailures } from '@/lib/pattern-check';
 import { learningContext, timingCommandGuide } from '@/lib/learning-context';
 import { goldenPatterns } from '@/lib/golden-patterns';
 import { speakingChecklist } from '@/lib/readiness';
+import { socLearningAids } from '@/lib/soc-learning-aids';
 
 type Result = {
   ok: boolean;
@@ -759,6 +761,7 @@ export default function Home() {
     challenges.find((item) => item.id === selectedId) ?? challenges[0];
   const context = learningContext[current.id];
   const goldenPattern = goldenPatterns[current.id];
+  const socLearningAid = socLearningAids[current.id];
   const text = copy[locale];
   const starterCode = useMemo(
     () => formatCodeForEditor(current.starter, current.language),
@@ -2030,6 +2033,7 @@ export default function Home() {
                 ))}
               </ul>
             </div>
+            {socLearningAid && <SocInterfaceGuide aid={socLearningAid} locale={locale} />}
             {goldenPattern && (
               <section className="golden-pattern mt-4 border-t border-border pt-4" aria-labelledby="golden-pattern-title">
                 <div className="flex flex-wrap items-start justify-between gap-2">

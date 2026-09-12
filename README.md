@@ -99,6 +99,8 @@ These deliberately small models expose the architecture trade-offs: direct mappi
 
 The separate SoC track is organized around the boundaries a Linux-controlled FPGA accelerator must implement:
 
+Every SoC exercise now opens with a bilingual system-position diagram and a complete port contract before the editor. The diagram identifies the upstream source, the block being implemented, the downstream consumer, and the transaction path. The port table states direction, width, sampling/handshake timing, and functional purpose for every top-level signal. Three progressive hints then move from the transaction model, through the required state or equations, to an implementation skeleton without exposing a paste-ready solution.
+
 | Stage                   | Exercises                                                                                             | Demonstrated capability                                                            |
 | ----------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | Software control plane  | APB register, AXI4-Lite register bank, W1C interrupt status                                           | Explain register maps, start/status, sticky events and software-visible completion |

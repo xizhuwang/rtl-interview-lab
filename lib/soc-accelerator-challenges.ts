@@ -25,9 +25,9 @@ export const socAcceleratorChallenges: Challenge[] = [
     ],
     testGroups: [{ zh: 'Back-pressure 資料保持', en: 'Back-pressure stability' }, { zh: '同拍 consume/refill', en: 'Same-cycle consume/refill' }, { zh: 'Reset 與連續傳輸', en: 'Reset and continuous traffic' }],
     hints: [
-      { zh: '核心條件是 s_ready = !m_valid || m_ready。', en: 'The key equation is s_ready = !m_valid || m_ready.' },
-      { zh: '只有 s_ready=1 時才能更新 output register。', en: 'Update the output register only when s_ready is high.' },
-      { zh: '更新時令 m_valid<=s_valid；只有 s_valid=1 才需要鎖住 s_data。', en: 'When updating, assign m_valid<=s_valid and capture s_data only when it is valid.' },
+      { zh: '先分清兩個 handshake：push=s_valid&&s_ready，pop=m_valid&&m_ready。buffer 空時能 push；有資料且 pop 的同一拍也能 refill。', en: 'Separate the handshakes: push=s_valid&&s_ready and pop=m_valid&&m_ready. An empty slot can accept a push, and an occupied slot can refill in the same cycle it pops.' },
+      { zh: '由「空槽或本拍會清空」可推得 s_ready = !m_valid || m_ready。當 m_valid=1、m_ready=0 時 s_ready=0，所有 output registers 都必須保持。', en: '“Empty or consumed this cycle” gives s_ready=!m_valid||m_ready. When m_valid=1 and m_ready=0, s_ready is low and every output register must hold.' },
+      { zh: 'Sequential skeleton：reset 時 m_valid<=0；否則 if(s_ready) begin m_valid<=s_valid; if(s_valid) m_data<=s_data; end。沒有 s_ready 的週期不要寫 else 清資料。', en: 'Sequential skeleton: clear m_valid on reset; otherwise if(s_ready) begin m_valid<=s_valid; if(s_valid) m_data<=s_data; end. Do not clear data in an else branch while stalled.' },
     ],
     starter: `module stream_register_slice(
   input wire clk,
@@ -76,9 +76,9 @@ end endmodule`,
     ],
     testGroups: [{ zh: 'Sticky event', en: 'Sticky event' }, { zh: '逐 bit W1C', en: 'Per-bit W1C' }, { zh: 'Set-over-clear 與 IRQ', en: 'Set-over-clear and IRQ' }],
     hints: [
-      { zh: '先算 cleared = status & ~(sw_write ? sw_wdata : 0)。', en: 'First compute cleared = status & ~(sw_write ? sw_wdata : 0).' },
-      { zh: '再把硬體事件 OR 回去，即可自然形成 set priority。', en: 'Then OR hardware events back in to give set priority.' },
-      { zh: 'irq 是 status 的組合輸出，不需要另一個 state bit。', en: 'irq is a combinational reduction of status and needs no extra state.' },
+      { zh: 'W1C 不是「只要 sw_write 就整個清零」：sw_wdata 的每個 1 只清除對應 status bit，0 表示保持。先寫出 clear_mask = sw_write ? sw_wdata : 2\'b00。', en: 'W1C does not clear everything on any write. Each one in sw_wdata clears only its matching status bit, while zero preserves it. Start with clear_mask=sw_write?sw_wdata:2\'b00.' },
+      { zh: '把下一狀態寫成一條式子：next_status = (status & ~clear_mask) | {hw_error, hw_done}。因為事件最後才 OR 進去，同拍 set/clear 時自然是 set 優先。', en: 'Write the next state as next_status=(status&~clear_mask)|{hw_error,hw_done}. OR-ing events last naturally gives set priority on a simultaneous set and clear.' },
+      { zh: 'Sequential block 只需 reset 或 status<=next_status；irq 可直接 assign irq=|status，不要再做另一個會和 status 不同步的 irq register。', en: 'The sequential block only needs reset or status<=next_status. Use assign irq=|status instead of another IRQ register that could lag status.' },
     ],
     starter: `module accelerator_status(
   input wire clk,input wire rst_n,
@@ -123,9 +123,9 @@ we=1;wd=2;step;we=0;wd=0;check(status==0&&!irq);$display("@@PASS@@");$finish;end
     ],
     testGroups: [{ zh: '連續與 stride 位址', en: 'Contiguous and strided addresses' }, { zh: 'Back-pressure 保持', en: 'Back-pressure stability' }, { zh: 'Last、done 與零長度', en: 'Last, done, and zero length' }],
     hints: [
-      { zh: '用 remaining 記錄尚未 handshake 的數量。', en: 'Track the number of beats not yet handshaken in remaining.' },
-      { zh: 'addr_valid 可以直接由 busy 產生；last=(remaining==1)。', en: 'addr_valid can be derived from busy; last is remaining==1.' },
-      { zh: '只有 addr_valid && addr_ready 才能更新 addr／remaining。', en: 'Advance addr and remaining only on addr_valid && addr_ready.' },
+      { zh: 'start 只負責建立 descriptor state：addr<=base_addr、remaining<=count。count=0 時直接 pulse done；否則 busy<=1。工作期間不要再讀取改變中的 base/count。', en: 'start creates descriptor state: addr<=base_addr and remaining<=count. Pulse done immediately for count=0; otherwise set busy. Do not keep reading changing base/count during the job.' },
+      { zh: '輸出可以由 state 推導：addr_valid=busy，last=busy&&(remaining==1)。因此 addr_ready=0 時，只要不更新 addr/remaining，三個輸出就會自然保持。', en: 'Derive outputs from state: addr_valid=busy and last=busy&&(remaining==1). When addr_ready=0, simply hold addr/remaining and all three outputs remain stable.' },
+      { zh: '只在 fire=addr_valid&&addr_ready 時前進。若 remaining==1：busy<=0、remaining<=0、done<=1；否則 addr<=addr+stride、remaining<=remaining-1。每拍先 done<=0。', en: 'Advance only on fire=addr_valid&&addr_ready. If remaining==1, clear busy/remaining and pulse done; otherwise add stride and decrement remaining. Default done low every cycle.' },
     ],
     starter: `module dma_address_generator(
   input wire clk,input wire rst_n,input wire start,
@@ -179,9 +179,9 @@ check(valid&&addr==32'h1000&&!last);repeat(2)begin @(posedge clk);#1;check(addr=
     ],
     testGroups: [{ zh: 'FIFO 順序與滿／空', en: 'FIFO order and full/empty' }, { zh: 'Back-pressure', en: 'Back-pressure' }, { zh: '同拍 push/pop', en: 'Simultaneous push/pop' }],
     hints: [
-      { zh: '用 2-bit write/read pointer 和 3-bit count。', en: 'Use two-bit read/write pointers and a three-bit count.' },
-      { zh: 'push=enq_valid&&enq_ready；pop=deq_valid&&deq_ready。', en: 'Define push and pop from their valid/ready handshakes.' },
-      { zh: 'case({push,pop})：10 加一、01 減一、其他保持。', en: 'Use case({push,pop}): increment for 10, decrement for 01, otherwise hold.' },
+      { zh: '深度 4 需要 mem[0:3]、2-bit wptr/rptr 與能表示 0～4 的 3-bit count。enq_ready=(count<4)、deq_valid=(count!=0)、deq_data=mem[rptr]。', en: 'Depth four needs mem[0:3], two-bit wptr/rptr, and a three-bit count representing 0–4. enq_ready=(count<4), deq_valid=(count!=0), and deq_data=mem[rptr].' },
+      { zh: '明確定義 push=enq_valid&&enq_ready、pop=deq_valid&&deq_ready。只有 push 寫 mem[wptr] 並移動 wptr；只有 pop 移動 rptr。', en: 'Define push=enq_valid&&enq_ready and pop=deq_valid&&deq_ready. Only push writes mem[wptr] and advances wptr; only pop advances rptr.' },
+      { zh: 'count 的四種情況用 case({push,pop})：10 加一、01 減一、11 與 00 保持。不要寫成兩個獨立 if 都對 count 做 nonblocking assignment，否則同拍 push/pop 會由最後一個 assignment 覆蓋。', en: 'Update count with case({push,pop}): increment for 10, decrement for 01, and hold for 11 or 00. Two independent nonblocking assignments to count would make the last assignment win on simultaneous push/pop.' },
     ],
     starter: `module command_fifo4(
   input wire clk,input wire rst_n,
@@ -229,9 +229,9 @@ pop(33);pop(44);pop(55);check(level==0&&!dv);$display("@@PASS@@");$finish;end en
     ],
     testGroups: [{ zh: 'INT8 正負數', en: 'Signed INT8' }, { zh: 'INT4 packed lanes', en: 'Packed INT4 lanes' }, { zh: '邊界與零', en: 'Boundaries and zero' }],
     hints: [
-      { zh: '寫 s8、s4 function，把 lane 的 sign bit 再複製一位。', en: 'Create s8 and s4 functions that explicitly extend each lane sign.' },
-      { zh: 'INT8 模式只取兩個 byte；INT4 模式取四個 nibble。', en: 'INT8 mode uses two bytes; INT4 mode uses four nibbles.' },
-      { zh: '用 integer 暫存累加結果，再指定到 signed output。', en: 'Accumulate in an integer temporary before assigning the signed output.' },
+      { zh: 'Verilog 的 a[7:0] 預設是 unsigned。先做 signed helper：s8={v[7],v} 產生 9-bit signed；s4={v[3],v} 產生 5-bit signed。這樣 8\'hFD 才會是 -3。', en: 'Slices such as a[7:0] are unsigned by default. Build signed helpers: s8={v[7],v} as signed 9-bit and s4={v[3],v} as signed 5-bit, so 8\'hFD becomes -3.' },
+      { zh: 'mode_int4=0 時算 s8(a[7:0])*s8(b[7:0]) + s8(a[15:8])*s8(b[15:8])；mode_int4=1 時依 [3:0]、[7:4]、[11:8]、[15:12] 算四組。', en: 'For mode_int4=0, compute the two byte products. For mode_int4=1, compute four products from [3:0], [7:4], [11:8], and [15:12].' },
+      { zh: '在 always @* 內用 integer acc 先收完整 signed sum，最後 y=acc。每個 mode 分支都要指定 acc，避免 latch；不要對 packed input 整體使用 $signed 後就假設每個 lane 都會獨立帶符號。', en: 'Use an integer acc inside always @* for the complete signed sum, then assign y=acc. Assign acc in every mode branch to avoid a latch; casting the whole packed input does not make each lane independently signed.' },
     ],
     starter: `module mixed_precision_dot(
   input wire mode_int4,
@@ -270,9 +270,9 @@ $display("@@PASS@@");$finish;end endmodule`,
     ],
     testGroups: [{ zh: 'INT8／INT4 多拍累加', en: 'Multi-beat INT8/INT4 accumulation' }, { zh: 'Input 與 output back-pressure', en: 'Input and output back-pressure' }, { zh: 'Job 邊界與結果保持', en: 'Job boundaries and result stability' }],
     hints: [
-      { zh: '先把上一題 dot product 改成內部 function／組合 wire。', en: 'Reuse the prior dot-product logic as an internal combinational value.' },
-      { zh: '用 remaining 判斷最後一拍；最後一拍 result<=accumulator+dot。', en: 'Use remaining to identify the final beat and assign result<=accumulator+dot.' },
-      { zh: '有未消費的 m_valid 時不可接受新 start 或新 input。', en: 'Do not accept a new start or input while an output remains unconsumed.' },
+      { zh: '先分成 datapath 與 control：組合 datapath 根據鎖住的 mode_q 算本拍 dot；sequential control 保存 mode_q、remaining、acc、busy、m_valid 與 result。', en: 'Split datapath from control. A combinational datapath computes this cycle\'s dot from captured mode_q; sequential control stores mode_q, remaining, acc, busy, m_valid, and result.' },
+      { zh: '接受 start 的條件是 !busy&&!m_valid&&start&&beats!=0；接受資料的條件是 fire=s_valid&&s_ready，其中 s_ready=busy&&!m_valid。只有 fire 才能改變 acc 或 remaining。', en: 'Accept start only when !busy&&!m_valid&&start&&beats!=0. Accept data on fire=s_valid&&s_ready, with s_ready=busy&&!m_valid. Only fire may change acc or remaining.' },
+      { zh: 'fire 且 remaining>1 時 acc<=acc+dot、remaining--；remaining==1 時 result<=acc+dot、m_valid<=1。m_valid&&m_ready 後清 m_valid 與 busy。最後一拍一定要用 acc+dot，不能只輸出舊 acc。', en: 'On fire with remaining>1, accumulate and decrement. When remaining==1, assign result<=acc+dot and set m_valid. Clear m_valid and busy after m_valid&&m_ready. The final result must include the current dot, not only the old acc.' },
     ],
     starter: `module streaming_llm_tile(
   input wire clk,input wire rst_n,input wire start,input wire mode_int4,input wire [7:0] beats,
