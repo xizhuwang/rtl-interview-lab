@@ -815,6 +815,7 @@ export default function Home() {
   });
   const [elementSpend, setElementSpend] = useState(0);
   const [mascotTapNonce, setMascotTapNonce] = useState(0);
+  const [mascotIsTapping, setMascotIsTapping] = useState(false);
   const [mascotInteraction, setMascotInteraction] = useState('');
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const pendingRequest = useRef<string | null>(null);
@@ -1308,34 +1309,40 @@ export default function Home() {
   }, [selectChallenge]);
 
   const updateCode = (next: string) => {
-    pendingRequest.current = null;
-    pendingSynth.current = null;
-    runStartedAt.current = 0;
-    synthStartedAt.current = 0;
-    iframeRef.current?.contentWindow?.postMessage(
-      { type: 'SOC_RTL_CANCEL' },
-      window.location.origin,
-    );
-    setRunning(false);
-    setBattleVisible(false);
-    clearRunWatchdog();
-    clearSynthWatchdog();
-    if (battleReturnTimer.current !== null) {
-      window.clearTimeout(battleReturnTimer.current);
-      battleReturnTimer.current = null;
+    const hadActiveWork =
+      pendingRequest.current !== null ||
+      pendingSynth.current !== null ||
+      instantJudgeTimer.current !== null;
+    if (hadActiveWork) {
+      pendingRequest.current = null;
+      pendingSynth.current = null;
+      runStartedAt.current = 0;
+      synthStartedAt.current = 0;
+      iframeRef.current?.contentWindow?.postMessage(
+        { type: 'SOC_RTL_CANCEL' },
+        window.location.origin,
+      );
+      setRunning(false);
+      setBattleVisible(false);
+      setEstimating(false);
+      clearRunWatchdog();
+      clearSynthWatchdog();
+      if (battleReturnTimer.current !== null) {
+        window.clearTimeout(battleReturnTimer.current);
+        battleReturnTimer.current = null;
+      }
+      if (instantJudgeTimer.current !== null) {
+        window.clearTimeout(instantJudgeTimer.current);
+        instantJudgeTimer.current = null;
+      }
     }
-    if (instantJudgeTimer.current !== null) {
-      window.clearTimeout(instantJudgeTimer.current);
-      instantJudgeTimer.current = null;
-    }
-    setEstimating(false);
-    setAreaResult(null);
-    setAreaError('');
+    if (areaResult) setAreaResult(null);
+    if (areaError) setAreaError('');
     setSolutions((previous) => {
       return { ...previous, [current.id]: next };
     });
-    setResult(null);
-    setWaveformVcd('');
+    if (result) setResult(null);
+    if (waveformVcd) setWaveformVcd('');
   };
 
   const gradePatterns = () => {
@@ -1641,6 +1648,7 @@ export default function Home() {
             'Waveforms are evidence; finish with the root cause.',
           ];
     setMascotTapNonce((value) => value + 1);
+    setMascotIsTapping(true);
     setMascotInteraction(lines[mascotTapNonce % lines.length]);
   };
 
@@ -1691,7 +1699,7 @@ export default function Home() {
           });
         }}
       />
-      <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur">
+      <header className="relative z-30 border-b border-border bg-card">
         <div className="mx-auto flex max-w-[1580px] items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <button
             type="button"
@@ -1745,7 +1753,7 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-[1580px] xl:grid-cols-[290px_minmax(0,1fr)_330px]">
+      <div className="lab-shell mx-auto grid max-w-[1580px] xl:grid-cols-[290px_minmax(0,1fr)_330px]">
         <aside className="border-b border-border bg-sidebar px-4 py-5 xl:min-h-[calc(100vh-65px)] xl:border-b-0 xl:border-r">
           <div className="relative mb-4">
             <Search className="pointer-events-none absolute left-3 top-2.5 size-4 text-muted-foreground" />
@@ -2125,7 +2133,7 @@ export default function Home() {
           </div>
         </aside>
 
-        <section className="min-w-0 px-4 py-6 sm:px-7">
+        <section className="lab-content min-w-0 px-4 py-6 sm:px-7">
           <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
             <div>
               <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -2242,11 +2250,11 @@ export default function Home() {
             )}
             <div className="mascot-companion-stage mt-4 grid grid-cols-[84px_minmax(0,1fr)] items-end gap-3 border-t border-border pt-4 sm:grid-cols-[104px_minmax(0,1fr)]">
               <button
-                key={`hint-${mascotTapNonce}`}
                 type="button"
                 onClick={interactWithMascot}
+                onAnimationEnd={() => setMascotIsTapping(false)}
                 aria-label={text.mascotInteract}
-                className={`mascot-hint-button mascot-tapped ${battleVisible ? 'mascot-departed' : ''}`}
+                className={`mascot-hint-button ${mascotIsTapping ? 'mascot-tapped' : ''} ${battleVisible ? 'mascot-departed' : ''}`}
               >
                 <MascotAvatar
                   gender={mascotGender}
@@ -2642,7 +2650,7 @@ export default function Home() {
           </div>
         </section>
 
-        <aside className="border-t border-border bg-card px-4 py-6 sm:px-6 xl:min-h-[calc(100vh-65px)] xl:border-l xl:border-t-0">
+        <aside className="lab-results border-t border-border bg-card px-4 py-6 sm:px-6 xl:min-h-[calc(100vh-65px)] xl:border-l xl:border-t-0">
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm font-medium">
               <TerminalSquare className="size-4" />
