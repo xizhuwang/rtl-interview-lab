@@ -315,7 +315,7 @@ initial begin expected_valid=0;expected=0;repeat(2)@(negedge clk);rst_n=1;@(nege
     ],
     testGroups: [{ zh: 'PWDATA → control', en: 'PWDATA → control' }, { zh: 'control/status → PRDATA', en: 'control/status → PRDATA' }, { zh: '唯讀與非法位址保護', en: 'Read-only and unmapped-address protection' }],
     hints: [
-      { zh: '先定義一次真正完成的寫入：write_fire = PSEL && PENABLE && PWRITE && PREADY。只有 write_fire 且 PADDR==8\'h00 時才能更新 control。', en: 'First define a completed write: write_fire = PSEL && PENABLE && PWRITE && PREADY. Update control only when write_fire and PADDR==8\'h00.' },
+      { zh: 'APB 先走 Setup（PSEL=1、PENABLE=0，此時不能寫入），下一拍才是 Access。只有 PSEL && PENABLE && PWRITE && PREADY 且 PADDR==8\'h00 時，才在上升緣把 PWDATA 寫進 control。', en: 'APB first enters Setup (PSEL=1, PENABLE=0, so no write may occur), then Access on the next cycle. Capture PWDATA into control at the rising edge only when PSEL && PENABLE && PWRITE && PREADY and PADDR==8\'h00.' },
       { zh: '把工作拆成兩塊：always @(posedge PCLK) 只處理 reset/control write；always @* 只處理 PRDATA address decode。不要在組合 read mux 裡寫 control。', en: 'Split the design: always @(posedge PCLK) handles reset/control writes, while always @* handles PRDATA address decode. Never write control from the read mux.' },
       { zh: '組合區先給 PRDATA=0，再用 case(PADDR) 覆蓋 0x00→control、0x04→status；PREADY 可直接 assign 1\'b1。這樣非法位址自然讀回 0，也不會推導 latch。', en: 'Default PRDATA to zero, then use case(PADDR) for 0x00→control and 0x04→status. Assign PREADY=1\'b1. Unmapped addresses then return zero without inferring a latch.' },
     ],

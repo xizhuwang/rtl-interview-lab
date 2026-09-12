@@ -71,7 +71,6 @@ import { Progress } from '@/components/ui/progress';
 import { WaveformViewer } from '@/components/waveform-viewer';
 import { CodeEditor, ReadOnlyCodeBlock } from '@/components/code-editor';
 import { SocInterfaceGuide } from '@/components/soc-interface-guide';
-import { ApbTimingGuide } from '@/components/apb-timing-guide';
 import {
   challenges,
   difficultyLabel,
@@ -2333,7 +2332,6 @@ export default function Home() {
                 </p>
               </section>
             )}
-            {current.id === 'soc-apb-register' && <ApbTimingGuide locale={locale} />}
             <div className="mascot-companion-stage mt-4 grid grid-cols-[84px_minmax(0,1fr)] items-end gap-3 border-t border-border pt-4 sm:grid-cols-[104px_minmax(0,1fr)]">
               <button
                 type="button"
