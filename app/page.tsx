@@ -750,6 +750,8 @@ export default function Home() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const pendingRequest = useRef<string | null>(null);
   const pendingSynth = useRef<string | null>(null);
+  const runWatchdogTimer = useRef<number | null>(null);
+  const synthWatchdogTimer = useRef<number | null>(null);
   const instantJudgeTimer = useRef<number | null>(null);
   const battleReturnTimer = useRef<number | null>(null);
   const storageLoaded = useRef(false);
@@ -780,6 +782,20 @@ export default function Home() {
     }, 1400);
   }, []);
 
+  const clearRunWatchdog = useCallback(() => {
+    if (runWatchdogTimer.current !== null) {
+      window.clearTimeout(runWatchdogTimer.current);
+      runWatchdogTimer.current = null;
+    }
+  }, []);
+
+  const clearSynthWatchdog = useCallback(() => {
+    if (synthWatchdogTimer.current !== null) {
+      window.clearTimeout(synthWatchdogTimer.current);
+      synthWatchdogTimer.current = null;
+    }
+  }, []);
+
   const markSolved = useCallback((id: string) => {
     setSolved((previous) => {
       if (previous.includes(id)) return previous;
@@ -808,6 +824,8 @@ export default function Home() {
     setRevealedHints(0);
     setHoldLab({ ...initialHoldLab });
     setMascotInteraction('');
+    clearRunWatchdog();
+    clearSynthWatchdog();
     if (instantJudgeTimer.current !== null) {
       window.clearTimeout(instantJudgeTimer.current);
       instantJudgeTimer.current = null;
@@ -818,7 +836,7 @@ export default function Home() {
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
     return true;
-  }, []);
+  }, [clearRunWatchdog, clearSynthWatchdog]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -1006,8 +1024,25 @@ export default function Home() {
       browserStorage.setItem(storageKeys.elementSpend, String(elementSpend));
   }, [elementSpend]);
   useEffect(() => {
+    if (!storageLoaded.current) return;
+    const timer = window.setTimeout(() => {
+      browserStorage.setItem(storageKeys.code, JSON.stringify(solutions));
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [solutions]);
+  useEffect(() => {
     document.documentElement.lang = locale === 'zh' ? 'zh-Hant-TW' : 'en';
   }, [locale]);
+
+  useEffect(() => {
+    const target = new Image();
+    target.decoding = 'async';
+    target.fetchPriority = 'low';
+    target.src =
+      current.difficulty === 'advanced'
+        ? './mascot/gate-level-timing-boss-display.png'
+        : './mascot/rtl-training-dummy-display.png';
+  }, [current.difficulty]);
 
   useEffect(() => {
     if (engineReady) return;
@@ -1037,6 +1072,7 @@ export default function Home() {
       )
         return;
       pendingRequest.current = null;
+      clearRunWatchdog();
       const next: Result = {
         ok: Boolean(event.data.ok),
         phase: event.data.phase,
@@ -1051,7 +1087,7 @@ export default function Home() {
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [current.id, markSolved, scheduleMascotReturn]);
+  }, [clearRunWatchdog, current.id, markSolved, scheduleMascotReturn]);
 
   useEffect(() => {
     const onSynthesis = (event: MessageEvent) => {
@@ -1063,6 +1099,7 @@ export default function Home() {
       )
         return;
       pendingSynth.current = null;
+      clearSynthWatchdog();
       setEstimating(false);
       if (!event.data.ok) {
         setAreaError(String(event.data.console || text.areaError));
@@ -1083,7 +1120,15 @@ export default function Home() {
     };
     window.addEventListener('message', onSynthesis);
     return () => window.removeEventListener('message', onSynthesis);
-  }, [text.areaError]);
+  }, [clearSynthWatchdog, text.areaError]);
+
+  useEffect(
+    () => () => {
+      clearRunWatchdog();
+      clearSynthWatchdog();
+    },
+    [clearRunWatchdog, clearSynthWatchdog],
+  );
 
   useEffect(() => {
     const nav = navigator as Navigator & {
@@ -1124,6 +1169,8 @@ export default function Home() {
     );
     setRunning(false);
     setBattleVisible(false);
+    clearRunWatchdog();
+    clearSynthWatchdog();
     if (battleReturnTimer.current !== null) {
       window.clearTimeout(battleReturnTimer.current);
       battleReturnTimer.current = null;
@@ -1136,9 +1183,7 @@ export default function Home() {
     setAreaResult(null);
     setAreaError('');
     setSolutions((previous) => {
-      const updated = { ...previous, [current.id]: next };
-      browserStorage.setItem(storageKeys.code, JSON.stringify(updated));
-      return updated;
+      return { ...previous, [current.id]: next };
     });
     setResult(null);
     setWaveformVcd('');
@@ -1205,6 +1250,28 @@ export default function Home() {
     const requestId = `${Date.now()}-${Math.random()}`;
     pendingRequest.current = requestId;
     setRunning(true);
+    clearRunWatchdog();
+    runWatchdogTimer.current = window.setTimeout(() => {
+      if (pendingRequest.current !== requestId) return;
+      pendingRequest.current = null;
+      iframeRef.current?.contentWindow?.postMessage(
+        { type: 'SOC_RTL_CANCEL' },
+        window.location.origin,
+      );
+      if (iframeRef.current) iframeRef.current.src = './engine/runner.html';
+      setRunning(false);
+      setEngineReady(false);
+      setResult({
+        ok: false,
+        phase: 'engine',
+        console:
+          locale === 'zh'
+            ? '執行環境逾時，已自動解除鎖定並重新連線；請再執行一次。'
+            : 'The runtime timed out. The UI was unlocked and is reconnecting; please run again.',
+      });
+      scheduleMascotReturn();
+      runWatchdogTimer.current = null;
+    }, 50000);
     iframeRef.current.contentWindow.postMessage(
       {
         type: 'SOC_RTL_RUN',
@@ -1273,6 +1340,24 @@ export default function Home() {
     setEstimating(true);
     setAreaError('');
     setAreaResult(null);
+    clearSynthWatchdog();
+    synthWatchdogTimer.current = window.setTimeout(() => {
+      if (pendingSynth.current !== requestId) return;
+      pendingSynth.current = null;
+      iframeRef.current?.contentWindow?.postMessage(
+        { type: 'SOC_RTL_CANCEL' },
+        window.location.origin,
+      );
+      if (iframeRef.current) iframeRef.current.src = './engine/runner.html';
+      setEstimating(false);
+      setEngineReady(false);
+      setAreaError(
+        locale === 'zh'
+          ? '合成逾時，已自動解除鎖定並重新連線；請稍後再試。'
+          : 'Synthesis timed out. The UI was unlocked and is reconnecting; please retry.',
+      );
+      synthWatchdogTimer.current = null;
+    }, 125000);
     iframeRef.current.contentWindow.postMessage(
       {
         type: 'SOC_RTL_SYNTH',
@@ -1419,6 +1504,39 @@ export default function Home() {
         title="Icarus Verilog simulation engine"
         className="hidden"
         sandbox="allow-scripts allow-same-origin"
+        onLoad={() => {
+          setEngineReady(false);
+          if (pendingRequest.current !== null) {
+            pendingRequest.current = null;
+            clearRunWatchdog();
+            setRunning(false);
+            setResult({
+              ok: false,
+              phase: 'engine',
+              console:
+                locale === 'zh'
+                  ? '執行環境已重新啟動，請再執行一次。'
+                  : 'The runtime restarted. Please run the test again.',
+            });
+            scheduleMascotReturn();
+          }
+          if (pendingSynth.current !== null) {
+            pendingSynth.current = null;
+            clearSynthWatchdog();
+            setEstimating(false);
+            setAreaError(
+              locale === 'zh'
+                ? '合成環境已重新啟動，請稍後再試。'
+                : 'The synthesis runtime restarted. Please retry.',
+            );
+          }
+          window.requestAnimationFrame(() => {
+            iframeRef.current?.contentWindow?.postMessage(
+              { type: 'SOC_RTL_ENGINE_PING' },
+              window.location.origin,
+            );
+          });
+        }}
       />
       <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1580px] items-center justify-between gap-4 px-4 py-3 sm:px-6">

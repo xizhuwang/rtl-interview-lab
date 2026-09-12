@@ -1,5 +1,9 @@
 # SoC RTL Lab
 
+<p align="center">
+  <img src="public/soc-rtl-lab-preview.jpg" width="1200" alt="SoC RTL Lab penguin professions facing a gate-level timing boss with four elemental stones">
+</p>
+
 An original, bilingual (Traditional Chinese / English) hands-on practice site for SoC and digital IC engineering.
 
 The current release contains 48 coding, debugging, constraint, and interactive challenges. CPU/cache is now an independent track, separate from SoC and accelerator integration. The SoC path progresses from software-visible control and ready/valid flow through AXI/DMA, SRAM/CDC, command queues, mixed-precision arithmetic, and a streaming compute-tile capstone. The CDC track includes a complete asynchronous FIFO.
