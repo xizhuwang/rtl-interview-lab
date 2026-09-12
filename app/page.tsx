@@ -93,7 +93,74 @@ type Result = {
   phase: 'compile' | 'simulate' | 'pattern' | 'engine' | 'interactive' | 'cnf';
   console: string;
   elapsedMs?: number;
+  checks?: SimulationCheck[];
 };
+type SimulationCheck = {
+  step: string;
+  signal: string;
+  cycle: number;
+  expected: string;
+  actual: string;
+  pass: boolean;
+};
+
+const diagnosticStepLabels: Record<string, { zh: string; en: string }> = {
+  reset: { zh: 'Reset 後', en: 'After reset' },
+  write_control: { zh: '寫入 control', en: 'Write control' },
+  read_control: { zh: '讀回 control', en: 'Read control' },
+  read_status: { zh: '讀取 status', en: 'Read status' },
+  read_unmapped: { zh: '讀取非法位址', en: 'Read unmapped address' },
+  always_ready: { zh: 'PREADY 檢查', en: 'PREADY check' },
+  protect_status: { zh: '唯讀位址保護', en: 'Read-only address protection' },
+};
+
+function SimulationCheckTable({ checks, locale }: { checks: SimulationCheck[]; locale: Locale }) {
+  if (!checks.length) return null;
+  const firstFailure = checks.find((check) => !check.pass);
+  return (
+    <section className="mt-3 overflow-hidden rounded-xl border border-border bg-card">
+      <div className="border-b border-border px-3 py-2.5">
+        <p className="text-sm font-semibold text-foreground">
+          {locale === 'zh' ? 'Current vs Golden 逐項比較' : 'Current vs Golden checks'}
+        </p>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+          {firstFailure
+            ? locale === 'zh'
+              ? `第一個錯誤在 cycle ${firstFailure.cycle} 的 ${firstFailure.signal}。`
+              : `The first mismatch is ${firstFailure.signal} at cycle ${firstFailure.cycle}.`
+            : locale === 'zh'
+              ? '所有列出的訊號值都符合 Golden。'
+              : 'All listed signal values match the Golden values.'}
+        </p>
+      </div>
+      <div className="divide-y divide-border font-mono text-[11px]">
+        <div className="hidden grid-cols-[minmax(0,1.25fr)_4rem_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_2.5rem] gap-2 bg-muted/60 px-3 py-2 font-sans font-semibold text-muted-foreground sm:grid">
+          <span>{locale === 'zh' ? '檢查步驟' : 'Check'}</span>
+          <span>Cycle</span>
+          <span>Signal</span>
+          <span>Golden</span>
+          <span>Current</span>
+          <span />
+        </div>
+        {checks.map((check, index) => (
+          <div
+            key={`${check.step}-${check.signal}-${check.cycle}-${index}`}
+            className={`grid gap-2 px-3 py-2.5 sm:grid-cols-[minmax(0,1.25fr)_4rem_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_2.5rem] sm:items-center ${check.pass ? '' : 'bg-destructive/8'}`}
+          >
+            <span className="font-sans font-medium text-foreground">
+              {diagnosticStepLabels[check.step]?.[locale] ?? check.step.replaceAll('_', ' ')}
+            </span>
+            <span className="text-muted-foreground">C{check.cycle}</span>
+            <span className="font-semibold text-cyan-700 dark:text-cyan-200">{check.signal}</span>
+            <span><span className="font-sans text-muted-foreground sm:hidden">Golden: </span>{check.expected}</span>
+            <span><span className="font-sans text-muted-foreground sm:hidden">Current: </span>{check.actual}</span>
+            {check.pass ? <Check className="size-4 text-success" aria-label="pass" /> : <XCircle className="size-4 text-destructive" aria-label="fail" />}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 type AreaResult = {
   total: number;
   counts: Record<string, number>;
@@ -756,6 +823,8 @@ export default function Home() {
   const synthWatchdogTimer = useRef<number | null>(null);
   const instantJudgeTimer = useRef<number | null>(null);
   const battleReturnTimer = useRef<number | null>(null);
+  const runStartedAt = useRef(0);
+  const synthStartedAt = useRef(0);
   const storageLoaded = useRef(false);
   const current =
     challenges.find((item) => item.id === selectedId) ?? challenges[0];
@@ -812,6 +881,8 @@ export default function Home() {
     if (!challenges.some((item) => item.id === id)) return false;
     pendingRequest.current = null;
     pendingSynth.current = null;
+    runStartedAt.current = 0;
+    synthStartedAt.current = 0;
     iframeRef.current?.contentWindow?.postMessage(
       { type: 'SOC_RTL_CANCEL' },
       window.location.origin,
@@ -1049,14 +1120,82 @@ export default function Home() {
 
   useEffect(() => {
     if (engineReady) return;
-    const timer = window.setInterval(() => {
+    let attempts = 0;
+    let timer: number | null = null;
+    const ping = () => {
       iframeRef.current?.contentWindow?.postMessage(
         { type: 'SOC_RTL_ENGINE_PING' },
         window.location.origin,
       );
-    }, 750);
-    return () => window.clearInterval(timer);
+      attempts += 1;
+      if (attempts < 12)
+        timer = window.setTimeout(ping, 750);
+    };
+    ping();
+    return () => {
+      if (timer !== null) window.clearTimeout(timer);
+    };
   }, [engineReady]);
+
+  useEffect(() => {
+    const recoverAfterSuspend = () => {
+      document.documentElement.classList.toggle('page-hidden', document.hidden);
+      if (document.hidden) return;
+
+      const now = Date.now();
+      let cancelledStaleWork = false;
+      if (pendingRequest.current && now - runStartedAt.current > 50000) {
+        pendingRequest.current = null;
+        runStartedAt.current = 0;
+        cancelledStaleWork = true;
+        clearRunWatchdog();
+        setRunning(false);
+        setBattleVisible(false);
+        setResult({
+          ok: false,
+          phase: 'engine',
+          console:
+            locale === 'zh'
+              ? '頁面閒置期間測試環境失去回應，已自動解除鎖定；請重新執行。'
+              : 'The runtime stopped responding while the page was idle. The UI has been unlocked; please run again.',
+        });
+      }
+      if (pendingSynth.current && now - synthStartedAt.current > 125000) {
+        pendingSynth.current = null;
+        synthStartedAt.current = 0;
+        cancelledStaleWork = true;
+        clearSynthWatchdog();
+        setEstimating(false);
+        setAreaError(
+          locale === 'zh'
+            ? '頁面閒置期間合成環境失去回應，已自動解除鎖定。'
+            : 'The synthesis runtime stopped responding while the page was idle. The UI has been unlocked.',
+        );
+      }
+
+      setEngineReady(false);
+      if (cancelledStaleWork)
+        iframeRef.current?.contentWindow?.postMessage(
+          { type: 'SOC_RTL_CANCEL' },
+          window.location.origin,
+        );
+      window.requestAnimationFrame(() => {
+        iframeRef.current?.contentWindow?.postMessage(
+          { type: 'SOC_RTL_ENGINE_PING' },
+          window.location.origin,
+        );
+      });
+    };
+
+    recoverAfterSuspend();
+    document.addEventListener('visibilitychange', recoverAfterSuspend);
+    window.addEventListener('pageshow', recoverAfterSuspend);
+    return () => {
+      document.documentElement.classList.remove('page-hidden');
+      document.removeEventListener('visibilitychange', recoverAfterSuspend);
+      window.removeEventListener('pageshow', recoverAfterSuspend);
+    };
+  }, [clearRunWatchdog, clearSynthWatchdog, locale]);
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
@@ -1081,7 +1220,11 @@ export default function Home() {
         phase: event.data.phase,
         console: String(event.data.console || ''),
         elapsedMs: Number(event.data.elapsedMs || 0),
+        checks: Array.isArray(event.data.checks)
+          ? event.data.checks.slice(0, 32)
+          : [],
       };
+      runStartedAt.current = 0;
       setResult(next);
       setWaveformVcd(String(event.data.vcd || ''));
       setRunning(false);
@@ -1102,6 +1245,7 @@ export default function Home() {
       )
         return;
       pendingSynth.current = null;
+      synthStartedAt.current = 0;
       clearSynthWatchdog();
       setEstimating(false);
       if (!event.data.ok) {
@@ -1166,6 +1310,8 @@ export default function Home() {
   const updateCode = (next: string) => {
     pendingRequest.current = null;
     pendingSynth.current = null;
+    runStartedAt.current = 0;
+    synthStartedAt.current = 0;
     iframeRef.current?.contentWindow?.postMessage(
       { type: 'SOC_RTL_CANCEL' },
       window.location.origin,
@@ -1252,11 +1398,13 @@ export default function Home() {
     }
     const requestId = `${Date.now()}-${Math.random()}`;
     pendingRequest.current = requestId;
+    runStartedAt.current = Date.now();
     setRunning(true);
     clearRunWatchdog();
     runWatchdogTimer.current = window.setTimeout(() => {
       if (pendingRequest.current !== requestId) return;
       pendingRequest.current = null;
+      runStartedAt.current = 0;
       iframeRef.current?.contentWindow?.postMessage(
         { type: 'SOC_RTL_CANCEL' },
         window.location.origin,
@@ -1340,6 +1488,7 @@ export default function Home() {
     if (!engineReady || !iframeRef.current?.contentWindow) return;
     const requestId = `synth-${Date.now()}`;
     pendingSynth.current = requestId;
+    synthStartedAt.current = Date.now();
     setEstimating(true);
     setAreaError('');
     setAreaResult(null);
@@ -1347,6 +1496,7 @@ export default function Home() {
     synthWatchdogTimer.current = window.setTimeout(() => {
       if (pendingSynth.current !== requestId) return;
       pendingSynth.current = null;
+      synthStartedAt.current = 0;
       iframeRef.current?.contentWindow?.postMessage(
         { type: 'SOC_RTL_CANCEL' },
         window.location.origin,
@@ -2573,6 +2723,9 @@ export default function Home() {
                 .trim()}
             </pre>
           )}
+          {result?.checks?.length ? (
+            <SimulationCheckTable checks={result.checks} locale={locale} />
+          ) : null}
           <div className="mt-6">
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               {text.testGroups}

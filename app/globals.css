@@ -238,8 +238,12 @@ body {
 }
 
 .mascot-avatar {
-  animation: mascot-float 3.6s ease-in-out infinite;
   isolation: isolate;
+}
+
+.mascot-hint-button:hover .mascot-avatar,
+.mascot-hint-button:focus-visible .mascot-avatar {
+  animation: mascot-float 700ms ease-in-out 2;
 }
 
 .mascot-avatar::before {
@@ -266,7 +270,6 @@ body {
 
 .mascot-equipment {
   align-items: center;
-  animation: mascot-equipment-pulse 2.4s ease-in-out infinite;
   backdrop-filter: blur(4px);
   background: oklch(0.17 0.04 248 / 90%);
   border: 1px solid currentColor;
@@ -397,7 +400,6 @@ body {
 }
 
 .mascot-tier-ornament i {
-  animation: tier-node-orbit 3.2s linear infinite;
   background: currentColor;
   border-radius: 2px;
   box-shadow: 0 0 7px currentColor;
@@ -417,6 +419,11 @@ body {
 
 .mascot-tier-ornament i:nth-child(2) { animation-delay: -1.05s; left: 88%; top: 38%; }
 .mascot-tier-ornament i:nth-child(3) { animation-delay: -2.1s; left: 72%; top: 88%; }
+
+.mascot-hint-button:hover .mascot-tier-ornament i,
+.mascot-hint-button:focus-visible .mascot-tier-ornament i {
+  animation: tier-node-orbit 700ms ease-in-out 2;
+}
 
 @keyframes tier-node-orbit {
   0%, 100% { opacity: 0.45; transform: translateY(0) scale(0.8); }
@@ -1050,7 +1057,11 @@ body {
 }
 
 .mascot-tier-3::before {
-  animation: mascot-aura 1.9s ease-in-out infinite;
+  opacity: 0.9;
+}
+
+.mascot-tapped .mascot-equipment {
+  animation: mascot-equipment-pulse 440ms ease-in-out 1;
 }
 
 @keyframes mascot-aura {
@@ -1081,4 +1092,12 @@ body {
   .four-roots-active .mascot-attack-path::after {
     animation: none;
   }
+}
+
+/* Browsers may throttle timers while a tab is suspended. Pause decorative work
+   while hidden so returning to a long-open lab does not trigger an animation burst. */
+.page-hidden *,
+.page-hidden *::before,
+.page-hidden *::after {
+  animation-play-state: paused !important;
 }

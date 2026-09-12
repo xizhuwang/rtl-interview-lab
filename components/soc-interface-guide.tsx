@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { ArrowDown, ArrowRight, Cable, Network } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +18,11 @@ const copy = {
     width: '寬度',
     timing: '何時有效／何時取樣',
     purpose: '在系統中的用途',
+    paths: '真正的資料路徑',
+    operation: '操作',
+    source: '來源',
+    destination: '目的',
+    rule: '規則',
     input: '輸入',
     output: '輸出',
   },
@@ -32,15 +38,20 @@ const copy = {
     width: 'Width',
     timing: 'Validity / sampling rule',
     purpose: 'Purpose in the system',
+    paths: 'Actual data paths',
+    operation: 'Operation',
+    source: 'Source',
+    destination: 'Destination',
+    rule: 'Rule',
     input: 'Input',
     output: 'Output',
   },
 };
 
-export function SocInterfaceGuide({ aid, locale }: { aid: SocLearningAid; locale: Locale }) {
+export const SocInterfaceGuide = memo(function SocInterfaceGuide({ aid, locale }: { aid: SocLearningAid; locale: Locale }) {
   const text = copy[locale];
   return (
-    <section className="mt-4 border-t border-border pt-4" aria-labelledby="soc-interface-guide-title">
+    <section className="soc-interface-guide mt-4 border-t border-border pt-4" aria-labelledby="soc-interface-guide-title">
       <div className="flex items-center gap-2">
         <Network className="size-4 text-amber-500" />
         <h2 id="soc-interface-guide-title" className="text-sm font-semibold text-foreground">
@@ -74,40 +85,34 @@ export function SocInterfaceGuide({ aid, locale }: { aid: SocLearningAid; locale
         </p>
       </div>
 
+      {aid.dataPaths?.length ? (
+        <div className="mt-3 overflow-hidden rounded-xl border border-cyan-200 bg-cyan-50/50 dark:border-cyan-900 dark:bg-cyan-950/20">
+          <p className="border-b border-cyan-200 px-3 py-2.5 text-xs font-semibold uppercase tracking-[0.1em] text-cyan-900 dark:border-cyan-900 dark:text-cyan-100">
+            {text.paths}
+          </p>
+          <div className="divide-y divide-cyan-200 dark:divide-cyan-900">
+            {aid.dataPaths.map((path) => (
+              <div key={`${path.source}-${path.destination}`} className="grid gap-1 px-3 py-3 text-xs sm:grid-cols-[7rem_minmax(0,11rem)_minmax(0,1fr)] sm:items-center sm:gap-3">
+                <strong className="text-foreground">{localize(path.operation, locale)}</strong>
+                <span className="font-mono font-semibold text-cyan-800 dark:text-cyan-200">
+                  {path.source} → {path.destination}
+                </span>
+                <span className="leading-5 text-muted-foreground">{localize(path.rule, locale)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       <details className="mt-3 overflow-hidden rounded-xl border border-border bg-card" open>
         <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-3 text-sm font-semibold text-foreground">
           <Cable className="size-4 text-cyan-500" />
           {text.ports}
           <Badge variant="secondary" className="ml-auto">{aid.ports.length}</Badge>
         </summary>
-        <div className="border-t border-border md:hidden">
-          <div className="divide-y divide-border">
-            {aid.ports.map((port) => (
-              <article key={port.name} className="px-3 py-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <code className="font-mono text-sm font-semibold text-cyan-800 dark:text-cyan-200">{port.name}</code>
-                  <Badge variant="outline" className={port.direction === 'input' ? 'border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-200' : 'border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-200'}>
-                    {text[port.direction]}
-                  </Badge>
-                  <span className="ml-auto rounded bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">{port.width} bit</span>
-                </div>
-                <dl className="mt-2 grid gap-2 text-xs leading-5">
-                  <div>
-                    <dt className="font-semibold text-foreground">{text.timing}</dt>
-                    <dd className="text-muted-foreground">{localize(port.timing, locale)}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-foreground">{text.purpose}</dt>
-                    <dd className="text-muted-foreground">{localize(port.purpose, locale)}</dd>
-                  </div>
-                </dl>
-              </article>
-            ))}
-          </div>
-        </div>
-        <div className="hidden overflow-x-auto border-t border-border md:block">
-          <table className="w-full min-w-[760px] border-collapse text-left text-xs">
-            <thead className="bg-muted/70 text-muted-foreground">
+        <div className="border-t border-border">
+          <table className="block w-full border-collapse text-left text-xs md:table">
+            <thead className="hidden bg-muted/70 text-muted-foreground md:table-header-group">
               <tr>
                 <th className="px-3 py-2 font-semibold">{text.signal}</th>
                 <th className="px-3 py-2 font-semibold">{text.direction}</th>
@@ -116,18 +121,30 @@ export function SocInterfaceGuide({ aid, locale }: { aid: SocLearningAid; locale
                 <th className="px-3 py-2 font-semibold">{text.purpose}</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="block md:table-row-group">
               {aid.ports.map((port) => (
-                <tr key={port.name} className="border-t border-border align-top">
-                  <td className="whitespace-nowrap px-3 py-2.5 font-mono font-semibold text-cyan-800 dark:text-cyan-200">{port.name}</td>
-                  <td className="px-3 py-2.5">
+                <tr key={port.name} className="block border-t border-border px-3 py-3 align-top first:border-t-0 md:table-row md:px-0 md:py-0 md:first:border-t">
+                  <td className="flex items-center gap-2 whitespace-nowrap font-mono font-semibold text-cyan-800 md:table-cell md:px-3 md:py-2.5 dark:text-cyan-200">
+                    {port.name}
+                    <Badge variant="outline" className={`font-sans md:hidden ${port.direction === 'input' ? 'border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-200' : 'border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-200'}`}>
+                      {text[port.direction]}
+                    </Badge>
+                    <span className="ml-auto rounded bg-muted px-2 py-0.5 font-mono text-xs font-normal text-muted-foreground md:hidden">{port.width} bit</span>
+                  </td>
+                  <td className="hidden px-3 py-2.5 md:table-cell">
                     <Badge variant="outline" className={port.direction === 'input' ? 'border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-200' : 'border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-200'}>
                       {text[port.direction]}
                     </Badge>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2.5 font-mono text-muted-foreground">{port.width}</td>
-                  <td className="px-3 py-2.5 leading-5 text-muted-foreground">{localize(port.timing, locale)}</td>
-                  <td className="px-3 py-2.5 leading-5 text-muted-foreground">{localize(port.purpose, locale)}</td>
+                  <td className="hidden whitespace-nowrap px-3 py-2.5 font-mono text-muted-foreground md:table-cell">{port.width}</td>
+                  <td className="mt-2 block leading-5 text-muted-foreground md:table-cell md:px-3 md:py-2.5">
+                    <span className="block font-semibold text-foreground md:hidden">{text.timing}</span>
+                    {localize(port.timing, locale)}
+                  </td>
+                  <td className="mt-2 block leading-5 text-muted-foreground md:table-cell md:px-3 md:py-2.5">
+                    <span className="block font-semibold text-foreground md:hidden">{text.purpose}</span>
+                    {localize(port.purpose, locale)}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -136,7 +153,7 @@ export function SocInterfaceGuide({ aid, locale }: { aid: SocLearningAid; locale
       </details>
     </section>
   );
-}
+});
 
 function ArchitectureColumn({ title, items }: { title: string; items: string[] }) {
   return (

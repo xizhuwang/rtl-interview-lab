@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useDeferredValue, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
 import type { Challenge } from '@/lib/challenges';
 
@@ -59,7 +59,8 @@ export function ReadOnlyCodeBlock({ code, language, ariaLabel }: { code: string;
 export function CodeEditor({ value, onChange, language, ariaLabel }: { value: string; onChange: (value: string) => void; language: CodeLanguage; ariaLabel: string }) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [scroll, setScroll] = useState({ top: 0, left: 0 });
-  const lines = useMemo(() => value.split('\n'), [value]);
+  const deferredValue = useDeferredValue(value);
+  const lines = useMemo(() => deferredValue.split('\n'), [deferredValue]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key !== 'Tab') return;
@@ -81,7 +82,7 @@ export function CodeEditor({ value, onChange, language, ariaLabel }: { value: st
         <div style={{ transform: `translateY(-${scroll.top}px)` }}>{lines.map((_, index) => <span className="block pr-3" key={index}>{index + 1}</span>)}</div>
       </div>
       <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 left-[3.25rem] overflow-hidden">
-        <pre className="absolute min-w-max p-4 font-code text-sm leading-[1.625rem] text-editor-foreground" style={{ transform: `translate(${-scroll.left}px, ${-scroll.top}px)` }}><code><CodeLines code={value} language={language} /></code></pre>
+        <pre className="absolute min-w-max p-4 font-code text-sm leading-[1.625rem] text-editor-foreground" style={{ transform: `translate(${-scroll.left}px, ${-scroll.top}px)` }}><code><CodeLines code={deferredValue} language={language} /></code></pre>
       </div>
       <textarea
         ref={inputRef}

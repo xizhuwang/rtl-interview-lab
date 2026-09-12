@@ -306,19 +306,73 @@ initial begin expected_valid=0;expected=0;repeat(2)@(negedge clk);rst_n=1;@(nege
     id: 'soc-apb-register', order: 13, track: 'soc', difficulty: 'intermediate', minutes: 25, points: 160,
     kind: 'build', judge: 'simulation', language: 'Verilog-2005',
     title: { zh: 'APB 控制暫存器', en: 'APB control register block' },
-    description: { zh: '實作簡化 APB slave。0x00 是可讀寫 control，0x04 是唯讀 status。write transfer 在 PSEL && PENABLE && PWRITE 時完成。', en: 'Implement a simplified APB slave. 0x00 is read/write control and 0x04 is read-only status.' },
-    specs: [{ zh: 'PREADY 固定為 1；非法位址讀回 0。', en: 'PREADY is always 1; unmapped reads return 0.' }, { zh: 'status 不能被 bus write 改變。', en: 'Bus writes must not modify status.' }],
-    testGroups: [{ zh: 'APB write', en: 'APB write' }, { zh: 'APB read', en: 'APB read' }, { zh: 'Address decode', en: 'Address decode' }],
+    description: { zh: '完成兩條獨立路徑：CPU 寫入時把 PWDATA 存進 control；CPU 讀取時把 control 或 status 經由 PRDATA 回傳。', en: 'Implement two independent paths: writes store PWDATA in control, while reads return control or status through PRDATA.' },
+    specs: [
+      { zh: '寫入：只有 0x00 的合法 transfer 才執行 PWDATA → control。', en: 'Write: only a legal transfer to 0x00 performs PWDATA → control.' },
+      { zh: '讀取：0x00 執行 control → PRDATA；0x04 執行 status → PRDATA。', en: 'Read: 0x00 performs control → PRDATA; 0x04 performs status → PRDATA.' },
+      { zh: 'PRDATA 不是儲存暫存器；status 是外部硬體輸入，兩者都不能被 PWDATA 寫入。', en: 'PRDATA is not storage and status is a hardware input; neither is written by PWDATA.' },
+      { zh: 'PREADY 固定為 1；非法位址讀回 0。', en: 'PREADY is always 1; unmapped reads return 0.' },
+    ],
+    testGroups: [{ zh: 'PWDATA → control', en: 'PWDATA → control' }, { zh: 'control/status → PRDATA', en: 'control/status → PRDATA' }, { zh: '唯讀與非法位址保護', en: 'Read-only and unmapped-address protection' }],
     hints: [
       { zh: '先定義一次真正完成的寫入：write_fire = PSEL && PENABLE && PWRITE && PREADY。只有 write_fire 且 PADDR==8\'h00 時才能更新 control。', en: 'First define a completed write: write_fire = PSEL && PENABLE && PWRITE && PREADY. Update control only when write_fire and PADDR==8\'h00.' },
       { zh: '把工作拆成兩塊：always @(posedge PCLK) 只處理 reset/control write；always @* 只處理 PRDATA address decode。不要在組合 read mux 裡寫 control。', en: 'Split the design: always @(posedge PCLK) handles reset/control writes, while always @* handles PRDATA address decode. Never write control from the read mux.' },
       { zh: '組合區先給 PRDATA=0，再用 case(PADDR) 覆蓋 0x00→control、0x04→status；PREADY 可直接 assign 1\'b1。這樣非法位址自然讀回 0，也不會推導 latch。', en: 'Default PRDATA to zero, then use case(PADDR) for 0x00→control and 0x04→status. Assign PREADY=1\'b1. Unmapped addresses then return zero without inferring a latch.' },
     ],
-    starter: `module apb_regs(input wire PCLK,input wire PRESETn,input wire PSEL,input wire PENABLE,input wire PWRITE,input wire [7:0] PADDR,input wire [31:0] PWDATA,input wire [31:0] status,output reg [31:0] PRDATA,output wire PREADY,output reg [31:0] control);
+    starter: `module apb_regs(
+  input wire PCLK,
+  input wire PRESETn,
+  input wire PSEL,
+  input wire PENABLE,
+  input wire PWRITE,
+  input wire [7:0] PADDR,
+  input wire [31:0] PWDATA,
+  input wire [31:0] status,
+  output reg [31:0] PRDATA,
+  output wire PREADY,
+  output reg [31:0] control
+);
   // TODO
 endmodule`,
-    testbench: `module tb; reg clk=0,rst_n=0,sel=0,en=0,wr=0; reg [7:0] addr=0; reg [31:0] wdata=0,status=32'hCAFE1234; wire [31:0] rdata,control; wire ready; apb_regs dut(clk,rst_n,sel,en,wr,addr,wdata,status,rdata,ready,control); always #5 clk=~clk; ${pass}
-initial begin repeat(2) @(posedge clk); rst_n<=1; @(negedge clk); sel=1;en=1;wr=1;addr=0;wdata=32'h12345678; @(posedge clk); #1; check(control==32'h12345678); wr=0; #1; check(rdata==control); addr=4; #1; check(rdata==status); addr=8; #1; check(rdata==0); check(ready==1); wr=1;wdata=0;addr=4; @(posedge clk); #1; check(control==32'h12345678); $display("@@PASS@@"); $finish; end endmodule`,
+    testbench: `module tb;
+reg clk=0,rst_n=0,sel=0,en=0,wr=0;
+reg [7:0] addr=0;
+reg [31:0] wdata=0,status=32'hCAFE1234;
+reg [31:0] expected_control=0,expected_rdata=0;
+wire [31:0] rdata,control;
+wire ready;
+integer cycle=0;
+apb_regs dut(clk,rst_n,sel,en,wr,addr,wdata,status,rdata,ready,control);
+always #5 clk=~clk;
+always @(posedge clk) cycle=cycle+1;
+task check_value;
+  input [8*24-1:0] step_name;
+  input [8*16-1:0] signal_name;
+  input [31:0] actual;
+  input [31:0] expected;
+  begin
+    $display("@@CHECK@@ step=%0s signal=%0s cycle=%0d expected=0x%08h actual=0x%08h pass=%0d",step_name,signal_name,cycle,expected,actual,actual===expected);
+    if(actual!==expected)begin
+      $display("@@FAIL@@ first mismatch: step=%0s signal=%0s cycle=%0d expected=0x%08h actual=0x%08h",step_name,signal_name,cycle,expected,actual);
+      $finish;
+    end
+  end
+endtask
+initial begin
+  repeat(2) @(posedge clk);
+  #1; check_value("reset","control",control,expected_control);
+  rst_n=1;
+  @(negedge clk); sel=1;en=1;wr=1;addr=8'h00;wdata=32'h12345678;expected_control=32'h12345678;
+  @(posedge clk); #1; check_value("write_control","control",control,expected_control);
+  wr=0;expected_rdata=expected_control;#1;check_value("read_control","PRDATA",rdata,expected_rdata);
+  addr=8'h04;expected_rdata=status;#1;check_value("read_status","PRDATA",rdata,expected_rdata);
+  addr=8'h08;expected_rdata=0;#1;check_value("read_unmapped","PRDATA",rdata,expected_rdata);
+  check_value("always_ready","PREADY",{31'b0,ready},32'h1);
+  wr=1;wdata=0;addr=8'h04;
+  @(posedge clk);#1;check_value("protect_status","control",control,expected_control);
+  $display("@@PASS@@");$finish;
+end
+endmodule`,
   },
   {
     id: 'soc-round-robin', order: 14, track: 'soc', difficulty: 'advanced', minutes: 35, points: 210,

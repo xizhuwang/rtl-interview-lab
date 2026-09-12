@@ -2,6 +2,38 @@
 // Tool binaries are downloaded from their upstream distributor, not republished.
 import { loadIcarus } from './runtime-loader.js';
 let initIvlpp, initIvl, initVvp;
+const MAX_VCD_CHARS = 600000;
+const VCD_TRUNCATION_MARKER = '$comment SOC_RTL_WAVEFORM_TRUNCATED $end';
+
+function limitVcd(vcd) {
+  if (!vcd || vcd.length <= MAX_VCD_CHARS) return vcd;
+  const lastCompleteLine = vcd.lastIndexOf('\n', MAX_VCD_CHARS);
+  const cut = lastCompleteLine > 0 ? lastCompleteLine : MAX_VCD_CHARS;
+  return `${vcd.slice(0, cut)}\n${VCD_TRUNCATION_MARKER}\n`;
+}
+
+function parseChecks(output) {
+  return String(output || '')
+    .split('\n')
+    .map((line) => line.match(/^@@CHECK@@\s+step=(\S+)\s+signal=(\S+)\s+cycle=(\d+)\s+expected=(\S+)\s+actual=(\S+)\s+pass=([01])$/))
+    .filter(Boolean)
+    .slice(0, 32)
+    .map((match) => ({
+      step: match[1],
+      signal: match[2],
+      cycle: Number(match[3]),
+      expected: match[4],
+      actual: match[5],
+      pass: match[6] === '1',
+    }));
+}
+
+function cleanSimulationConsole(output) {
+  return String(output || '')
+    .split('\n')
+    .filter((line) => !line.startsWith('@@CHECK@@'))
+    .join('\n');
+}
 
 const sanitize = (source) => String(source || '')
   .replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
@@ -136,13 +168,15 @@ self.addEventListener('message', async (event) => {
       return;
     }
     const result = await simulate(compiled.program);
+    const checks = parseChecks(result.console);
     self.postMessage({
       type: 'SOC_RTL_RESULT',
       requestId: event.data.requestId,
       ok: result.console.includes('@@PASS@@') && !result.console.includes('@@FAIL@@'),
       phase: 'simulate',
-      console: [diagnostics, result.console].filter(Boolean).join('\n'),
-      vcd: result.vcd,
+      console: [diagnostics, cleanSimulationConsole(result.console)].filter(Boolean).join('\n'),
+      checks,
+      vcd: limitVcd(result.vcd),
       elapsedMs: performance.now() - started,
     });
   } catch (error) {

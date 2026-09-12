@@ -18,6 +18,12 @@ export type SocLearningAid = {
     sinks: Localized[];
     flow: Localized;
   };
+  dataPaths?: {
+    operation: Localized;
+    source: string;
+    destination: string;
+    rule: Localized;
+  }[];
   ports: SocPortGuide[];
 };
 
@@ -50,6 +56,26 @@ export const socLearningAids: Record<string, SocLearningAid> = {
       sinks: [t('control 暫存器', 'Control register'), t('CPU read data', 'CPU read data')],
       flow: t('CPU 在 setup phase 給位址，access phase 令 PSEL=PENABLE=1；本題不插入 wait state。', 'The CPU presents an address in setup, then asserts PSEL and PENABLE in access. This task inserts no wait state.'),
     },
+    dataPaths: [
+      {
+        operation: t('寫入 0x00', 'Write 0x00'),
+        source: 'PWDATA',
+        destination: 'control',
+        rule: t('只在合法 write transfer 的 PCLK 上升沿更新並保存。', 'Update and store only on the PCLK edge of a legal write transfer.'),
+      },
+      {
+        operation: t('讀取 0x00', 'Read 0x00'),
+        source: 'control',
+        destination: 'PRDATA',
+        rule: t('組合式讀回先前保存的 control；PRDATA 本身不是儲存暫存器。', 'Combinationally return the stored control value; PRDATA is not storage.'),
+      },
+      {
+        operation: t('讀取 0x04', 'Read 0x04'),
+        source: 'status',
+        destination: 'PRDATA',
+        rule: t('直接讀回加速器提供的唯讀狀態；PWDATA 不會流向 status。', 'Return the read-only accelerator status; PWDATA never flows into status.'),
+      },
+    ],
     ports: [
       p('PCLK', 'input', '1', '所有暫存器在上升沿更新', 'Registers update on the rising edge', 'APB clock', 'APB clock'),
       p('PRESETn', 'input', '1', '低有效；在 PCLK 上升沿取樣', 'Active-low; sampled on PCLK rising edges', '清除 control 暫存器', 'Clears the control register'),

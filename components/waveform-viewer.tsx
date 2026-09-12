@@ -5,13 +5,17 @@ import { Activity } from 'lucide-react';
 
 type Change = { time: number; value: string };
 type Signal = { code: string; name: string; width: number; changes: Change[] };
+const MAX_VCD_PARSE_CHARS = 620000;
+const MAX_STORED_CHANGES = 20000;
+const MAX_RENDERED_CHANGES = 240;
 
 function parseVcd(vcd: string): Signal[] {
-  const lines = vcd.split(/\r?\n/);
+  const lines = vcd.slice(0, MAX_VCD_PARSE_CHARS).split(/\r?\n/);
   const scopes: string[] = [];
   const signals = new Map<string, Signal>();
   let time = 0;
   let definitions = true;
+  let storedChanges = 0;
 
   for (const raw of lines) {
     const line = raw.trim();
@@ -31,9 +35,15 @@ function parseVcd(vcd: string): Signal[] {
     }
     if (line[0] === '#') { time = Number(line.slice(1)); continue; }
     const scalar = line.match(/^([01xz])(.+)$/i);
-    if (scalar && signals.has(scalar[2])) signals.get(scalar[2])?.changes.push({ time, value: scalar[1].toLowerCase() });
+    if (scalar && signals.has(scalar[2]) && storedChanges < MAX_STORED_CHANGES) {
+      signals.get(scalar[2])?.changes.push({ time, value: scalar[1].toLowerCase() });
+      storedChanges += 1;
+    }
     const vector = line.match(/^b([01xz]+)\s+(.+)$/i);
-    if (vector && signals.has(vector[2])) signals.get(vector[2])?.changes.push({ time, value: vector[1].toLowerCase() });
+    if (vector && signals.has(vector[2]) && storedChanges < MAX_STORED_CHANGES) {
+      signals.get(vector[2])?.changes.push({ time, value: vector[1].toLowerCase() });
+      storedChanges += 1;
+    }
   }
 
   const priority = (signal: Signal) => {
@@ -50,6 +60,15 @@ function parseVcd(vcd: string): Signal[] {
     .slice(0, 10);
 }
 
+function sampledChanges(changes: Change[]) {
+  if (changes.length <= MAX_RENDERED_CHANGES) return changes;
+  const stride = Math.ceil(changes.length / MAX_RENDERED_CHANGES);
+  const sampled = changes.filter((_, index) => index % stride === 0);
+  const last = changes[changes.length - 1];
+  if (sampled[sampled.length - 1] !== last) sampled.push(last);
+  return sampled;
+}
+
 function valueAt(changes: Change[], time: number) {
   let value = 'x';
   for (const change of changes) {
@@ -61,6 +80,7 @@ function valueAt(changes: Change[], time: number) {
 
 export function WaveformViewer({ vcd, locale }: { vcd: string; locale: 'zh' | 'en' }) {
   const signals = useMemo(() => parseVcd(vcd), [vcd]);
+  const waveformLimited = vcd.includes('SOC_RTL_WAVEFORM_TRUNCATED') || vcd.length > MAX_VCD_PARSE_CHARS;
   const timescale = vcd.match(/\$timescale\s+([^$]+)\$end/)?.[1].trim() ?? 'VCD tick';
   const maxTime = Math.max(1, ...signals.flatMap((signal) => signal.changes.map((change) => change.time)));
   const plotX = 170;
@@ -87,8 +107,9 @@ export function WaveformViewer({ vcd, locale }: { vcd: string; locale: 'zh' | 'e
           const expected = signal.name.toLowerCase().includes('expected');
           const color = expected ? '#8b5cf6' : '#0891b2';
           const shortName = signal.name.replace(/^tb\./, '').replace(/\.(dut|d)\./, '.');
+          const visibleChanges = sampledChanges(signal.changes);
           if (signal.width === 1) {
-            const times = [...new Set([0, ...signal.changes.map((change) => change.time), maxTime])].sort((a, b) => a - b);
+            const times = [...new Set([0, ...visibleChanges.map((change) => change.time), maxTime])].sort((a, b) => a - b);
             let path = '';
             times.forEach((sampleTime, sampleIndex) => {
               const value = valueAt(signal.changes, sampleTime);
@@ -99,11 +120,14 @@ export function WaveformViewer({ vcd, locale }: { vcd: string; locale: 'zh' | 'e
             });
             return <g key={signal.code}><text x="4" y={y + 14} className="fill-foreground font-mono text-[11px]">{shortName.slice(-23)}</text><path d={path} fill="none" stroke={color} strokeWidth="2" /></g>;
           }
-          const segments = signal.changes.map((change, changeIndex) => ({ start: change.time, end: signal.changes[changeIndex + 1]?.time ?? maxTime, value: change.value }));
+          const segments = visibleChanges.map((change, changeIndex) => ({ start: change.time, end: visibleChanges[changeIndex + 1]?.time ?? maxTime, value: change.value }));
           return <g key={signal.code}><text x="4" y={y + 14} className="fill-foreground font-mono text-[11px]">{shortName.slice(-23)}</text>{segments.map((segment, segmentIndex) => { const x = xFor(segment.start); const width = Math.max(1, xFor(segment.end) - x); return <g key={segmentIndex}><rect x={x} y={y + 2} width={width} height="20" fill="transparent" stroke={color} /><text x={x + 3} y={y + 16} className="font-mono text-[9px]" fill={color}>{width > 28 ? (/[xz]/i.test(segment.value) ? `b${segment.value}` : `0x${Number.parseInt(segment.value, 2).toString(16)}`) : ''}</text></g>;})}</g>;
         })}
       </svg>
     </div>
-    <p className="border-t border-border px-4 py-3 text-xs leading-5 text-muted-foreground">{locale === 'zh' ? '波形來自同一次瀏覽器內模擬。若題目的 testbench 提供 expected_* golden 訊號，會一起顯示以協助逐拍比對。' : 'Waveforms come from the same in-browser simulation. When a testbench exposes expected_* golden signals, they appear for cycle-by-cycle comparison.'}</p>
+    <p className="border-t border-border px-4 py-3 text-xs leading-5 text-muted-foreground">
+      {locale === 'zh' ? '波形來自同一次瀏覽器內模擬。若題目的 testbench 提供 expected_* golden 訊號，會一起顯示以協助逐拍比對。' : 'Waveforms come from the same in-browser simulation. When a testbench exposes expected_* golden signals, they appear for cycle-by-cycle comparison.'}
+      {waveformLimited ? (locale === 'zh' ? ' 為維持操作順暢，這次只顯示模擬前段的波形預覽；判題仍使用完整模擬結果。' : ' To keep the page responsive, this view shows an early waveform preview; grading still uses the complete simulation result.') : ''}
+    </p>
   </section>;
 }

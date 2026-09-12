@@ -22,6 +22,8 @@ const { learningContext } = await loadTs('../lib/learning-context.ts');
 const { goldenPatterns } = await loadTs('../lib/golden-patterns.ts');
 const { socLearningAids } = await loadTs('../lib/soc-learning-aids.ts');
 const { boardImplementationCompetencies } = await loadTs('../lib/readiness.ts');
+const workerSource = await readFile(new URL('../public/engine/worker.js', import.meta.url), 'utf8');
+const waveformSource = await readFile(new URL('../components/waveform-viewer.tsx', import.meta.url), 'utf8');
 let checks = 0;
 function verify(ok, name) { assert.ok(ok, name); checks++; console.log('PASS ' + name); }
 function simulate(design, testbench, timeout = 15000) {
@@ -41,6 +43,9 @@ verify(challenges.filter(c=>c.track==='low-power').length===4, 'Four low-power e
 verify(challenges.filter(c=>/^soc-(?:cpu|cache)-/.test(c.id)).length===9, 'Nine CPU and cache exercises');
 verify(challenges.filter(c=>c.track==='cpu-cache').length===9, 'CPU/cache is an independent track');
 verify(challenges.filter(c=>c.track==='soc').length===11, 'Eleven SoC and accelerator exercises');
+verify(/MAX_VCD_CHARS\s*=\s*600000/.test(workerSource)&&/limitVcd\(result\.vcd\)/.test(workerSource), 'Worker caps waveform transfer size');
+verify(/MAX_STORED_CHANGES\s*=\s*20000/.test(waveformSource)&&/MAX_RENDERED_CHANGES\s*=\s*240/.test(waveformSource), 'Waveform renderer caps parse and SVG work');
+verify(/function parseChecks\(output\)/.test(workerSource)&&/checks,/.test(workerSource), 'Worker returns structured expected/actual checks');
 const socChallenges = challenges.filter(c=>c.track==='soc');
 verify(Object.keys(socLearningAids).length===socChallenges.length, 'Every SoC exercise has exactly one interface guide');
 verify(socChallenges.every(c=>socLearningAids[c.id]), 'Every SoC exercise maps to a system architecture guide');

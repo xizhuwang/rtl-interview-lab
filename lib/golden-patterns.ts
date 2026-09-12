@@ -21,6 +21,19 @@ const pattern = (
 ): GoldenPattern => ({ title, summary, columns, rows, notes });
 
 export const goldenPatterns: Record<string, GoldenPattern> = {
+  'soc-apb-register': pattern(
+    { zh: 'Golden pattern：寫入與讀取是兩條不同路徑', en: 'Golden pattern: write and read use different paths' },
+    { zh: 'control 是真正保存資料的暫存器；PRDATA 只是依 PADDR 選出目前要回給 CPU 的值。', en: 'control is stored state; PRDATA is only the value currently selected by PADDR for the CPU.' },
+    [{ zh: '操作', en: 'Operation' }, { zh: 'PADDR', en: 'PADDR' }, { zh: '來源', en: 'Source' }, { zh: '目的', en: 'Destination' }, { zh: '預期結果', en: 'Expected result' }],
+    [
+      [t('寫入 control', 'Write control'), '0x00', 'PWDATA=0x12345678', 'control', 'control=0x12345678'],
+      [t('讀回 control', 'Read control'), '0x00', 'control', 'PRDATA', 'PRDATA=0x12345678'],
+      [t('讀取 status', 'Read status'), '0x04', 'status=0xCAFE1234', 'PRDATA', 'PRDATA=0xCAFE1234'],
+      [t('讀取非法位址', 'Read unmapped address'), '0x08', '—', 'PRDATA', 'PRDATA=0x00000000'],
+      [t('嘗試寫 status', 'Attempt to write status'), '0x04', 'PWDATA=0', t('不可改變 control/status', 'Must not change control/status'), 'control=0x12345678'],
+    ],
+    [{ zh: '一句話記法：PWDATA 只負責「寫進 control」；status 或 control 才會經由 PRDATA「讀回 CPU」。', en: 'Shortcut: PWDATA writes only into control; status or control is read back to the CPU through PRDATA.' }],
+  ),
   'cdc-2ff-level': pattern(
     { zh: 'Golden pattern：目的端兩級取樣', en: 'Golden pattern: two destination samples' },
     { zh: '下表的 D1、D2 是 async_in 改變後的前兩個 clk_dst 上升沿；不模擬真實亞穩態，只檢查數位模型的兩級延遲。', en: 'D1 and D2 are the first two clk_dst rising edges after async_in changes. The digital model checks two stages, not analog metastability.' },
