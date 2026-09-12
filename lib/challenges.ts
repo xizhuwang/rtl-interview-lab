@@ -358,20 +358,80 @@ task check_value;
     end
   end
 endtask
+task idle_bus;
+  begin
+    sel=0; en=0; wr=0; addr=0; wdata=0;
+  end
+endtask
+task apb_write;
+  input [7:0] write_addr;
+  input [31:0] write_data;
+  input [31:0] expected_after;
+  input [8*24-1:0] step_name;
+  begin
+    @(negedge clk); sel=1; en=0; wr=1; addr=write_addr; wdata=write_data; // Setup
+    #1; check_value("setup_no_write","control",control,expected_control);
+    @(negedge clk); en=1; // Access
+    @(posedge clk); #1; expected_control=expected_after;
+    check_value(step_name,"control",control,expected_control);
+    @(negedge clk); idle_bus;
+  end
+endtask
+task apb_read;
+  input [7:0] read_addr;
+  input [31:0] expected;
+  input [8*24-1:0] step_name;
+  begin
+    @(negedge clk); sel=1; en=0; wr=0; addr=read_addr; // Setup
+    @(negedge clk); en=1; // Access: PRDATA must be valid before completion edge
+    #4; check_value(step_name,"PRDATA",rdata,expected);
+    check_value("always_ready","PREADY",{31'b0,ready},32'h1);
+    @(posedge clk);
+    @(negedge clk); idle_bus;
+  end
+endtask
 initial begin
   repeat(2) @(posedge clk);
   #1; check_value("reset","control",control,expected_control);
-  rst_n=1;
-  @(negedge clk); sel=1;en=1;wr=1;addr=8'h00;wdata=32'h12345678;expected_control=32'h12345678;
-  @(posedge clk); #1; check_value("write_control","control",control,expected_control);
-  wr=0;expected_rdata=expected_control;#1;check_value("read_control","PRDATA",rdata,expected_rdata);
-  addr=8'h04;expected_rdata=status;#1;check_value("read_status","PRDATA",rdata,expected_rdata);
-  addr=8'h08;expected_rdata=0;#1;check_value("read_unmapped","PRDATA",rdata,expected_rdata);
-  check_value("always_ready","PREADY",{31'b0,ready},32'h1);
-  wr=1;wdata=0;addr=8'h04;
-  @(posedge clk);#1;check_value("protect_status","control",control,expected_control);
+  @(negedge clk); rst_n=1; idle_bus;
+  apb_write(8'h00,32'h12345678,32'h12345678,"write_control");
+  apb_read(8'h00,expected_control,"read_control");
+  apb_read(8'h04,status,"read_status");
+  apb_read(8'h08,32'h00000000,"read_unmapped");
+  apb_write(8'h04,32'h00000000,expected_control,"protect_status");
   $display("@@PASS@@");$finish;
 end
+endmodule`,
+    referenceSolution: `module apb_regs(
+  input wire PCLK,
+  input wire PRESETn,
+  input wire PSEL,
+  input wire PENABLE,
+  input wire PWRITE,
+  input wire [7:0] PADDR,
+  input wire [31:0] PWDATA,
+  input wire [31:0] status,
+  output reg [31:0] PRDATA,
+  output wire PREADY,
+  output reg [31:0] control
+);
+  wire write_fire;
+  assign PREADY = 1'b1;
+  assign write_fire = PSEL && PENABLE && PWRITE && PREADY;
+
+  always @(posedge PCLK) begin
+    if(!PRESETn) control <= 32'b0;
+    else if(write_fire && PADDR == 8'h00) control <= PWDATA;
+  end
+
+  always @* begin
+    PRDATA = 32'b0;
+    case(PADDR)
+      8'h00: PRDATA = control;
+      8'h04: PRDATA = status;
+      default: PRDATA = 32'b0;
+    endcase
+  end
 endmodule`,
   },
   {

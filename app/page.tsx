@@ -71,6 +71,7 @@ import { Progress } from '@/components/ui/progress';
 import { WaveformViewer } from '@/components/waveform-viewer';
 import { CodeEditor, ReadOnlyCodeBlock } from '@/components/code-editor';
 import { SocInterfaceGuide } from '@/components/soc-interface-guide';
+import { ApbTimingGuide } from '@/components/apb-timing-guide';
 import {
   challenges,
   difficultyLabel,
@@ -112,6 +113,7 @@ const diagnosticStepLabels: Record<string, { zh: string; en: string }> = {
   read_unmapped: { zh: '讀取非法位址', en: 'Read unmapped address' },
   always_ready: { zh: 'PREADY 檢查', en: 'PREADY check' },
   protect_status: { zh: '唯讀位址保護', en: 'Read-only address protection' },
+  setup_no_write: { zh: 'Setup 不可提前寫入', en: 'No early write in setup' },
 };
 
 function SimulationCheckTable({ checks, locale }: { checks: SimulationCheck[]; locale: Locale }) {
@@ -134,37 +136,116 @@ function SimulationCheckTable({ checks, locale }: { checks: SimulationCheck[]; l
         </p>
       </div>
       <div className="divide-y divide-border font-mono text-[11px]">
-        <div className="hidden grid-cols-[minmax(0,1.25fr)_4rem_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_2.5rem] gap-2 bg-muted/60 px-3 py-2 font-sans font-semibold text-muted-foreground sm:grid">
-          <span>{locale === 'zh' ? '檢查步驟' : 'Check'}</span>
-          <span>Cycle</span>
-          <span>Signal</span>
-          <span>Golden</span>
-          <span>Current</span>
-          <span />
-        </div>
         {checks.map((check, index) => (
           <div
             key={`${check.step}-${check.signal}-${check.cycle}-${index}`}
-            className={`grid gap-2 px-3 py-2.5 sm:grid-cols-[minmax(0,1.25fr)_4rem_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_2.5rem] sm:items-center ${check.pass ? '' : 'bg-destructive/8'}`}
+            className={`px-3 py-2.5 ${check.pass ? '' : 'bg-destructive/8'}`}
           >
-            <span className="font-sans font-medium text-foreground">
-              {diagnosticStepLabels[check.step]?.[locale] ?? check.step.replaceAll('_', ' ')}
-            </span>
-            <span className="text-muted-foreground">C{check.cycle}</span>
-            <span className="font-semibold text-cyan-700 dark:text-cyan-200">{check.signal}</span>
-            <span><span className="font-sans text-muted-foreground sm:hidden">Golden: </span>{check.expected}</span>
-            <span><span className="font-sans text-muted-foreground sm:hidden">Current: </span>{check.actual}</span>
-            {check.pass ? <Check className="size-4 text-success" aria-label="pass" /> : <XCircle className="size-4 text-destructive" aria-label="fail" />}
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="min-w-0 flex-1 font-sans font-medium text-foreground">
+                {diagnosticStepLabels[check.step]?.[locale] ?? check.step.replaceAll('_', ' ')}
+              </span>
+              <span className="shrink-0 text-muted-foreground">C{check.cycle}</span>
+              {check.pass ? <Check className="size-4 shrink-0 text-success" aria-label="pass" /> : <XCircle className="size-4 shrink-0 text-destructive" aria-label="fail" />}
+            </div>
+            <dl className="mt-2 grid min-w-0 grid-cols-3 gap-2 rounded-lg bg-muted/45 p-2">
+              <div className="min-w-0">
+                <dt className="font-sans text-[10px] text-muted-foreground">Signal</dt>
+                <dd className="truncate font-semibold text-cyan-700 dark:text-cyan-200" title={check.signal}>{check.signal}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="font-sans text-[10px] text-muted-foreground">Golden</dt>
+                <dd className="overflow-x-auto whitespace-nowrap pb-0.5">{check.expected}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="font-sans text-[10px] text-muted-foreground">Current</dt>
+                <dd className={`overflow-x-auto whitespace-nowrap pb-0.5 ${check.pass ? '' : 'font-bold text-destructive'}`}>{check.actual}</dd>
+              </div>
+            </dl>
           </div>
         ))}
       </div>
     </section>
   );
 }
+
+function CellComparisonTable({
+  currentCounts,
+  referenceCounts,
+  locale,
+}: {
+  currentCounts: Record<string, number>;
+  referenceCounts: Record<string, number>;
+  locale: Locale;
+}) {
+  const rows = Array.from(
+    new Set([...Object.keys(currentCounts), ...Object.keys(referenceCounts)]),
+  )
+    .map((name) => ({
+      name,
+      current: currentCounts[name] ?? 0,
+      reference: referenceCounts[name] ?? 0,
+    }))
+    .sort(
+      (a, b) =>
+        b.current + b.reference - (a.current + a.reference) ||
+        a.name.localeCompare(b.name),
+    );
+
+  return (
+    <div className="mt-3 overflow-x-auto rounded-lg border border-border">
+      <table className="w-full min-w-[31rem] border-collapse text-left text-xs">
+        <thead className="bg-muted/55 text-muted-foreground">
+          <tr>
+            <th className="px-3 py-2 font-medium">
+              {locale === 'zh' ? 'Generic cell 類型' : 'Generic cell type'}
+            </th>
+            <th className="px-3 py-2 text-right font-medium">
+              {locale === 'zh' ? '你的 RTL' : 'Your RTL'}
+            </th>
+            <th className="px-3 py-2 text-right font-medium">
+              {locale === 'zh' ? '參考解' : 'Reference'}
+            </th>
+            <th className="px-3 py-2 text-right font-medium">
+              {locale === 'zh' ? '差異' : 'Delta'}
+            </th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border font-mono">
+          {rows.map((row) => {
+            const delta = row.current - row.reference;
+            return (
+              <tr key={row.name}>
+                <th className="whitespace-nowrap px-3 py-2 font-medium text-foreground">
+                  {row.name}
+                </th>
+                <td className="px-3 py-2 text-right">{row.current}</td>
+                <td className="px-3 py-2 text-right">{row.reference}</td>
+                <td
+                  className={`px-3 py-2 text-right font-semibold ${
+                    delta < 0
+                      ? 'text-success'
+                      : delta > 0
+                        ? 'text-amber-600 dark:text-amber-400'
+                        : 'text-muted-foreground'
+                  }`}
+                >
+                  {delta > 0 ? '+' : ''}
+                  {delta}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 type AreaResult = {
   total: number;
   counts: Record<string, number>;
   referenceTotal: number | null;
+  referenceCounts: Record<string, number> | null;
   elapsedMs: number;
 };
 type HoldLabState = {
@@ -1263,6 +1344,10 @@ export default function Home() {
           event.data.referenceTotal === undefined
             ? null
             : Number(event.data.referenceTotal),
+        referenceCounts:
+          event.data.referenceCounts && typeof event.data.referenceCounts === 'object'
+            ? event.data.referenceCounts
+            : null,
         elapsedMs: Number(event.data.elapsedMs || 0),
       });
     };
@@ -2248,6 +2333,7 @@ export default function Home() {
                 </p>
               </section>
             )}
+            {current.id === 'soc-apb-register' && <ApbTimingGuide locale={locale} />}
             <div className="mascot-companion-stage mt-4 grid grid-cols-[84px_minmax(0,1fr)] items-end gap-3 border-t border-border pt-4 sm:grid-cols-[104px_minmax(0,1fr)]">
               <button
                 type="button"
@@ -2616,19 +2702,34 @@ export default function Home() {
                         {areaResult.total} {text.genericCells}
                       </p>
                     )}
-                    <p className="mt-2 break-words border-t border-border pt-2 font-mono text-[11px] leading-5 text-muted-foreground">
-                      {Object.entries(areaResult.counts)
-                        .sort((a, b) => b[1] - a[1])
-                        .slice(0, 8)
-                        .map(([name, count]) => `${name}: ${count}`)
-                        .join(' · ')}
-                    </p>
-                    {areaResult.referenceTotal !== null && (
-                      <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                        {locale === 'zh'
-                          ? '基準與你的 RTL 使用同一次、同版本、同參數的 Yosys generic synthesis；數字只能做相對比較，越少不一定代表實際 PPA 一定更好。'
-                          : 'The reference and your RTL use the same Yosys version and generic synthesis settings. This is only a relative comparison; fewer cells do not guarantee better physical PPA.'}
+                    {areaResult.referenceCounts ? (
+                      <CellComparisonTable
+                        currentCounts={areaResult.counts}
+                        referenceCounts={areaResult.referenceCounts}
+                        locale={locale}
+                      />
+                    ) : (
+                      <p className="mt-2 break-words border-t border-border pt-2 font-mono text-[11px] leading-5 text-muted-foreground">
+                        {Object.entries(areaResult.counts)
+                          .sort((a, b) => b[1] - a[1])
+                          .slice(0, 8)
+                          .map(([name, count]) => `${name}: ${count}`)
+                          .join(' · ')}
                       </p>
+                    )}
+                    {areaResult.referenceTotal !== null && (
+                      <div className="mt-2 space-y-1 text-xs leading-5 text-muted-foreground">
+                        <p>
+                          {locale === 'zh'
+                            ? '差異＝你的 RTL－參考解；負值只表示這次 generic synthesis 使用較少 cells。'
+                            : 'Delta = your RTL − reference. A negative value only means fewer cells in this generic synthesis run.'}
+                        </p>
+                        <p>
+                          {locale === 'zh'
+                            ? '基準與你的 RTL 使用同一次、同版本、同參數的 Yosys generic synthesis；數字只能做相對比較，越少不一定代表實際 PPA 一定更好。'
+                            : 'The reference and your RTL use the same Yosys version and generic synthesis settings. This is only a relative comparison; fewer cells do not guarantee better physical PPA.'}
+                        </p>
+                      </div>
                     )}
                   </div>
                 )}
