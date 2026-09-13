@@ -39,11 +39,11 @@ The four columns below are the definitive profession artwork used by the site. E
   </tbody>
 </table>
 
-| Profession | Unlock route | Battle skill | How to train with it |
-| ---------- | ------------ | ------------ | -------------------- |
-| Circuit Swordsman / CPU Specialist | Solve 3 CPU/cache challenges | Sword swing and layered sword waves | Trace dependencies first; explain forwarding priority, stalls, flushes, tags and replacement state cycle by cycle. |
-| Circuit Archer / SoC Integration Specialist | Solve 3 SoC challenges | Staggered arrow rain | Follow one transaction across ready/valid, address mapping, AXI, DMA, SRAM latency and CDC boundaries. |
-| Silicon Healer / DFT Specialist | Solve 2 DFT challenges | Holy-light orb and diagnostic pulses | State the fault model, then connect controllability, observability, scan/MBIST sequencing and failure evidence. |
+| Profession                                  | Unlock route                           | Battle skill                                            | How to train with it                                                                                                    |
+| ------------------------------------------- | -------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Circuit Swordsman / CPU Specialist          | Solve 3 CPU/cache challenges           | Sword swing and layered sword waves                     | Trace dependencies first; explain forwarding priority, stalls, flushes, tags and replacement state cycle by cycle.      |
+| Circuit Archer / SoC Integration Specialist | Solve 3 SoC challenges                 | Staggered arrow rain                                    | Follow one transaction across ready/valid, address mapping, AXI, DMA, SRAM latency and CDC boundaries.                  |
+| Silicon Healer / DFT Specialist             | Solve 2 DFT challenges                 | Holy-light orb and diagnostic pulses                    | State the fault model, then connect controllability, observability, scan/MBIST sequencing and failure evidence.         |
 | Timing Mage / Timing & Low-Power Specialist | Solve 3 timing or low-power challenges | Elemental burst whose color follows the strongest stone | Identify launch/capture clocks and path type before choosing a setup, hold, isolation, retention or power-sequence fix. |
 
 ### Progression, equipment, and enchantments
@@ -51,20 +51,21 @@ The four columns below are the definitive profession artwork used by the site. E
 - Profession unlocks depend on completed exercises in the matching domain. Changing gender or profession never resets progress.
 - Total earned points determine the visual tier: base below 300 points, tier 1 at 300, tier 2 at 700, and tier 3 at 1,300. Purchases use a separate spendable balance and therefore do not lower rank or remove an unlock.
 - Any affordable shop item can be purchased immediately. Common equipment can be worn by every profession; profession equipment stays in inventory and becomes wearable when its matching class is active.
+- The companion dialog separates the **Backpack** from the **Shop**. The backpack selects gender, an unlocked profession, owned equipment, and one active element; the shop only handles purchases and upgrades.
 - Equipment and enchantments change only the companion and battle presentation. They never alter compilation, hidden checks, hints, PPA comparison, or the pass/fail verdict.
 
 <p align="center">
   <img src="public/mascot/element-enchantments-guide.png" width="900" alt="Fire, water, wind, and earth enchantment stones">
 </p>
 
-| Stone | Visible treatment | Engineering learning cue |
-| ----- | ----------------- | ------------------------ |
-| Fire | Red-orange outfit trim, particles, and attack color | Focus on the first mismatch and isolate the root cause. |
-| Water | Blue flowing trim and waveform-like particles | Follow valid/data alignment and signal movement cycle by cycle. |
-| Wind | Mint-green motion accents and faster-looking trails | Narrow the failing regression and reduce the debug search space. |
-| Earth | Amber-gold stable aura and heavier impact | Build reproducible boundary tests, assertions, and stable checks. |
+| Stone | Visible treatment                                   | Engineering learning cue                                          |
+| ----- | --------------------------------------------------- | ----------------------------------------------------------------- |
+| Fire  | Red-orange outfit trim, particles, and attack color | Focus on the first mismatch and isolate the root cause.           |
+| Water | Blue flowing trim and waveform-like particles       | Follow valid/data alignment and signal movement cycle by cycle.   |
+| Wind  | Mint-green motion accents and faster-looking trails | Narrow the failing regression and reduce the debug search space.  |
+| Earth | Amber-gold stable aura and heavier impact           | Build reproducible boundary tests, assertions, and stable checks. |
 
-Repeated purchases increase that stone's visual intensity. The highest-level stone becomes the active outfit and attack color; owning at least one of all four unlocks the combined **Four Roots** spectrum effect. This is a visual reward, not an electrical model or gameplay advantage.
+Repeated purchases increase that stone's visual intensity. Owned stones can be switched freely in the backpack; owning at least one of all four unlocks the selectable **Four Roots** orbit, spectrum outfit aura, and prismatic battle beam. This is a visual reward, not an electrical model or gameplay advantage.
 
 ### Battle targets and verdict animation
 
@@ -74,7 +75,7 @@ Repeated purchases increase that stone's visual intensity. The highest-level sto
     <tr>
       <td align="center"><img src="public/mascot/rtl-training-dummy-display.png" width="150" alt="RTL training dummy"></td>
       <td align="center"><img src="public/mascot/chip-cat.png" width="180" alt="Fluffy dark and poison spirit cat with a jade circuit talisman"></td>
-      <td align="center"><img src="public/mascot/laser-bear.png" width="190" alt="Fluffy dark and lightning guardian bear with a rune bracer"></td>
+      <td align="center"><img src="public/mascot/laser-bear-v3.webp" width="190" alt="Fluffy dark and lightning guardian bear with a rune bracer"></td>
       <td align="center"><img src="public/mascot/gate-level-timing-boss-display.png" width="210" alt="Gate-level timing boss built from damaged chips, gears, and timing traces"></td>
       <td align="center"><img src="public/mascot/cosmic-dark-emperor.png" width="280" alt="Dark xianxia sovereign with timing-wave and compute-array formations in ink-wash energy"></td>
     </tr>
