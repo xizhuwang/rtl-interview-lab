@@ -8,7 +8,7 @@ An original, bilingual (Traditional Chinese / English) hands-on practice site fo
 
 The current release contains 48 coding, debugging, constraint, and interactive challenges. CPU/cache is now an independent track, separate from SoC and accelerator integration. The SoC path progresses from software-visible control and ready/valid flow through AXI/DMA, SRAM/CDC, command queues, mixed-precision arithmetic, and a streaming compute-tile capstone. The CDC track includes a complete asynchronous FIFO.
 
-Timing-sensitive exercises now include bilingual golden behavior patterns before the editor. These cycle/event tables make latency, back-pressure, valid/data alignment, handshake completion, FIFO ordering, and SRAM timing expectations explicit without revealing a paste-ready RTL implementation. The patterns cover the CDC synchronizers and multi-bit handshake, pipelining, AXI-Lite/AXI read, async FIFO, SRAM wrapper, streaming interfaces, DMA, command FIFO, blocking-cache miss flow, and the streaming compute-tile capstone.
+Timing-sensitive exercises include bilingual golden behavior patterns before the editor. After simulation, the browser now runs the learner RTL and the reference RTL against the same stimulus, then aligns every DUT output as adjacent **Your / Golden** waveform rows. Shared inputs appear once, output badges identify matches or mismatches, and VCD aliases are preserved so a testbench wire cannot hide the corresponding DUT port. Golden waveforms are cached per exercise and rendering is capped to keep repeat runs responsive.
 
 An optional game layer places an original penguin companion beside progressive hints and test feedback. Solving domain exercises unlocks four electronic-fantasy professions; points, equipment, elemental enchantments, training targets, and the advanced timing boss provide visible progression without changing the simulator or judging rules. All companion variants now use one consistent character scale and rendering family. Opponents use a separate mechanical-target family so allies and enemies remain visually distinct.
 
@@ -68,12 +68,20 @@ Repeated purchases increase that stone's visual intensity. The highest-level sto
 
 ### Battle targets and verdict animation
 
-| RTL training dummy | Gate-level timing boss |
-| ------------------ | ---------------------- |
-| <img src="public/mascot/rtl-training-dummy-display.png" width="260" alt="RTL training dummy with circuit board target"> | <img src="public/mascot/gate-level-timing-boss-display.png" width="360" alt="Gate-level timing boss built from damaged chips, gears, and timing traces"> |
-| Beginner and intermediate exercises use a readable circuit-board target. | Advanced exercises summon the larger timing boss to mark a harder design or debug task. |
+<table>
+  <thead><tr><th>Chip Cat</th><th>Laser Bear</th><th>Timing Boss</th><th>Cosmic Dark Emperor</th></tr></thead>
+  <tbody>
+    <tr>
+      <td align="center"><img src="public/mascot/chip-cat.png" width="180" alt="Cute robotic chip cat"></td>
+      <td align="center"><img src="public/mascot/laser-bear.png" width="190" alt="Cute purple robotic laser bear"></td>
+      <td align="center"><img src="public/mascot/gate-level-timing-boss-display.png" width="210" alt="Gate-level timing boss built from damaged chips, gears, and timing traces"></td>
+      <td align="center"><img src="public/mascot/cosmic-dark-emperor.png" width="230" alt="Ultimate cosmic dark emperor final boss"></td>
+    </tr>
+    <tr><td>Beginner</td><td>Intermediate</td><td>Advanced</td><td>Selected capstone labs</td></tr>
+  </tbody>
+</table>
 
-Pressing **Run tests** moves the active companion into the hint-area arena and triggers the profession-specific attack: sword wave, arrow rain, holy-light pulse, or elemental burst. A passing result produces the hit/defeat animation; a failing result produces a block/parry animation and points the learner back to the first useful diagnostic. The companion then returns to its normal position. The arena never covers the editor, waveform, or debug output, and the animation is only a visualization of the real judge result.
+Pressing **Run tests** moves the active companion into the hint-area arena and triggers the profession-specific attack: sword wave, arrow rain, holy-light pulse, or elemental burst. A passing result now produces an arena-wide flash, PASS seal, confetti burst and enemy defeat. A failing result produces a red impact flash, damage ring, visible hit marker and companion recoil before directing the learner to the first diagnostic. The companion then returns to its normal position. These short, CSS-only verdict effects never cover the editor, waveform or debug output and do not alter the real judge result.
 
 The companion, enchantment, training-target, and boss visuals are project-specific artwork and contain no vendor logos, commercial game characters, foundry material, or proprietary IP.
 

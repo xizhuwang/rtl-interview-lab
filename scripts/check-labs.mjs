@@ -26,13 +26,13 @@ const workerSource = await readFile(new URL('../public/engine/worker.js', import
 const waveformSource = await readFile(new URL('../components/waveform-viewer.tsx', import.meta.url), 'utf8');
 let checks = 0;
 function verify(ok, name) { assert.ok(ok, name); checks++; console.log('PASS ' + name); }
-function simulate(design, testbench, timeout = 15000) {
+function simulate(design, testbench, timeout = 15000, reference = '', challengeId = '') {
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL('./engine-test-worker.mjs', import.meta.url));
     const timer = setTimeout(() => { worker.terminate(); reject(new Error('Worker timeout')); }, timeout);
     worker.on('error', (error) => { clearTimeout(timer); reject(error); });
     worker.on('message', (result) => {
-      if (result.type === 'TEST_READY') worker.postMessage({ type: 'SOC_RTL_RUN', requestId: 'test', design, testbench, generation: '2005' });
+      if (result.type === 'TEST_READY') worker.postMessage({ type: 'SOC_RTL_RUN', requestId: 'test', design, reference, challengeId, testbench, generation: '2005' });
       else if (result.type === 'SOC_RTL_RESULT') { clearTimeout(timer); worker.terminate(); resolve(result); }
     });
   });
@@ -44,8 +44,10 @@ verify(challenges.filter(c=>/^soc-(?:cpu|cache)-/.test(c.id)).length===9, 'Nine 
 verify(challenges.filter(c=>c.track==='cpu-cache').length===9, 'CPU/cache is an independent track');
 verify(challenges.filter(c=>c.track==='soc').length===11, 'Eleven SoC and accelerator exercises');
 verify(/MAX_VCD_CHARS\s*=\s*600000/.test(workerSource)&&/limitVcd\(result\.vcd\)/.test(workerSource), 'Worker caps waveform transfer size');
-verify(/MAX_STORED_CHANGES\s*=\s*20000/.test(waveformSource)&&/MAX_RENDERED_CHANGES\s*=\s*240/.test(waveformSource), 'Waveform renderer caps parse and SVG work');
+verify(/MAX_STORED_CHANGES\s*=\s*20000/.test(waveformSource)&&/MAX_RENDERED_CHANGES\s*=\s*220/.test(waveformSource), 'Waveform renderer caps parse and SVG work');
 verify(/function parseChecks\(output\)/.test(workerSource)&&/checks,/.test(workerSource), 'Worker returns structured expected/actual checks');
+verify(/goldenVcdCache/.test(workerSource)&&/goldenVcd,/.test(workerSource), 'Worker simulates and caches a separate Golden waveform');
+verify(/Your waveform vs Golden waveform/.test(waveformSource)&&/definitions\.push/.test(waveformSource), 'Waveform viewer preserves VCD aliases and renders paired traces');
 const socChallenges = challenges.filter(c=>c.track==='soc');
 verify(Object.keys(socLearningAids).length===socChallenges.length, 'Every SoC exercise has exactly one interface guide');
 verify(socChallenges.every(c=>socLearningAids[c.id]), 'Every SoC exercise maps to a system architecture guide');
@@ -165,6 +167,10 @@ for (const value of ["1'bx", "1'bz", "1'b0"]) {
 }
 const bad = await simulate('not verilog!', 'module tb;initial $finish;endmodule');
 verify(!bad.ok, 'Invalid Verilog rejected');
+const dualChallenge = challenges.find((c) => c.id === 'rtl-edge-pulse');
+const dualReference = solutions[dualChallenge.id](dualChallenge.starter);
+const dual = await simulate(dualReference, dualChallenge.testbench, 20000, dualReference, dualChallenge.id);
+verify(dual.ok && Boolean(dual.vcd) && Boolean(dual.goldenVcd), 'One request returns both user and Golden VCD data');
 const watchdog = await simulate('module unused;endmodule', "module tb;reg clk=0;always #5 clk=~clk;initial wait(1'b0);endmodule");
 verify(!watchdog.ok && watchdog.console.includes('simulation-time limit reached'), 'Simulation-time watchdog');
 console.log('All ' + checks + ' checks passed.');

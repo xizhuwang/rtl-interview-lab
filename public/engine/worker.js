@@ -4,6 +4,7 @@ import { loadIcarus } from './runtime-loader.js';
 let initIvlpp, initIvl, initVvp;
 const MAX_VCD_CHARS = 600000;
 const VCD_TRUNCATION_MARKER = '$comment SOC_RTL_WAVEFORM_TRUNCATED $end';
+const goldenVcdCache = new Map();
 
 function limitVcd(vcd) {
   if (!vcd || vcd.length <= MAX_VCD_CHARS) return vcd;
@@ -86,6 +87,21 @@ async function simulate(program) {
   return { console: output.join('\n'), vcd };
 }
 
+async function compileAndSimulate(design, testbench, generation) {
+  const source = await preprocess([
+    { name: 'design.v', source: '`timescale 1ns/1ps\n' + design },
+    { name: 'testbench.v', source: '`timescale 1ns/1ps\n' + testbench },
+  ]);
+  const compiled = await compile(source, generation);
+  const diagnostics = compiled.diagnostics
+    .split('\n')
+    .filter((line) => !/system\.vpi|dynamic linking not enabled/.test(line))
+    .join('\n')
+    .trim();
+  if (!compiled.program) return { diagnostics, result: null };
+  return { diagnostics, result: await simulate(compiled.program) };
+}
+
 let yosysRun = null;
 async function synthesize(source, generation) {
   if (!yosysRun) {
@@ -146,37 +162,50 @@ self.addEventListener('message', async (event) => {
       /module\s+tb\s*;/,
       '$&\ninitial begin $dumpfile("/dump.vcd"); $dumpvars(0, tb); end\ninitial begin #10000; $display("@@FAIL@@ simulation-time limit reached"); $finish; end\n',
     );
-    const source = await preprocess([
-      { name: 'design.v', source: '`timescale 1ns/1ps\n' + design },
-      { name: 'testbench.v', source: '`timescale 1ns/1ps\n' + testbench },
-    ]);
-    const compiled = await compile(source, event.data.generation || '2012');
-    const diagnostics = compiled.diagnostics
-      .split('\n')
-      .filter((line) => !/system\.vpi|dynamic linking not enabled/.test(line))
-      .join('\n')
-      .trim();
-    if (!compiled.program) {
+    const generation = event.data.generation || '2012';
+    const currentRun = await compileAndSimulate(design, testbench, generation);
+    if (!currentRun.result) {
       self.postMessage({
         type: 'SOC_RTL_RESULT',
         requestId: event.data.requestId,
         ok: false,
         phase: 'compile',
-        console: diagnostics || 'Compilation failed.',
+        console: currentRun.diagnostics || 'Compilation failed.',
         elapsedMs: performance.now() - started,
       });
       return;
     }
-    const result = await simulate(compiled.program);
+    const result = currentRun.result;
+    let goldenVcd = null;
+    if (event.data.reference) {
+      const cacheKey = `${event.data.challengeId || 'anonymous'}:${generation}`;
+      goldenVcd = goldenVcdCache.get(cacheKey) || null;
+      if (!goldenVcd) {
+        const goldenRun = await compileAndSimulate(
+          sanitize(event.data.reference),
+          testbench,
+          generation,
+        );
+        if (goldenRun.result) {
+          goldenVcd = limitVcd(goldenRun.result.vcd);
+          if (goldenVcd) {
+            if (goldenVcdCache.size >= 8)
+              goldenVcdCache.delete(goldenVcdCache.keys().next().value);
+            goldenVcdCache.set(cacheKey, goldenVcd);
+          }
+        }
+      }
+    }
     const checks = parseChecks(result.console);
     self.postMessage({
       type: 'SOC_RTL_RESULT',
       requestId: event.data.requestId,
       ok: result.console.includes('@@PASS@@') && !result.console.includes('@@FAIL@@'),
       phase: 'simulate',
-      console: [diagnostics, cleanSimulationConsole(result.console)].filter(Boolean).join('\n'),
+      console: [currentRun.diagnostics, cleanSimulationConsole(result.console)].filter(Boolean).join('\n'),
       checks,
       vcd: limitVcd(result.vcd),
+      goldenVcd,
       elapsedMs: performance.now() - started,
     });
   } catch (error) {

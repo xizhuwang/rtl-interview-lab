@@ -87,6 +87,7 @@ import { learningContext, timingCommandGuide } from '@/lib/learning-context';
 import { goldenPatterns } from '@/lib/golden-patterns';
 import { speakingChecklist } from '@/lib/readiness';
 import { socLearningAids } from '@/lib/soc-learning-aids';
+import { solutions as referenceSolutions } from '@/scripts/test-solutions.mjs';
 
 type Result = {
   ok: boolean;
@@ -103,6 +104,7 @@ type SimulationCheck = {
   actual: string;
   pass: boolean;
 };
+type EnemyKind = 'chip-cat' | 'laser-bear' | 'timing-boss' | 'cosmic-emperor';
 
 const diagnosticStepLabels: Record<string, { zh: string; en: string }> = {
   reset: { zh: 'Reset 後', en: 'After reset' },
@@ -787,7 +789,7 @@ function BattleArena({
   equipment,
   elements,
   status,
-  isBoss,
+  enemy,
 }: {
   gender: MascotGender;
   profession: MascotProfession;
@@ -795,8 +797,15 @@ function BattleArena({
   equipment: EquipmentId | null;
   elements: ElementLevels;
   status: BattleStatus;
-  isBoss: boolean;
+  enemy: EnemyKind;
 }) {
+  const enemyCatalog: Record<EnemyKind, { src: string; label: string; boss: boolean; final: boolean }> = {
+    'chip-cat': { src: './mascot/chip-cat.png', label: 'CHIP CAT', boss: false, final: false },
+    'laser-bear': { src: './mascot/laser-bear.png', label: 'LASER BEAR', boss: false, final: false },
+    'timing-boss': { src: './mascot/gate-level-timing-boss-display.png', label: 'TIMING BOSS', boss: true, final: false },
+    'cosmic-emperor': { src: './mascot/cosmic-dark-emperor.png', label: 'FINAL BOSS', boss: true, final: true },
+  };
+  const opponent = enemyCatalog[enemy];
   const rootsUnlocked = Object.values(elements).every((level) => level > 0);
   const totalElementLevel = Object.values(elements).reduce((sum, level) => sum + level, 0);
   const activeElements = (Object.keys(elements) as ElementId[]).filter(
@@ -813,7 +822,7 @@ function BattleArena({
 
   return (
     <div
-      className={`mascot-battle-arena battle-${status} profession-${profession} ${dominantElement ? `battle-element-${dominantElement}` : ''} ${isBoss ? 'boss-battle' : ''} ${rootsUnlocked ? 'four-roots-active' : ''}`}
+      className={`mascot-battle-arena battle-${status} profession-${profession} enemy-${enemy} ${dominantElement ? `battle-element-${dominantElement}` : ''} ${opponent.boss ? 'boss-battle' : ''} ${opponent.final ? 'final-boss-battle' : ''} ${rootsUnlocked ? 'four-roots-active' : ''}`}
       style={battleStyle}
       aria-hidden="true"
     >
@@ -843,27 +852,50 @@ function BattleArena({
           />
         ))}
       </div>
-      <div className={`rtl-dummy-wrap ${isBoss ? 'boss-target-wrap' : ''}`} aria-hidden="true">
+      <div className={`rtl-dummy-wrap enemy-target-wrap ${opponent.boss ? 'boss-target-wrap' : ''}`} aria-hidden="true">
         <span className="dummy-hit-ring" />
         <img
-          src={isBoss ? './mascot/gate-level-timing-boss-display.png' : './mascot/rtl-training-dummy-display.png'}
+          src={opponent.src}
           alt=""
-          width={isBoss ? 560 : 360}
-          height={isBoss ? 512 : 360}
+          width={opponent.final ? 760 : opponent.boss ? 560 : 640}
+          height={opponent.final ? 695 : opponent.boss ? 512 : 585}
           decoding="async"
-          className={isBoss ? 'rtl-boss' : 'rtl-dummy'}
+          className={opponent.boss ? 'rtl-boss' : 'rtl-dummy'}
         />
-        {isBoss && (
+        {opponent.boss && (
           <>
             <span className="boss-shard boss-shard-a" />
             <span className="boss-shard boss-shard-b" />
             <span className="boss-shard boss-shard-c" />
           </>
         )}
-        <span className="rtl-dummy-label">{isBoss ? 'BOSS' : 'RTL'}</span>
+        <span className="rtl-dummy-label">{opponent.label}</span>
       </div>
+      <span className="battle-screen-flash" />
+      <span className="failure-impact" />
+      <span className="failure-damage-mark">!</span>
+      <span className="victory-seal">PASS</span>
+      <span className="celebration-burst">
+        {Array.from({ length: 10 }, (_, index) => <i key={index} />)}
+      </span>
     </div>
   );
+}
+
+const finalBossChallenges = new Set([
+  'cdc-async-fifo',
+  'soc-axi-burst-reader',
+  'soc-cache-miss-fsm',
+  'dft-sram-mbist',
+  'lp-power-sequencer',
+  'soc-streaming-llm-tile',
+]);
+
+function enemyForChallenge(id: string, difficulty: string): EnemyKind {
+  if (finalBossChallenges.has(id)) return 'cosmic-emperor';
+  if (difficulty === 'advanced') return 'timing-boss';
+  if (difficulty === 'intermediate') return 'laser-bear';
+  return 'chip-cat';
 }
 
 export default function Home() {
@@ -882,7 +914,7 @@ export default function Home() {
   const [areaResult, setAreaResult] = useState<AreaResult | null>(null);
   const [areaError, setAreaError] = useState('');
   const [estimating, setEstimating] = useState(false);
-  const [waveformVcd, setWaveformVcd] = useState('');
+  const [waveforms, setWaveforms] = useState({ current: '', golden: '' });
   const [mascotGender, setMascotGender] = useState<MascotGender>('masculine');
   const [mascotProfession, setMascotProfession] =
     useState<MascotProfession>('novice');
@@ -918,6 +950,13 @@ export default function Home() {
     [current.starter, current.language],
   );
   const code = solutions[current.id] ?? starterCode;
+  const referenceCode = useMemo(
+    () =>
+      current.referenceSolution ??
+      referenceSolutions[current.id]?.(current.starter) ??
+      '',
+    [current],
+  );
 
   const startBattle = useCallback(() => {
     if (battleReturnTimer.current !== null)
@@ -932,7 +971,7 @@ export default function Home() {
     battleReturnTimer.current = window.setTimeout(() => {
       setBattleVisible(false);
       battleReturnTimer.current = null;
-    }, 1400);
+    }, 2200);
   }, []);
 
   const clearRunWatchdog = useCallback(() => {
@@ -973,7 +1012,7 @@ export default function Home() {
     setEstimating(false);
     setSelectedId(id);
     setResult(null);
-    setWaveformVcd('');
+      setWaveforms({ current: '', golden: '' });
     setAreaResult(null);
     setAreaError('');
     setRevealedHints(0);
@@ -1193,11 +1232,14 @@ export default function Home() {
     const target = new Image();
     target.decoding = 'async';
     target.fetchPriority = 'low';
-    target.src =
-      current.difficulty === 'advanced'
-        ? './mascot/gate-level-timing-boss-display.png'
-        : './mascot/rtl-training-dummy-display.png';
-  }, [current.difficulty]);
+    const enemy = enemyForChallenge(current.id, current.difficulty);
+    target.src = {
+      'chip-cat': './mascot/chip-cat.png',
+      'laser-bear': './mascot/laser-bear.png',
+      'timing-boss': './mascot/gate-level-timing-boss-display.png',
+      'cosmic-emperor': './mascot/cosmic-dark-emperor.png',
+    }[enemy];
+  }, [current.id, current.difficulty]);
 
   useEffect(() => {
     if (engineReady) return;
@@ -1307,7 +1349,10 @@ export default function Home() {
       };
       runStartedAt.current = 0;
       setResult(next);
-      setWaveformVcd(String(event.data.vcd || ''));
+      setWaveforms({
+        current: String(event.data.vcd || ''),
+        golden: String(event.data.goldenVcd || ''),
+      });
       setRunning(false);
       scheduleMascotReturn();
       if (next.ok) markSolved(current.id);
@@ -1426,7 +1471,8 @@ export default function Home() {
       return { ...previous, [current.id]: next };
     });
     if (result) setResult(null);
-    if (waveformVcd) setWaveformVcd('');
+    if (waveforms.current || waveforms.golden)
+      setWaveforms({ current: '', golden: '' });
   };
 
   const gradePatterns = () => {
@@ -1453,7 +1499,7 @@ export default function Home() {
   const run = () => {
     setMascotInteraction('');
     setResult(null);
-    setWaveformVcd('');
+    setWaveforms({ current: '', golden: '' });
     startBattle();
     if (current.judge === 'pattern') {
       setRunning(true);
@@ -1519,6 +1565,8 @@ export default function Home() {
         type: 'SOC_RTL_RUN',
         requestId,
         design: code,
+        reference: referenceCode,
+        challengeId: current.id,
         testbench: current.testbench,
         generation: current.language === 'Verilog-2005' ? '2005' : '2012',
       },
@@ -2332,7 +2380,7 @@ export default function Home() {
                 </p>
               </section>
             )}
-            <div className="mascot-companion-stage mt-4 grid grid-cols-[84px_minmax(0,1fr)] items-end gap-3 border-t border-border pt-4 sm:grid-cols-[104px_minmax(0,1fr)]">
+            <div className={`mascot-companion-stage mt-4 grid grid-cols-[84px_minmax(0,1fr)] items-end gap-3 border-t border-border pt-4 sm:grid-cols-[104px_minmax(0,1fr)] ${battleVisible ? 'battle-stage-active' : ''}`}>
               <button
                 type="button"
                 onClick={interactWithMascot}
@@ -2417,7 +2465,7 @@ export default function Home() {
                   equipment={activeEquipment}
                   elements={elementLevels}
                   status={battleStatus}
-                  isBoss={current.difficulty === 'advanced'}
+                  enemy={enemyForChallenge(current.id, current.difficulty)}
                 />
               )}
             </div>
@@ -2631,7 +2679,14 @@ export default function Home() {
               </div>
             </div>
           )}
-          {waveformVcd && <WaveformViewer vcd={waveformVcd} locale={locale} />}
+          {(waveforms.current || waveforms.golden) && (
+            <WaveformViewer
+              currentVcd={waveforms.current}
+              goldenVcd={waveforms.golden}
+              design={code}
+              locale={locale}
+            />
+          )}
           <div className="mt-6 rounded-xl border border-border bg-muted/30 p-4">
             <div className="flex items-start gap-3">
               <Gauge className="mt-0.5 size-5 shrink-0 text-primary" />
