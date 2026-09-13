@@ -47,6 +47,7 @@ verify(/MAX_VCD_CHARS\s*=\s*600000/.test(workerSource)&&/limitVcd\(result\.vcd\)
 verify(/MAX_STORED_CHANGES\s*=\s*20000/.test(waveformSource)&&/MAX_RENDERED_CHANGES\s*=\s*220/.test(waveformSource), 'Waveform renderer caps parse and SVG work');
 verify(/function parseChecks\(output\)/.test(workerSource)&&/checks,/.test(workerSource), 'Worker returns structured expected/actual checks');
 verify(/goldenVcdCache/.test(workerSource)&&/goldenVcd,/.test(workerSource), 'Worker simulates and caches a separate Golden waveform');
+verify(/compareGoldenOutputs\(currentVcd, goldenVcd, outputNames\)/.test(workerSource)&&/testbenchPassed && goldenComparison\.matches/.test(workerSource), 'Verdict requires full DUT-output waveform equality with Golden');
 verify(/Your waveform vs Golden waveform/.test(waveformSource)&&/definitions\.push/.test(waveformSource), 'Waveform viewer preserves VCD aliases and renders paired traces');
 const socChallenges = challenges.filter(c=>c.track==='soc');
 verify(Object.keys(socLearningAids).length===socChallenges.length, 'Every SoC exercise has exactly one interface guide');
@@ -90,9 +91,10 @@ for (const c of challenges) {
   const rawDesign = solutions[c.id]?.(c.starter) ?? c.referenceSolution;
   assert.ok(rawDesign, 'Missing fixture: ' + c.id);
   const design = formatCodeForEditor(rawDesign, c.language);
-  const good = await simulate(design, c.testbench);
+  const good = await simulate(design, c.testbench, 20000, design, c.id);
   verify(good.ok, c.id + ' reference accepts: ' + (good.ok ? '' : good.console));
   verify(Boolean(good.vcd?.includes('$enddefinitions')), c.id + ' emits VCD');
+  verify(good.goldenComparedSignals > 0, c.id + ' activates declared-output comparison against a Golden run');
   const starter = await simulate(formattedStarter, c.testbench);
   verify(starter.ok === (c.id === 'ppa-width-discipline'), c.id + ' starter verdict: ' + starter.console.slice(-100));
 }
@@ -171,6 +173,22 @@ const dualChallenge = challenges.find((c) => c.id === 'rtl-edge-pulse');
 const dualReference = solutions[dualChallenge.id](dualChallenge.starter);
 const dual = await simulate(dualReference, dualChallenge.testbench, 20000, dualReference, dualChallenge.id);
 verify(dual.ok && Boolean(dual.vcd) && Boolean(dual.goldenVcd), 'One request returns both user and Golden VCD data');
+const roundRobin = challenges.find((c) => c.id === 'soc-round-robin');
+const roundRobinReference = solutions[roundRobin.id](roundRobin.starter);
+const falsePassCandidate = roundRobinReference.replace(
+  'always @*case(req)',
+  "always @*if(!clk)grant=0;else case(req)",
+);
+const legacyRoundRobinResult = await simulate(falsePassCandidate, roundRobin.testbench);
+const strictRoundRobinResult = await simulate(
+  falsePassCandidate,
+  roundRobin.testbench,
+  20000,
+  roundRobinReference,
+  roundRobin.id,
+);
+verify(legacyRoundRobinResult.ok, 'Round-robin regression fixture exposes the former checkpoint-only false pass');
+verify(!strictRoundRobinResult.ok && strictRoundRobinResult.goldenMismatch?.signal === 'grant', 'Round-robin Golden waveform mismatch is rejected with the failing output');
 const watchdog = await simulate('module unused;endmodule', "module tb;reg clk=0;always #5 clk=~clk;initial wait(1'b0);endmodule");
 verify(!watchdog.ok && watchdog.console.includes('simulation-time limit reached'), 'Simulation-time watchdog');
 console.log('All ' + checks + ' checks passed.');

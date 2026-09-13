@@ -36,6 +36,215 @@ function cleanSimulationConsole(output) {
     .join('\n');
 }
 
+function firstModuleOutputNames(source) {
+  const text = String(source || '')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/\/\/[^\n\r]*/g, ' ');
+  const moduleMatch = /\bmodule\s+[A-Za-z_$][\w$]*/.exec(text);
+  if (!moduleMatch) return [];
+
+  let cursor = moduleMatch.index + moduleMatch[0].length;
+  const skipSpace = () => {
+    while (/\s/.test(text[cursor] || '')) cursor += 1;
+  };
+  const skipBalanced = () => {
+    if (text[cursor] !== '(') return false;
+    let depth = 0;
+    for (; cursor < text.length; cursor += 1) {
+      if (text[cursor] === '(') depth += 1;
+      else if (text[cursor] === ')') {
+        depth -= 1;
+        if (depth === 0) {
+          cursor += 1;
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  skipSpace();
+  if (text[cursor] === '#') {
+    cursor += 1;
+    skipSpace();
+    if (!skipBalanced()) return [];
+    skipSpace();
+  }
+  if (text[cursor] !== '(') return [];
+  const portStart = cursor + 1;
+  if (!skipBalanced()) return [];
+  const header = text.slice(portStart, cursor - 1);
+
+  const parts = [];
+  let start = 0;
+  let bracketDepth = 0;
+  let parenDepth = 0;
+  for (let index = 0; index <= header.length; index += 1) {
+    const char = header[index];
+    if (char === '[') bracketDepth += 1;
+    else if (char === ']') bracketDepth = Math.max(0, bracketDepth - 1);
+    else if (char === '(') parenDepth += 1;
+    else if (char === ')') parenDepth = Math.max(0, parenDepth - 1);
+    if ((char === ',' && bracketDepth === 0 && parenDepth === 0) || index === header.length) {
+      parts.push(header.slice(start, index));
+      start = index + 1;
+    }
+  }
+
+  const outputs = [];
+  let direction = null;
+  for (const rawPart of parts) {
+    const directionMatch = rawPart.match(/\b(input|output|inout)\b/);
+    if (directionMatch) direction = directionMatch[1];
+    if (direction !== 'output') continue;
+    const declaration = rawPart
+      .replace(/\b(input|output|inout|wire|reg|logic|signed|unsigned|tri|supply0|supply1)\b/g, ' ')
+      .replace(/\[[^\]]*\]/g, ' ')
+      .split('=')[0];
+    const names = declaration.match(/[A-Za-z_$][\w$]*/g);
+    if (names?.length) outputs.push(names[names.length - 1]);
+  }
+  return [...new Set(outputs)];
+}
+
+function parseVcdOutputs(vcd, outputNames) {
+  const wanted = new Set(outputNames);
+  const scopes = [];
+  const candidates = new Map();
+  const lines = String(vcd || '').split(/\r?\n/);
+  let definitionsEnded = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('$scope ')) {
+      const match = trimmed.match(/^\$scope\s+\S+\s+(\S+)\s+\$end$/);
+      if (match) scopes.push(match[1]);
+      continue;
+    }
+    if (trimmed.startsWith('$upscope')) {
+      scopes.pop();
+      continue;
+    }
+    if (trimmed.startsWith('$var ')) {
+      const match = trimmed.match(/^\$var\s+\S+\s+(\d+)\s+(\S+)\s+([^\s[]+)/);
+      if (!match || !wanted.has(match[3])) continue;
+      const signal = match[3];
+      const path = `${scopes.join('.')}.${signal}`;
+      const score = /(^|\.)dut\./.test(path) ? 2 : scopes.at(-1) === 'tb' ? 1 : 0;
+      const previous = candidates.get(signal);
+      if (!previous || score > previous.score) {
+        candidates.set(signal, {
+          code: match[2],
+          width: Number(match[1]),
+          path,
+          score,
+        });
+      }
+      continue;
+    }
+    if (trimmed.startsWith('$enddefinitions')) {
+      definitionsEnded = true;
+      break;
+    }
+  }
+  if (!definitionsEnded) return { signals: new Map(), missing: outputNames };
+
+  const codeToSignals = new Map();
+  const signals = new Map();
+  for (const [name, candidate] of candidates) {
+    const aliases = codeToSignals.get(candidate.code) || [];
+    aliases.push(name);
+    codeToSignals.set(candidate.code, aliases);
+    signals.set(name, { width: candidate.width, changes: new Map() });
+  }
+
+  let time = 0;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed[0] === '$') continue;
+    if (trimmed[0] === '#') {
+      const nextTime = Number(trimmed.slice(1));
+      if (Number.isFinite(nextTime)) time = nextTime;
+      continue;
+    }
+    let value = null;
+    let code = null;
+    const scalar = trimmed.match(/^([01xXzZ])(.+)$/);
+    const vector = trimmed.match(/^[bB]([01xXzZ]+)\s+(\S+)$/);
+    if (vector) {
+      value = vector[1].toLowerCase();
+      code = vector[2];
+    } else if (scalar) {
+      value = scalar[1].toLowerCase();
+      code = scalar[2].trim();
+    }
+    const names = code ? codeToSignals.get(code) : null;
+    if (names && value !== null) {
+      for (const name of names) signals.get(name).changes.set(time, value);
+    }
+  }
+  return {
+    signals,
+    missing: outputNames.filter((name) => !signals.has(name)),
+  };
+}
+
+function normalizeVcdValue(value, width) {
+  if (value === null || value === undefined) return 'x'.repeat(Math.max(1, width));
+  const normalized = String(value).toLowerCase();
+  if (/^[xz]$/.test(normalized) && width > 1) return normalized.repeat(width);
+  if (/^[01]+$/.test(normalized)) return normalized.padStart(width, '0').slice(-width);
+  return normalized.padStart(width, normalized[0] || 'x').slice(-width);
+}
+
+function compareGoldenOutputs(currentVcd, goldenVcd, outputNames) {
+  if (!goldenVcd || !outputNames.length)
+    return { matches: true, comparedSignals: 0, mismatch: null };
+  const current = parseVcdOutputs(currentVcd, outputNames);
+  const golden = parseVcdOutputs(goldenVcd, outputNames);
+  const missing = [...new Set([...current.missing, ...golden.missing])];
+  if (missing.length) {
+    return {
+      matches: false,
+      comparedSignals: 0,
+      mismatch: { signal: missing[0], time: 0, expected: 'present in Golden VCD', actual: 'missing from waveform' },
+    };
+  }
+
+  let comparedSignals = 0;
+  for (const name of outputNames) {
+    const currentSignal = current.signals.get(name);
+    const goldenSignal = golden.signals.get(name);
+    const width = Math.max(currentSignal.width, goldenSignal.width, 1);
+    const times = [...new Set([
+      ...currentSignal.changes.keys(),
+      ...goldenSignal.changes.keys(),
+    ])].sort((a, b) => a - b);
+    let currentValue = null;
+    let goldenValue = null;
+    let started = false;
+    let comparedThisSignal = false;
+    for (const time of times) {
+      if (currentSignal.changes.has(time)) currentValue = currentSignal.changes.get(time);
+      if (goldenSignal.changes.has(time)) goldenValue = goldenSignal.changes.get(time);
+      const expected = normalizeVcdValue(goldenValue, width);
+      const actual = normalizeVcdValue(currentValue, width);
+      if (!started && !/[xz]/.test(expected)) started = true;
+      if (!started) continue;
+      comparedThisSignal = true;
+      if (actual !== expected) {
+        return {
+          matches: false,
+          comparedSignals,
+          mismatch: { signal: name, time, expected, actual },
+        };
+      }
+    }
+    if (comparedThisSignal) comparedSignals += 1;
+  }
+  return { matches: true, comparedSignals, mismatch: null };
+}
+
 const sanitize = (source) => String(source || '')
   .replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
   .replace(/[\u200B-\u200D\uFEFF]/g, '')
@@ -197,15 +406,24 @@ self.addEventListener('message', async (event) => {
       }
     }
     const checks = parseChecks(result.console);
+    const outputNames = firstModuleOutputNames(design);
+    const currentVcd = limitVcd(result.vcd);
+    const goldenComparison = compareGoldenOutputs(currentVcd, goldenVcd, outputNames);
+    const testbenchPassed = result.console.includes('@@PASS@@') && !result.console.includes('@@FAIL@@');
+    const mismatchMessage = goldenComparison.mismatch
+      ? `Golden waveform mismatch: signal=${goldenComparison.mismatch.signal} time=${goldenComparison.mismatch.time} expected=${goldenComparison.mismatch.expected} actual=${goldenComparison.mismatch.actual}`
+      : '';
     self.postMessage({
       type: 'SOC_RTL_RESULT',
       requestId: event.data.requestId,
-      ok: result.console.includes('@@PASS@@') && !result.console.includes('@@FAIL@@'),
+      ok: testbenchPassed && goldenComparison.matches,
       phase: 'simulate',
-      console: [currentRun.diagnostics, cleanSimulationConsole(result.console)].filter(Boolean).join('\n'),
+      console: [currentRun.diagnostics, cleanSimulationConsole(result.console), mismatchMessage].filter(Boolean).join('\n'),
       checks,
-      vcd: limitVcd(result.vcd),
+      vcd: currentVcd,
       goldenVcd,
+      goldenComparedSignals: goldenComparison.comparedSignals,
+      goldenMismatch: goldenComparison.mismatch,
       elapsedMs: performance.now() - started,
     });
   } catch (error) {

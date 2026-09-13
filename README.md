@@ -69,19 +69,22 @@ Repeated purchases increase that stone's visual intensity. The highest-level sto
 ### Battle targets and verdict animation
 
 <table>
-  <thead><tr><th>Dark Venom Spirit Cat</th><th>Dark Thunder Guardian Bear</th><th>Timing Boss</th><th>Dark Immortal Sovereign</th></tr></thead>
+  <thead><tr><th>RTL Training Dummy</th><th>Dark Venom Spirit Cat</th><th>Dark Thunder Guardian Bear</th><th>Timing Boss</th><th>Dark Immortal Sovereign</th></tr></thead>
   <tbody>
     <tr>
+      <td align="center"><img src="public/mascot/rtl-training-dummy-display.png" width="150" alt="RTL training dummy"></td>
       <td align="center"><img src="public/mascot/chip-cat.png" width="180" alt="Fluffy dark and poison spirit cat with a jade circuit talisman"></td>
       <td align="center"><img src="public/mascot/laser-bear.png" width="190" alt="Fluffy dark and lightning guardian bear with a rune bracer"></td>
       <td align="center"><img src="public/mascot/gate-level-timing-boss-display.png" width="210" alt="Gate-level timing boss built from damaged chips, gears, and timing traces"></td>
-      <td align="center"><img src="public/mascot/cosmic-dark-emperor.png" width="230" alt="Dark xianxia sovereign with timing-wave and compute-array formations in ink-wash energy"></td>
+      <td align="center"><img src="public/mascot/cosmic-dark-emperor.png" width="280" alt="Dark xianxia sovereign with timing-wave and compute-array formations in ink-wash energy"></td>
     </tr>
-    <tr><td>Beginner · Dark / Poison</td><td>Intermediate · Dark / Lightning</td><td>Advanced · Timing / Array</td><td>Selected capstones · Dark / Ink</td></tr>
+    <tr><td>Exercises 1–10 · Fundamentals</td><td>Later beginner exercises · Dark / Poison</td><td>Intermediate · Dark / Lightning</td><td>Advanced · Timing / Array</td><td>Hardest five challenges · Dark / Ink</td></tr>
   </tbody>
 </table>
 
-Pressing **Run tests** moves the active companion into the hint-area arena and triggers the profession-specific attack: sword wave, arrow rain, holy-light pulse, or elemental burst. A passing result now produces an arena-wide flash, PASS seal, confetti burst and enemy defeat. A failing result produces a red impact flash, damage ring, visible hit marker and companion recoil before directing the learner to the first diagnostic. The companion then returns to its normal position. These short, CSS-only verdict effects never cover the editor, waveform or debug output and do not alter the real judge result.
+Pressing **Run tests** moves the active companion into the hint-area arena and triggers the profession-specific attack: sword wave, arrow rain, holy-light pulse, or elemental burst. Exercises 1–10 always use the training dummy. Only the five highest-level challenges use the three-times-larger Dark Immortal; on failure it counters with a dark timing-array seal and energy beam. A first-time pass produces an arena-wide flash, PASS seal, confetti burst, enemy defeat, and a one-time coin-gain prompt. Re-running a solved exercise never awards or displays the same reward again. A failing result produces a red impact flash, damage ring, visible hit marker and companion recoil before directing the learner to the first diagnostic. The companion then returns to its normal position. These short, CSS-only verdict effects never cover the editor, waveform or debug output.
+
+Simulation verdicts use two gates: the self-checking testbench must pass, and every externally visible DUT output waveform must match the Golden run over the same stimulus. This prevents checkpoint-only false passes such as an arbiter that briefly drives an incorrect grant between sampled checks. The first mismatch is reported with signal name, simulation time, Golden value, and current value.
 
 The companion, enchantment, training-target, and boss visuals are project-specific artwork and contain no vendor logos, commercial game characters, foundry material, or proprietary IP.
 

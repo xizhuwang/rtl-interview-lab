@@ -95,6 +95,12 @@ type Result = {
   console: string;
   elapsedMs?: number;
   checks?: SimulationCheck[];
+  goldenMismatch?: {
+    signal: string;
+    time: number;
+    expected: string;
+    actual: string;
+  } | null;
 };
 type SimulationCheck = {
   step: string;
@@ -104,7 +110,7 @@ type SimulationCheck = {
   actual: string;
   pass: boolean;
 };
-type EnemyKind = 'chip-cat' | 'laser-bear' | 'timing-boss' | 'cosmic-emperor';
+type EnemyKind = 'training-dummy' | 'chip-cat' | 'laser-bear' | 'timing-boss' | 'cosmic-emperor';
 
 const diagnosticStepLabels: Record<string, { zh: string; en: string }> = {
   reset: { zh: 'Reset 後', en: 'After reset' },
@@ -790,6 +796,7 @@ function BattleArena({
   elements,
   status,
   enemy,
+  coinReward,
 }: {
   gender: MascotGender;
   profession: MascotProfession;
@@ -798,8 +805,10 @@ function BattleArena({
   elements: ElementLevels;
   status: BattleStatus;
   enemy: EnemyKind;
+  coinReward: number | null;
 }) {
   const enemyCatalog: Record<EnemyKind, { src: string; label: string; boss: boolean; final: boolean }> = {
+    'training-dummy': { src: './mascot/rtl-training-dummy-display.png', label: 'RTL DUMMY', boss: false, final: false },
     'chip-cat': { src: './mascot/chip-cat.png', label: 'VENOM CAT', boss: false, final: false },
     'laser-bear': { src: './mascot/laser-bear.png', label: 'THUNDER BEAR', boss: false, final: false },
     'timing-boss': { src: './mascot/gate-level-timing-boss-display.png', label: 'TIMING BOSS', boss: true, final: false },
@@ -872,26 +881,37 @@ function BattleArena({
         <span className="rtl-dummy-label">{opponent.label}</span>
       </div>
       <span className="battle-screen-flash" />
+      {opponent.final && (
+        <>
+          <span className="boss-counterattack-beam" />
+          <span className="boss-counterattack-seal" />
+        </>
+      )}
       <span className="failure-impact" />
       <span className="failure-damage-mark">!</span>
       <span className="victory-seal">PASS</span>
       <span className="celebration-burst">
         {Array.from({ length: 10 }, (_, index) => <i key={index} />)}
       </span>
+      {status === 'success' && coinReward !== null && (
+        <span className="coin-reward-toast">
+          <span aria-hidden="true">●</span> +{coinReward}
+        </span>
+      )}
     </div>
   );
 }
 
 const finalBossChallenges = new Set([
   'cdc-async-fifo',
-  'soc-axi-burst-reader',
+  'soc-cache-two-way',
   'soc-cache-miss-fsm',
-  'dft-sram-mbist',
   'lp-power-sequencer',
   'soc-streaming-llm-tile',
 ]);
 
-function enemyForChallenge(id: string, difficulty: string): EnemyKind {
+function enemyForChallenge(id: string, difficulty: string, order: number): EnemyKind {
+  if (order <= 10) return 'training-dummy';
   if (finalBossChallenges.has(id)) return 'cosmic-emperor';
   if (difficulty === 'advanced') return 'timing-boss';
   if (difficulty === 'intermediate') return 'laser-bear';
@@ -908,6 +928,7 @@ export default function Home() {
   const [result, setResult] = useState<Result | null>(null);
   const [running, setRunning] = useState(false);
   const [battleVisible, setBattleVisible] = useState(false);
+  const [coinReward, setCoinReward] = useState<number | null>(null);
   const [engineReady, setEngineReady] = useState(false);
   const [revealedHints, setRevealedHints] = useState(0);
   const [holdLab, setHoldLab] = useState<HoldLabState>({ ...initialHoldLab });
@@ -970,6 +991,7 @@ export default function Home() {
       window.clearTimeout(battleReturnTimer.current);
     battleReturnTimer.current = window.setTimeout(() => {
       setBattleVisible(false);
+      setCoinReward(null);
       battleReturnTimer.current = null;
     }, 2200);
   }, []);
@@ -989,13 +1011,13 @@ export default function Home() {
   }, []);
 
   const markSolved = useCallback((id: string) => {
-    setSolved((previous) => {
-      if (previous.includes(id)) return previous;
-      const next = [...previous, id];
-      browserStorage.setItem(storageKeys.solved, JSON.stringify(next));
-      return next;
-    });
-  }, []);
+    if (solved.includes(id)) return false;
+    const next = [...solved, id];
+    setSolved(next);
+    browserStorage.setItem(storageKeys.solved, JSON.stringify(next));
+    setCoinReward(challenges.find((item) => item.id === id)?.points ?? 0);
+    return true;
+  }, [solved]);
 
   const selectChallenge = useCallback((id: string) => {
     if (!challenges.some((item) => item.id === id)) return false;
@@ -1009,6 +1031,7 @@ export default function Home() {
     );
     setRunning(false);
     setBattleVisible(false);
+    setCoinReward(null);
     setEstimating(false);
     setSelectedId(id);
     setResult(null);
@@ -1232,14 +1255,15 @@ export default function Home() {
     const target = new Image();
     target.decoding = 'async';
     target.fetchPriority = 'low';
-    const enemy = enemyForChallenge(current.id, current.difficulty);
+    const enemy = enemyForChallenge(current.id, current.difficulty, current.order);
     target.src = {
+      'training-dummy': './mascot/rtl-training-dummy-display.png',
       'chip-cat': './mascot/chip-cat.png',
       'laser-bear': './mascot/laser-bear.png',
       'timing-boss': './mascot/gate-level-timing-boss-display.png',
       'cosmic-emperor': './mascot/cosmic-dark-emperor.png',
     }[enemy];
-  }, [current.id, current.difficulty]);
+  }, [current.id, current.difficulty, current.order]);
 
   useEffect(() => {
     if (engineReady) return;
@@ -1346,6 +1370,11 @@ export default function Home() {
         checks: Array.isArray(event.data.checks)
           ? event.data.checks.slice(0, 32)
           : [],
+        goldenMismatch:
+          event.data.goldenMismatch &&
+          typeof event.data.goldenMismatch === 'object'
+            ? event.data.goldenMismatch
+            : null,
       };
       runStartedAt.current = 0;
       setResult(next);
@@ -1498,6 +1527,7 @@ export default function Home() {
 
   const run = () => {
     setMascotInteraction('');
+    setCoinReward(null);
     setResult(null);
     setWaveforms({ current: '', golden: '' });
     startBattle();
@@ -1578,6 +1608,8 @@ export default function Home() {
     action: 'delay' | 'pipeline' | 'false-path' | 'speed-up',
   ) => {
     setMascotInteraction('');
+    setCoinReward(null);
+    startBattle();
     const messages =
       locale === 'zh'
         ? {
@@ -1621,6 +1653,7 @@ export default function Home() {
       setHoldLab({ ...initialHoldLab, message: messages[action], ok: false });
       setResult({ ok: false, phase: 'interactive', console: messages[action] });
     }
+    scheduleMascotReturn();
   };
 
   const estimateArea = () => {
@@ -2465,7 +2498,8 @@ export default function Home() {
                   equipment={activeEquipment}
                   elements={elementLevels}
                   status={battleStatus}
-                  enemy={enemyForChallenge(current.id, current.difficulty)}
+                  enemy={enemyForChallenge(current.id, current.difficulty, current.order)}
+                  coinReward={coinReward}
                 />
               )}
             </div>
@@ -2876,6 +2910,20 @@ export default function Home() {
                 {result.phase}
               </p>
             </output>
+          )}
+          {result?.goldenMismatch && (
+            <div className="mt-3 rounded-xl border border-destructive/35 bg-destructive/8 p-3 text-sm">
+              <p className="font-semibold text-destructive">
+                {locale === 'zh'
+                  ? `第一個 Golden 波形差異：${result.goldenMismatch.signal}`
+                  : `First Golden waveform mismatch: ${result.goldenMismatch.signal}`}
+              </p>
+              <p className="mt-1 font-mono text-xs text-muted-foreground">
+                {locale === 'zh' ? 'VCD 時間刻度' : 'VCD time tick'} {result.goldenMismatch.time}
+                {' · '}Golden {result.goldenMismatch.expected}
+                {' · '}{locale === 'zh' ? '你的輸出' : 'Your output'} {result.goldenMismatch.actual}
+              </p>
+            </div>
           )}
           {result?.console && (
             <pre className="mt-3 max-h-[290px] overflow-auto whitespace-pre-wrap rounded-lg bg-editor p-3 font-mono text-[11px] leading-5 text-editor-foreground">

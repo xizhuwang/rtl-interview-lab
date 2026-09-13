@@ -886,6 +886,18 @@ body {
   z-index: 4;
 }
 
+.enemy-training-dummy .rtl-dummy {
+  filter:
+    drop-shadow(0 8px 10px oklch(0.05 0.02 250 / 42%))
+    drop-shadow(0 0 8px oklch(0.72 0.13 85 / 28%));
+}
+
+.enemy-training-dummy .rtl-dummy-label {
+  background: oklch(0.2 0.05 70 / 92%);
+  border-color: oklch(0.75 0.14 82 / 68%);
+  color: oklch(0.92 0.12 88);
+}
+
 .enemy-chip-cat .enemy-target-wrap {
   height: 126px;
   width: 136px;
@@ -943,13 +955,14 @@ body {
 }
 
 .final-boss-battle {
-  grid-template-columns: 104px minmax(44px, 1fr) 224px;
+  grid-template-columns: 104px minmax(44px, 1fr) 292px;
+  height: 340px;
 }
 
 .final-boss-battle .boss-target-wrap {
-  height: 216px;
-  margin-top: -54px;
-  width: 224px;
+  height: 306px;
+  margin-top: -34px;
+  width: 292px;
 }
 
 .rtl-boss {
@@ -1084,15 +1097,52 @@ body {
 }
 
 .battle-screen-flash,
+.boss-counterattack-beam,
+.boss-counterattack-seal,
 .failure-impact,
 .failure-damage-mark,
 .victory-seal,
-.celebration-burst {
+.celebration-burst,
+.coin-reward-toast {
   inset: 0;
   opacity: 0;
   pointer-events: none;
   position: absolute;
   z-index: 9;
+}
+
+.boss-counterattack-beam {
+  background:
+    linear-gradient(90deg, transparent 0 3%, oklch(0.76 0.2 315 / 88%) 18%, white 48%, oklch(0.57 0.24 285 / 92%) 72%, transparent 100%);
+  box-shadow:
+    0 0 8px oklch(0.8 0.2 315 / 92%),
+    0 0 24px oklch(0.55 0.27 285 / 72%);
+  height: 10px;
+  inset: auto 18% auto auto;
+  top: 47%;
+  transform-origin: right center;
+  width: 58%;
+}
+
+.boss-counterattack-seal {
+  background:
+    repeating-linear-gradient(0deg, transparent 0 12px, oklch(0.76 0.15 310 / 25%) 13px 14px),
+    repeating-linear-gradient(90deg, transparent 0 12px, oklch(0.76 0.15 310 / 25%) 13px 14px),
+    conic-gradient(from 22.5deg, transparent 0 8%, oklch(0.77 0.19 315 / 85%) 9% 11%, transparent 12% 24%);
+  border: 2px solid oklch(0.8 0.18 315 / 82%);
+  border-radius: 999px;
+  box-shadow: inset 0 0 18px oklch(0.49 0.25 285 / 48%), 0 0 20px oklch(0.55 0.25 300 / 58%);
+  height: 92px;
+  inset: 18% auto auto 4%;
+  width: 92px;
+}
+
+.battle-failure.final-boss-battle .boss-counterattack-beam {
+  animation: boss-counterattack-beam 1050ms cubic-bezier(0.2, 0.82, 0.24, 1) 220ms forwards;
+}
+
+.battle-failure.final-boss-battle .boss-counterattack-seal {
+  animation: boss-counterattack-seal 1450ms cubic-bezier(0.2, 0.8, 0.3, 1) 420ms forwards;
 }
 
 .battle-success .battle-screen-flash {
@@ -1149,6 +1199,39 @@ body {
 .battle-success .celebration-burst { opacity: 1; }
 .battle-success .celebration-burst i {
   animation: confetti-burst 1750ms cubic-bezier(0.15, 0.8, 0.28, 1) forwards;
+}
+
+.coin-reward-toast {
+  align-items: center;
+  background: linear-gradient(145deg, oklch(0.93 0.16 92), oklch(0.74 0.17 70));
+  border: 2px solid oklch(0.98 0.08 100);
+  border-radius: 999px;
+  box-shadow: 0 7px 18px oklch(0.35 0.12 65 / 42%), inset 0 1px 0 white;
+  color: oklch(0.27 0.09 55);
+  display: flex;
+  font-family: var(--font-mono), monospace;
+  font-size: 18px;
+  font-weight: 1000;
+  gap: 7px;
+  height: fit-content;
+  inset: 12% auto auto 50%;
+  letter-spacing: 0.04em;
+  padding: 7px 13px;
+  translate: -50% 0;
+  width: fit-content;
+}
+
+.coin-reward-toast > span {
+  background: radial-gradient(circle at 36% 31%, white 0 7%, oklch(0.9 0.18 90) 9% 42%, oklch(0.64 0.17 65) 70%);
+  border: 1px solid oklch(0.56 0.15 62);
+  border-radius: 999px;
+  color: transparent;
+  height: 20px;
+  width: 20px;
+}
+
+.battle-success .coin-reward-toast {
+  animation: coin-reward-pop 1900ms cubic-bezier(0.18, 0.84, 0.28, 1) forwards;
 }
 
 .battle-failure .battle-screen-flash {
@@ -1224,6 +1307,27 @@ body {
   100% { opacity: 0; translate: 0 -16px; }
 }
 
+@keyframes boss-counterattack-beam {
+  0% { opacity: 0; scale: 0.05 0.7; translate: 0 -50%; }
+  18% { opacity: 1; scale: 1 1.2; }
+  64% { opacity: 0.95; translate: -34% -50%; }
+  100% { opacity: 0; scale: 0.25 2.6; translate: -58% -50%; }
+}
+
+@keyframes boss-counterattack-seal {
+  0% { opacity: 0; rotate: -55deg; scale: 0.2; }
+  30% { opacity: 1; rotate: 15deg; scale: 1.18; }
+  72% { opacity: 0.9; rotate: 155deg; scale: 1; }
+  100% { opacity: 0; rotate: 245deg; scale: 1.45; }
+}
+
+@keyframes coin-reward-pop {
+  0% { opacity: 0; scale: 0.45; translate: -50% 16px; }
+  24% { opacity: 1; scale: 1.16; translate: -50% 0; }
+  70% { opacity: 1; scale: 1; translate: -50% -4px; }
+  100% { opacity: 0; scale: 0.92; translate: -50% -28px; }
+}
+
 @media (max-width: 520px) {
   .mascot-battle-arena {
     grid-template-columns: 84px minmax(40px, 1fr) 72px;
@@ -1249,12 +1353,13 @@ body {
     width: 114px;
   }
   .final-boss-battle {
-    grid-template-columns: 84px minmax(16px, 1fr) 146px;
+    grid-template-columns: 70px minmax(0, 1fr) 210px;
+    height: 262px;
   }
   .final-boss-battle .boss-target-wrap {
-    height: 154px;
-    margin-top: -26px;
-    width: 150px;
+    height: 220px;
+    margin-top: -18px;
+    width: 210px;
   }
   .mascot-battle-actor .mascot-avatar {
     height: 105px !important;
@@ -1317,12 +1422,15 @@ body {
   .dummy-hit-ring,
   .rtl-dummy,
   .rtl-boss,
-    .boss-shard,
-    .battle-screen-flash,
-    .failure-impact,
-    .failure-damage-mark,
-    .victory-seal,
-    .celebration-burst i,
+  .boss-shard,
+  .boss-counterattack-beam,
+  .boss-counterattack-seal,
+  .battle-screen-flash,
+  .failure-impact,
+  .failure-damage-mark,
+  .victory-seal,
+  .celebration-burst i,
+  .coin-reward-toast,
   .four-roots-active .mascot-attack-path::after {
     animation: none;
   }
