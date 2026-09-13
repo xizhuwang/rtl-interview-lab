@@ -887,18 +887,42 @@ body {
 }
 
 .enemy-chip-cat .enemy-target-wrap {
-  height: 112px;
-  width: 116px;
+  height: 126px;
+  width: 136px;
 }
 
 .enemy-laser-bear .enemy-target-wrap {
-  height: 132px;
-  width: 148px;
+  height: 146px;
+  width: 164px;
 }
 
 .enemy-chip-cat .rtl-dummy,
 .enemy-laser-bear .rtl-dummy {
   transform-origin: 60% 75%;
+}
+
+.enemy-chip-cat .rtl-dummy {
+  filter:
+    drop-shadow(0 8px 10px oklch(0.05 0.02 250 / 42%))
+    drop-shadow(0 0 9px oklch(0.74 0.25 145 / 32%));
+}
+
+.enemy-laser-bear .rtl-dummy {
+  filter:
+    drop-shadow(0 8px 10px oklch(0.05 0.02 250 / 42%))
+    drop-shadow(0 0 10px oklch(0.68 0.25 285 / 38%));
+}
+
+.enemy-chip-cat .rtl-dummy-label {
+  background: oklch(0.18 0.07 145 / 92%);
+  border-color: oklch(0.76 0.24 145 / 72%);
+  color: oklch(0.9 0.16 145);
+}
+
+.enemy-laser-bear .rtl-dummy-label {
+  background: oklch(0.17 0.07 280 / 92%);
+  border-color: oklch(0.72 0.23 275 / 72%);
+  color: oklch(0.9 0.13 275);
 }
 
 .rtl-dummy {
@@ -942,6 +966,12 @@ body {
   background: oklch(0.22 0.08 25 / 92%);
   border-color: oklch(0.69 0.22 28 / 70%);
   color: oklch(0.92 0.11 75);
+}
+
+.final-boss-battle .rtl-dummy-label {
+  background: linear-gradient(90deg, oklch(0.13 0.06 285 / 94%), oklch(0.24 0.11 315 / 94%));
+  border-color: oklch(0.72 0.17 85 / 78%);
+  color: oklch(0.92 0.12 85);
 }
 
 .boss-shard {
@@ -1211,12 +1241,12 @@ body {
     width: 120px;
   }
   .enemy-chip-cat .enemy-target-wrap {
-    height: 86px;
-    width: 84px;
+    height: 94px;
+    width: 98px;
   }
   .enemy-laser-bear .enemy-target-wrap {
-    height: 96px;
-    width: 102px;
+    height: 106px;
+    width: 114px;
   }
   .final-boss-battle {
     grid-template-columns: 84px minmax(16px, 1fr) 146px;

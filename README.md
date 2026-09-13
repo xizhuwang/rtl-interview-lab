@@ -69,15 +69,15 @@ Repeated purchases increase that stone's visual intensity. The highest-level sto
 ### Battle targets and verdict animation
 
 <table>
-  <thead><tr><th>Chip Cat</th><th>Laser Bear</th><th>Timing Boss</th><th>Cosmic Dark Emperor</th></tr></thead>
+  <thead><tr><th>Dark Venom Spirit Cat</th><th>Dark Thunder Guardian Bear</th><th>Timing Boss</th><th>Dark Immortal Sovereign</th></tr></thead>
   <tbody>
     <tr>
-      <td align="center"><img src="public/mascot/chip-cat.png" width="180" alt="Cute robotic chip cat"></td>
-      <td align="center"><img src="public/mascot/laser-bear.png" width="190" alt="Cute purple robotic laser bear"></td>
+      <td align="center"><img src="public/mascot/chip-cat.png" width="180" alt="Fluffy dark and poison spirit cat with a jade circuit talisman"></td>
+      <td align="center"><img src="public/mascot/laser-bear.png" width="190" alt="Fluffy dark and lightning guardian bear with a rune bracer"></td>
       <td align="center"><img src="public/mascot/gate-level-timing-boss-display.png" width="210" alt="Gate-level timing boss built from damaged chips, gears, and timing traces"></td>
-      <td align="center"><img src="public/mascot/cosmic-dark-emperor.png" width="230" alt="Ultimate cosmic dark emperor final boss"></td>
+      <td align="center"><img src="public/mascot/cosmic-dark-emperor.png" width="230" alt="Dark xianxia sovereign with timing-wave and compute-array formations in ink-wash energy"></td>
     </tr>
-    <tr><td>Beginner</td><td>Intermediate</td><td>Advanced</td><td>Selected capstone labs</td></tr>
+    <tr><td>Beginner · Dark / Poison</td><td>Intermediate · Dark / Lightning</td><td>Advanced · Timing / Array</td><td>Selected capstones · Dark / Ink</td></tr>
   </tbody>
 </table>
 

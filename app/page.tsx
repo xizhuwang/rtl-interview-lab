@@ -800,10 +800,10 @@ function BattleArena({
   enemy: EnemyKind;
 }) {
   const enemyCatalog: Record<EnemyKind, { src: string; label: string; boss: boolean; final: boolean }> = {
-    'chip-cat': { src: './mascot/chip-cat.png', label: 'CHIP CAT', boss: false, final: false },
-    'laser-bear': { src: './mascot/laser-bear.png', label: 'LASER BEAR', boss: false, final: false },
+    'chip-cat': { src: './mascot/chip-cat.png', label: 'VENOM CAT', boss: false, final: false },
+    'laser-bear': { src: './mascot/laser-bear.png', label: 'THUNDER BEAR', boss: false, final: false },
     'timing-boss': { src: './mascot/gate-level-timing-boss-display.png', label: 'TIMING BOSS', boss: true, final: false },
-    'cosmic-emperor': { src: './mascot/cosmic-dark-emperor.png', label: 'FINAL BOSS', boss: true, final: true },
+    'cosmic-emperor': { src: './mascot/cosmic-dark-emperor.png', label: 'DARK IMMORTAL', boss: true, final: true },
   };
   const opponent = enemyCatalog[enemy];
   const rootsUnlocked = Object.values(elements).every((level) => level > 0);
