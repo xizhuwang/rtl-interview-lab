@@ -1693,7 +1693,8 @@ body {
 .failure-damage-mark,
 .victory-seal,
 .celebration-burst,
-.coin-reward-toast {
+.coin-reward-toast,
+.drop-reward-toast {
   inset: 0;
   opacity: 0;
   pointer-events: none;
@@ -1903,6 +1904,39 @@ body {
 
 .battle-success .coin-reward-toast {
   animation: coin-reward-pop 1900ms cubic-bezier(0.18, 0.84, 0.28, 1) forwards;
+}
+
+.drop-reward-toast {
+  align-items: center;
+  background: linear-gradient(
+    145deg,
+    oklch(0.3 0.12 285),
+    oklch(0.48 0.19 305)
+  );
+  border: 1px solid oklch(0.82 0.14 305);
+  border-radius: 999px;
+  box-shadow: 0 8px 22px oklch(0.24 0.12 290 / 48%);
+  color: white;
+  display: flex;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 6px;
+  height: fit-content;
+  inset: auto auto 9% 50%;
+  max-width: calc(100% - 24px);
+  padding: 7px 11px;
+  translate: -50% 0;
+  white-space: nowrap;
+  width: fit-content;
+}
+
+.drop-reward-toast > svg {
+  height: 15px;
+  width: 15px;
+}
+
+.battle-success .drop-reward-toast {
+  animation: coin-reward-pop 2050ms cubic-bezier(0.18, 0.84, 0.28, 1) forwards;
 }
 
 .battle-failure .battle-screen-flash {
@@ -2215,6 +2249,7 @@ body {
   .victory-seal,
   .celebration-burst i,
   .coin-reward-toast,
+  .drop-reward-toast,
   .four-roots-active .mascot-attack-path::after {
     animation: none;
   }

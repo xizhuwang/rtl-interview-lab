@@ -308,9 +308,6 @@ type MascotGender = 'masculine' | 'feminine';
 type MascotProfession = 'novice' | 'cpu' | 'soc' | 'dft' | 'timing';
 type UnlockableProfession = Exclude<MascotProfession, 'novice'>;
 type EquipmentId =
-  | 'visor'
-  | 'crystal'
-  | 'drone'
   | 'cpuBlade'
   | 'cpuShield'
   | 'socQuiver'
@@ -331,6 +328,16 @@ type EquipmentIconId =
   | 'scan'
   | 'book'
   | 'battery';
+type ConsumableId = 'visor' | 'crystal' | 'drone';
+type ConsumableInventory = Record<ConsumableId, number>;
+type AidUnlocks = {
+  logic: string[];
+  golden: string[];
+  hints: Record<string, number>;
+};
+type DropReward =
+  | { kind: 'consumable'; id: ConsumableId; quantity: number }
+  | { kind: 'equipment'; id: EquipmentId };
 type ElementId = 'fire' | 'water' | 'wind' | 'earth';
 type ElementLevels = Record<ElementId, number>;
 type ElementLoadout = ElementId | 'four-roots' | null;
@@ -341,6 +348,12 @@ const emptyElementLevels: ElementLevels = {
   wind: 0,
   earth: 0,
 };
+const starterConsumables: ConsumableInventory = {
+  visor: 50,
+  crystal: 50,
+  drone: 50,
+};
+const emptyAidUnlocks: AidUnlocks = { logic: [], golden: [], hints: {} };
 const storageKeys = {
   schemaVersion: 'soc-rtl-lab:schema-version',
   locale: 'soc-rtl-lab:locale',
@@ -351,6 +364,10 @@ const storageKeys = {
   ownedEquipment: 'soc-rtl-lab:owned-equipment',
   equippedEquipment: 'soc-rtl-lab:equipped-equipment',
   equipmentSpend: 'soc-rtl-lab:equipment-spend',
+  resaleCredits: 'soc-rtl-lab:resale-credits',
+  consumables: 'soc-rtl-lab:consumables',
+  consumableSpend: 'soc-rtl-lab:consumable-spend',
+  aidUnlocks: 'soc-rtl-lab:aid-unlocks',
   elementLevels: 'soc-rtl-lab:element-levels',
   elementSpend: 'soc-rtl-lab:element-spend',
   equippedElement: 'soc-rtl-lab:equipped-element',
@@ -454,6 +471,16 @@ const copy = {
     wallet: '可用點數',
     equipment: '已擁有裝備',
     shopEquipment: '購買裝備',
+    learningTools: '學習工具',
+    starterTools: '新手補給：三種工具各 50 個；解鎖結果會永久保留。',
+    quantity: '持有',
+    useTool: '使用 1 個',
+    unlockedAid: '本題已解鎖',
+    sell: '半價出售',
+    resaleValue: '回收價',
+    bossDrop: 'BOSS 掉落',
+    bossDropBody:
+      '高階與最終 BOSS 首次通關時有機會掉落學習工具或未持有的裝備。',
     buy: '購買',
     equip: '裝備',
     equipped: '使用中',
@@ -559,6 +586,17 @@ const copy = {
     wallet: 'Spendable points',
     equipment: 'Owned equipment',
     shopEquipment: 'Buy equipment',
+    learningTools: 'Learning tools',
+    starterTools:
+      'Starter supply: 50 of each tool. Challenge unlocks are permanent.',
+    quantity: 'Owned',
+    useTool: 'Use one',
+    unlockedAid: 'Unlocked for this challenge',
+    sell: 'Sell at half price',
+    resaleValue: 'Resale',
+    bossDrop: 'BOSS drop',
+    bossDropBody:
+      'Advanced and final bosses may drop learning tools or unowned gear on the first clear.',
     buy: 'Buy',
     equip: 'Equip',
     equipped: 'Equipped',
@@ -666,42 +704,9 @@ const equipmentCatalog: Record<
     artwork?: { src: string };
   }
 > = {
-  visor: {
-    icon: 'visor',
-    artwork: { src: './mascot/equipment-visor.png' },
-    cost: 600,
-    profession: 'all',
-    name: { zh: 'Debug 護目鏡', en: 'Debug Visor' },
-    effect: {
-      zh: '陪你看清波形與錯誤訊息。',
-      en: 'Helps you inspect waveforms and diagnostics.',
-    },
-  },
-  crystal: {
-    icon: 'crystal',
-    artwork: { src: './mascot/equipment-crystal.png' },
-    cost: 900,
-    profession: 'all',
-    name: { zh: 'Timing 水晶', en: 'Timing Crystal' },
-    effect: {
-      zh: '提醒你同時檢查 setup 與 hold。',
-      en: 'Reminds you to check both setup and hold.',
-    },
-  },
-  drone: {
-    icon: 'drone',
-    artwork: { src: './mascot/equipment-drone.png' },
-    cost: 1200,
-    profession: 'all',
-    name: { zh: '晶片夥伴', en: 'Chip Companion' },
-    effect: {
-      zh: '在 SoC 整合與除錯時並肩偵察。',
-      en: 'Scouts beside you during SoC integration and debug.',
-    },
-  },
   cpuBlade: {
     icon: 'sword',
-    cost: 900,
+    cost: 220,
     profession: 'cpu',
     name: { zh: 'Forwarding 光刃', en: 'Forwarding Blade' },
     effect: {
@@ -711,7 +716,7 @@ const equipmentCatalog: Record<
   },
   cpuShield: {
     icon: 'shield',
-    cost: 1450,
+    cost: 340,
     profession: 'cpu',
     name: { zh: 'Pipeline 護盾', en: 'Pipeline Shield' },
     effect: {
@@ -721,7 +726,7 @@ const equipmentCatalog: Record<
   },
   socQuiver: {
     icon: 'target',
-    cost: 950,
+    cost: 220,
     profession: 'soc',
     name: { zh: 'AXI 箭匣', en: 'AXI Quiver' },
     effect: {
@@ -731,7 +736,7 @@ const equipmentCatalog: Record<
   },
   socCompass: {
     icon: 'network',
-    cost: 1500,
+    cost: 360,
     profession: 'soc',
     name: { zh: 'Interconnect 羅盤', en: 'Interconnect Compass' },
     effect: {
@@ -741,7 +746,7 @@ const equipmentCatalog: Record<
   },
   dftLantern: {
     icon: 'healer',
-    cost: 850,
+    cost: 200,
     profession: 'dft',
     name: { zh: 'Scan 診斷燈', en: 'Scan Diagnostic Lantern' },
     effect: {
@@ -751,7 +756,7 @@ const equipmentCatalog: Record<
   },
   dftProbe: {
     icon: 'scan',
-    cost: 1400,
+    cost: 340,
     profession: 'dft',
     name: { zh: 'Fault 探針', en: 'Fault Probe' },
     effect: {
@@ -761,7 +766,7 @@ const equipmentCatalog: Record<
   },
   timingGrimoire: {
     icon: 'book',
-    cost: 1000,
+    cost: 260,
     profession: 'timing',
     name: { zh: 'STA 魔導書', en: 'STA Grimoire' },
     effect: {
@@ -771,12 +776,54 @@ const equipmentCatalog: Record<
   },
   lowPowerCharm: {
     icon: 'battery',
-    cost: 1600,
+    cost: 380,
     profession: 'timing',
     name: { zh: 'Low-Power 月墜', en: 'Low-Power Moon Charm' },
     effect: {
       zh: '守護 clock gating、isolation 與 retention 順序。',
       en: 'Guards clock gating, isolation, and retention sequencing.',
+    },
+  },
+};
+
+const consumableCatalog: Record<
+  ConsumableId,
+  {
+    icon: EquipmentIconId;
+    artwork: { src: string };
+    cost: number;
+    name: { zh: string; en: string };
+    effect: { zh: string; en: string };
+  }
+> = {
+  visor: {
+    icon: 'visor',
+    artwork: { src: './mascot/equipment-visor.png' },
+    cost: 120,
+    name: { zh: 'Debug 護目鏡', en: 'Debug Visor' },
+    effect: {
+      zh: '消耗 1 個，永久解鎖該題 Golden pattern。',
+      en: 'Spend one to permanently unlock a challenge Golden pattern.',
+    },
+  },
+  crystal: {
+    icon: 'crystal',
+    artwork: { src: './mascot/equipment-crystal.png' },
+    cost: 160,
+    name: { zh: 'Timing 水晶', en: 'Timing Crystal' },
+    effect: {
+      zh: '消耗 1 個，永久解鎖該題的關鍵邏輯整理。',
+      en: 'Spend one to permanently unlock a challenge logic brief.',
+    },
+  },
+  drone: {
+    icon: 'drone',
+    artwork: { src: './mascot/equipment-drone.png' },
+    cost: 100,
+    name: { zh: '晶片夥伴', en: 'Chip Companion' },
+    effect: {
+      zh: '每次消耗 1 個，永久解鎖下一層提示。',
+      en: 'Spend one to permanently unlock the next hint layer.',
     },
   },
 };
@@ -823,7 +870,7 @@ const elementCatalog: Record<
   },
 };
 
-const elementUpgradeCost = (level: number) => 450 + level * 350;
+const elementUpgradeCost = (level: number) => Math.min(500, 140 + level * 80);
 
 function EquipmentIcon({
   id,
@@ -966,6 +1013,7 @@ function MascotAvatar({
 }
 
 function BattleArena({
+  locale,
   gender,
   profession,
   tier,
@@ -975,7 +1023,9 @@ function BattleArena({
   status,
   enemy,
   coinReward,
+  dropReward,
 }: {
+  locale: Locale;
   gender: MascotGender;
   profession: MascotProfession;
   tier: number;
@@ -985,6 +1035,7 @@ function BattleArena({
   status: BattleStatus;
   enemy: EnemyKind;
   coinReward: number | null;
+  dropReward: DropReward | null;
 }) {
   const enemyCatalog: Record<
     EnemyKind,
@@ -1122,6 +1173,14 @@ function BattleArena({
           <span aria-hidden="true">●</span> +{coinReward}
         </span>
       )}
+      {status === 'success' && dropReward && (
+        <span className="drop-reward-toast">
+          <Gift aria-hidden="true" />
+          {dropReward.kind === 'consumable'
+            ? `${consumableCatalog[dropReward.id].name[locale]} × ${dropReward.quantity}`
+            : equipmentCatalog[dropReward.id].name[locale]}
+        </span>
+      )}
     </div>
   );
 }
@@ -1146,6 +1205,44 @@ function enemyForChallenge(
   return 'chip-cat';
 }
 
+function AidUnlockCard({
+  id,
+  count,
+  locale,
+  onUnlock,
+}: {
+  id: ConsumableId;
+  count: number;
+  locale: Locale;
+  onUnlock: () => void;
+}) {
+  const item = consumableCatalog[id];
+  return (
+    <div className="mt-4 flex flex-col gap-3 rounded-xl border border-dashed border-primary/30 bg-primary/[0.035] p-3 sm:flex-row sm:items-center">
+      <div className="equipment-shop-icon shrink-0">
+        <EquipmentArtwork src={item.artwork.src} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold">{item.name[locale]}</p>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+          {item.effect[locale]}
+        </p>
+      </div>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="shrink-0"
+        disabled={count < 1}
+        onClick={onUnlock}
+      >
+        <Sparkles />
+        {locale === 'zh' ? '使用 1 個' : 'Use one'} · × {count}
+      </Button>
+    </div>
+  );
+}
+
 export default function Home() {
   const [locale, setLocale] = useState<Locale>('zh');
   const [selectedId, setSelectedId] = useState(challenges[0].id);
@@ -1157,8 +1254,8 @@ export default function Home() {
   const [running, setRunning] = useState(false);
   const [battleVisible, setBattleVisible] = useState(false);
   const [coinReward, setCoinReward] = useState<number | null>(null);
+  const [dropReward, setDropReward] = useState<DropReward | null>(null);
   const [engineReady, setEngineReady] = useState(false);
-  const [revealedHints, setRevealedHints] = useState(0);
   const [holdLab, setHoldLab] = useState<HoldLabState>({ ...initialHoldLab });
   const [areaResult, setAreaResult] = useState<AreaResult | null>(null);
   const [areaError, setAreaError] = useState('');
@@ -1171,6 +1268,15 @@ export default function Home() {
   const [equippedEquipment, setEquippedEquipment] =
     useState<EquipmentId | null>(null);
   const [equipmentSpend, setEquipmentSpend] = useState(0);
+  const [resaleCredits, setResaleCredits] = useState(0);
+  const [consumables, setConsumables] = useState<ConsumableInventory>({
+    ...starterConsumables,
+  });
+  const [consumableSpend, setConsumableSpend] = useState(0);
+  const [aidUnlocks, setAidUnlocks] = useState<AidUnlocks>({
+    ...emptyAidUnlocks,
+    hints: {},
+  });
   const [elementLevels, setElementLevels] = useState<ElementLevels>({
     ...emptyElementLevels,
   });
@@ -1224,6 +1330,7 @@ export default function Home() {
     battleReturnTimer.current = window.setTimeout(() => {
       setBattleVisible(false);
       setCoinReward(null);
+      setDropReward(null);
       battleReturnTimer.current = null;
     }, 2200);
   }, []);
@@ -1245,13 +1352,56 @@ export default function Home() {
   const markSolved = useCallback(
     (id: string) => {
       if (solved.includes(id)) return false;
+      const solvedChallenge = challenges.find((item) => item.id === id);
       const next = [...solved, id];
       setSolved(next);
       browserStorage.setItem(storageKeys.solved, JSON.stringify(next));
-      setCoinReward(challenges.find((item) => item.id === id)?.points ?? 0);
+      setCoinReward(solvedChallenge?.points ?? 0);
+
+      const isDropBoss =
+        solvedChallenge?.difficulty === 'advanced' ||
+        finalBossChallenges.has(id);
+      if (isDropBoss) {
+        const roll = Math.random();
+        const consumableIds = Object.keys(consumableCatalog) as ConsumableId[];
+        const grantConsumable = () => {
+          const item =
+            consumableIds[Math.floor(Math.random() * consumableIds.length)];
+          const quantity = 2 + Math.floor(Math.random() * 4);
+          setConsumables((previous) => ({
+            ...previous,
+            [item]: previous[item] + quantity,
+          }));
+          setDropReward({ kind: 'consumable', id: item, quantity });
+        };
+
+        if (roll < 0.62) {
+          grantConsumable();
+        } else if (roll < 0.77) {
+          const availableEquipment = (
+            Object.keys(equipmentCatalog) as EquipmentId[]
+          ).filter((item) => !ownedEquipment.includes(item));
+          if (availableEquipment.length === 0) {
+            grantConsumable();
+          } else {
+            const item =
+              availableEquipment[
+                Math.floor(Math.random() * availableEquipment.length)
+              ];
+            setOwnedEquipment((previous) =>
+              previous.includes(item) ? previous : [...previous, item],
+            );
+            setDropReward({ kind: 'equipment', id: item });
+          }
+        } else {
+          setDropReward(null);
+        }
+      } else {
+        setDropReward(null);
+      }
       return true;
     },
-    [solved],
+    [ownedEquipment, solved],
   );
 
   const selectChallenge = useCallback(
@@ -1268,13 +1418,13 @@ export default function Home() {
       setRunning(false);
       setBattleVisible(false);
       setCoinReward(null);
+      setDropReward(null);
       setEstimating(false);
       setSelectedId(id);
       setResult(null);
       setWaveforms({ current: '', golden: '' });
       setAreaResult(null);
       setAreaError('');
-      setRevealedHints(0);
       setHoldLab({ ...initialHoldLab });
       setMascotInteraction('');
       clearRunWatchdog();
@@ -1315,6 +1465,17 @@ export default function Home() {
       const savedEquipmentSpend = browserStorage.getItem(
         storageKeys.equipmentSpend,
       );
+      const savedSchemaVersion = Number(
+        browserStorage.getItem(storageKeys.schemaVersion) ?? '1',
+      );
+      const savedResaleCredits = browserStorage.getItem(
+        storageKeys.resaleCredits,
+      );
+      const savedConsumables = browserStorage.getItem(storageKeys.consumables);
+      const savedConsumableSpend = browserStorage.getItem(
+        storageKeys.consumableSpend,
+      );
+      const savedAidUnlocks = browserStorage.getItem(storageKeys.aidUnlocks);
       const savedElementLevels = browserStorage.getItem(
         storageKeys.elementLevels,
       );
@@ -1340,6 +1501,12 @@ export default function Home() {
         const parsedSolutions: unknown = JSON.parse(savedSolutions ?? '{}');
         const parsedOwnedEquipment: unknown = JSON.parse(
           savedOwnedEquipment ?? '[]',
+        );
+        const parsedConsumables: unknown = JSON.parse(
+          savedConsumables ?? JSON.stringify(starterConsumables),
+        );
+        const parsedAidUnlocks: unknown = JSON.parse(
+          savedAidUnlocks ?? JSON.stringify(emptyAidUnlocks),
         );
         const parsedElementLevels: unknown = JSON.parse(
           savedElementLevels ?? JSON.stringify(emptyElementLevels),
@@ -1370,21 +1537,84 @@ export default function Home() {
             Number.isFinite(parsedSpend) &&
             parsedSpend >= 0
           ) {
-            setEquipmentSpend(parsedSpend);
-          } else {
-            const legacyPrices: Partial<Record<EquipmentId, number>> = {
-              visor: 120,
-              crystal: 220,
-              drone: 350,
+            const legacyPrices: Record<EquipmentId, number> = {
+              cpuBlade: 900,
+              cpuShield: 1450,
+              socQuiver: 950,
+              socCompass: 1500,
+              dftLantern: 850,
+              dftProbe: 1400,
+              timingGrimoire: 1000,
+              lowPowerCharm: 1600,
             };
+            const migrationRefund =
+              savedSchemaVersion < 3
+                ? migratedOwned.reduce(
+                    (sum, id) =>
+                      sum +
+                      Math.max(0, legacyPrices[id] - equipmentCatalog[id].cost),
+                    0,
+                  ) +
+                  parsedOwnedEquipment.reduce((sum, id) => {
+                    if (id === 'visor') return sum + 600;
+                    if (id === 'crystal') return sum + 900;
+                    if (id === 'drone') return sum + 1200;
+                    return sum;
+                  }, 0)
+                : 0;
+            setEquipmentSpend(Math.max(0, parsedSpend - migrationRefund));
+          } else {
             setEquipmentSpend(
               migratedOwned.reduce(
-                (sum, id) =>
-                  sum + (legacyPrices[id] ?? equipmentCatalog[id].cost),
+                (sum, id) => sum + equipmentCatalog[id].cost,
                 0,
               ),
             );
           }
+        }
+        if (parsedConsumables && typeof parsedConsumables === 'object') {
+          setConsumables(
+            (Object.keys(starterConsumables) as ConsumableId[]).reduce(
+              (next, id) => {
+                const value = Number(
+                  (parsedConsumables as Record<string, unknown>)[id],
+                );
+                next[id] = Number.isFinite(value)
+                  ? Math.max(0, Math.floor(value))
+                  : starterConsumables[id];
+                return next;
+              },
+              { ...starterConsumables },
+            ),
+          );
+        }
+        const parsedConsumableSpend = Number(savedConsumableSpend);
+        if (
+          Number.isFinite(parsedConsumableSpend) &&
+          parsedConsumableSpend >= 0
+        )
+          setConsumableSpend(parsedConsumableSpend);
+        const parsedResaleCredits = Number(savedResaleCredits);
+        if (Number.isFinite(parsedResaleCredits) && parsedResaleCredits >= 0)
+          setResaleCredits(parsedResaleCredits);
+        if (parsedAidUnlocks && typeof parsedAidUnlocks === 'object') {
+          const raw = parsedAidUnlocks as Partial<AidUnlocks>;
+          const validIds = new Set(challenges.map((item) => item.id));
+          const logic = Array.isArray(raw.logic)
+            ? [...new Set(raw.logic.filter((id) => validIds.has(id)))]
+            : [];
+          const golden = Array.isArray(raw.golden)
+            ? [...new Set(raw.golden.filter((id) => validIds.has(id)))]
+            : [];
+          const hints = Object.fromEntries(
+            Object.entries(raw.hints ?? {})
+              .filter(([id]) => validIds.has(id))
+              .map(([id, value]) => [
+                id,
+                Math.min(3, Math.max(0, Math.floor(Number(value) || 0))),
+              ]),
+          );
+          setAidUnlocks({ logic, golden, hints });
         }
         if (
           savedEquippedEquipment &&
@@ -1477,7 +1707,7 @@ export default function Home() {
         /* Ignore malformed saved data without overwriting it. */
       }
       storageLoaded.current = true;
-      browserStorage.setItem(storageKeys.schemaVersion, '2');
+      browserStorage.setItem(storageKeys.schemaVersion, '3');
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
@@ -1515,6 +1745,31 @@ export default function Home() {
         String(equipmentSpend),
       );
   }, [equipmentSpend]);
+  useEffect(() => {
+    if (storageLoaded.current)
+      browserStorage.setItem(storageKeys.resaleCredits, String(resaleCredits));
+  }, [resaleCredits]);
+  useEffect(() => {
+    if (storageLoaded.current)
+      browserStorage.setItem(
+        storageKeys.consumables,
+        JSON.stringify(consumables),
+      );
+  }, [consumables]);
+  useEffect(() => {
+    if (storageLoaded.current)
+      browserStorage.setItem(
+        storageKeys.consumableSpend,
+        String(consumableSpend),
+      );
+  }, [consumableSpend]);
+  useEffect(() => {
+    if (storageLoaded.current)
+      browserStorage.setItem(
+        storageKeys.aidUnlocks,
+        JSON.stringify(aidUnlocks),
+      );
+  }, [aidUnlocks]);
   useEffect(() => {
     if (storageLoaded.current)
       browserStorage.setItem(
@@ -2021,8 +2276,8 @@ export default function Home() {
       },
     ),
   ) as Record<UnlockableProfession, { count: number; unlocked: boolean }>;
-  const spentPoints = equipmentSpend + elementSpend;
-  const walletPoints = Math.max(0, points - spentPoints);
+  const spentPoints = equipmentSpend + elementSpend + consumableSpend;
+  const walletPoints = Math.max(0, points - spentPoints + resaleCredits);
   const progress = Math.round((solved.length / challenges.length) * 100);
   const mascotStage = mascotStageFor(points);
   const activeMascotProfession =
@@ -2072,6 +2327,9 @@ export default function Home() {
       en: 'Separate registers, combinational logic, and control, then check the expected value cycle by cycle.',
     },
   ];
+  const revealedHints = aidUnlocks.hints[current.id] ?? 0;
+  const logicUnlocked = aidUnlocks.logic.includes(current.id);
+  const goldenUnlocked = aidUnlocks.golden.includes(current.id);
 
   const buyEquipment = (id: EquipmentId) => {
     if (ownedEquipment.includes(id) || walletPoints < equipmentCatalog[id].cost)
@@ -2082,6 +2340,64 @@ export default function Home() {
     if (profession === 'all' || profession === activeMascotProfession) {
       setEquippedEquipment(id);
     }
+  };
+
+  const sellEquipment = (id: EquipmentId) => {
+    if (!ownedEquipment.includes(id)) return;
+    setOwnedEquipment((previous) => previous.filter((item) => item !== id));
+    if (equippedEquipment === id) setEquippedEquipment(null);
+    setResaleCredits(
+      (previous) => previous + Math.floor(equipmentCatalog[id].cost / 2),
+    );
+  };
+
+  const buyConsumable = (id: ConsumableId) => {
+    const cost = consumableCatalog[id].cost;
+    if (walletPoints < cost) return;
+    setConsumableSpend((previous) => previous + cost);
+    setConsumables((previous) => ({
+      ...previous,
+      [id]: previous[id] + 1,
+    }));
+  };
+
+  const unlockLogicAid = () => {
+    if (logicUnlocked || consumables.crystal < 1) return;
+    setConsumables((previous) => ({
+      ...previous,
+      crystal: previous.crystal - 1,
+    }));
+    setAidUnlocks((previous) => ({
+      ...previous,
+      logic: [...new Set([...previous.logic, current.id])],
+    }));
+  };
+
+  const unlockGoldenAid = () => {
+    if (goldenUnlocked || consumables.visor < 1) return;
+    setConsumables((previous) => ({
+      ...previous,
+      visor: previous.visor - 1,
+    }));
+    setAidUnlocks((previous) => ({
+      ...previous,
+      golden: [...new Set([...previous.golden, current.id])],
+    }));
+  };
+
+  const unlockNextHint = () => {
+    if (revealedHints >= 3 || consumables.drone < 1) return;
+    setConsumables((previous) => ({
+      ...previous,
+      drone: previous.drone - 1,
+    }));
+    setAidUnlocks((previous) => ({
+      ...previous,
+      hints: {
+        ...previous.hints,
+        [current.id]: Math.min(3, (previous.hints[current.id] ?? 0) + 1),
+      },
+    }));
   };
 
   const buyElementStone = (element: ElementId) => {
@@ -2464,6 +2780,44 @@ export default function Home() {
                           </div>
 
                           <div className="border-t border-border pt-4">
+                            <p className="mb-1 text-sm font-semibold">
+                              {text.learningTools}
+                            </p>
+                            <p className="mb-3 text-xs leading-5 text-muted-foreground">
+                              {text.starterTools}
+                            </p>
+                            <div className="grid grid-cols-3 gap-2">
+                              {(
+                                Object.keys(consumableCatalog) as ConsumableId[]
+                              ).map((id) => {
+                                const item = consumableCatalog[id];
+                                return (
+                                  <div
+                                    key={id}
+                                    className="rounded-xl border border-border bg-muted/25 p-2 text-center"
+                                  >
+                                    <div className="equipment-shop-icon mx-auto">
+                                      <EquipmentArtwork
+                                        src={item.artwork.src}
+                                      />
+                                    </div>
+                                    <span className="mt-1 block text-[11px] font-semibold leading-4">
+                                      {item.name[locale]}
+                                    </span>
+                                    <span className="mt-1 block font-mono text-xs font-bold text-primary">
+                                      × {consumables[id]}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <p className="mt-3 rounded-lg bg-violet-500/10 px-3 py-2 text-xs leading-5 text-violet-800 dark:text-violet-200">
+                              <strong>{text.bossDrop}：</strong>{' '}
+                              {text.bossDropBody}
+                            </p>
+                          </div>
+
+                          <div className="border-t border-border pt-4">
                             <p className="mb-2 text-sm font-semibold">
                               {text.equipment}
                             </p>
@@ -2592,6 +2946,52 @@ export default function Home() {
                           </div>
 
                           <div>
+                            <p className="mb-1 text-sm font-semibold">
+                              {text.learningTools}
+                            </p>
+                            <p className="mb-3 text-xs leading-5 text-muted-foreground">
+                              {text.starterTools}
+                            </p>
+                            <div className="grid gap-2 sm:grid-cols-3">
+                              {(
+                                Object.keys(consumableCatalog) as ConsumableId[]
+                              ).map((id) => {
+                                const item = consumableCatalog[id];
+                                return (
+                                  <div
+                                    key={id}
+                                    className="rounded-xl border border-border p-3"
+                                  >
+                                    <div className="equipment-shop-icon mx-auto">
+                                      <EquipmentArtwork
+                                        src={item.artwork.src}
+                                      />
+                                    </div>
+                                    <p className="mt-2 text-center text-sm font-semibold">
+                                      {item.name[locale]}
+                                    </p>
+                                    <p className="mt-1 min-h-10 text-center text-xs leading-5 text-muted-foreground">
+                                      {item.effect[locale]}
+                                    </p>
+                                    <p className="mt-1 text-center font-mono text-xs text-primary">
+                                      {text.quantity} × {consumables[id]}
+                                    </p>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="mt-2 w-full"
+                                      disabled={walletPoints < item.cost}
+                                      onClick={() => buyConsumable(id)}
+                                    >
+                                      <Coins /> {text.buy} · {item.cost}
+                                    </Button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          <div>
                             <p className="mb-2 text-sm font-semibold">
                               {text.shopEquipment}
                             </p>
@@ -2626,25 +3026,27 @@ export default function Home() {
                                     <p className="mt-1 min-h-10 text-center text-xs leading-5 text-muted-foreground">
                                       {item.effect[locale]}
                                     </p>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="mt-2 w-full"
-                                      disabled={
-                                        owned || walletPoints < item.cost
-                                      }
-                                      onClick={() => buyEquipment(id)}
-                                    >
-                                      {owned ? (
-                                        <>
-                                          <Check /> {text.owned}
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Coins /> {text.buy} · {item.cost}
-                                        </>
-                                      )}
-                                    </Button>
+                                    {owned ? (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="mt-2 w-full"
+                                        onClick={() => sellEquipment(id)}
+                                      >
+                                        <Coins /> {text.sell} ·{' '}
+                                        {Math.floor(item.cost / 2)}
+                                      </Button>
+                                    ) : (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="mt-2 w-full"
+                                        disabled={walletPoints < item.cost}
+                                        onClick={() => buyEquipment(id)}
+                                      >
+                                        <Coins /> {text.buy} · {item.cost}
+                                      </Button>
+                                    )}
                                   </div>
                                 );
                               })}
@@ -2823,7 +3225,15 @@ export default function Home() {
             {socLearningAid && (
               <SocInterfaceGuide aid={socLearningAid} locale={locale} />
             )}
-            {current.id === 'soc-stream-register-slice' && (
+            {current.id === 'soc-stream-register-slice' && !logicUnlocked && (
+              <AidUnlockCard
+                id="crystal"
+                count={consumables.crystal}
+                locale={locale}
+                onUnlock={unlockLogicAid}
+              />
+            )}
+            {current.id === 'soc-stream-register-slice' && logicUnlocked && (
               <section
                 className="elastic-buffer-guide mt-4"
                 aria-label={
@@ -2860,7 +3270,15 @@ export default function Home() {
                 </p>
               </section>
             )}
-            {goldenPattern && (
+            {goldenPattern && !goldenUnlocked && (
+              <AidUnlockCard
+                id="visor"
+                count={consumables.visor}
+                locale={locale}
+                onUnlock={unlockGoldenAid}
+              />
+            )}
+            {goldenPattern && goldenUnlocked && (
               <section
                 className="golden-pattern mt-4 border-t border-border pt-4"
                 aria-labelledby="golden-pattern-title"
@@ -2986,14 +3404,14 @@ export default function Home() {
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    onClick={() =>
-                      setRevealedHints((value) => Math.min(3, value + 1))
-                    }
-                    disabled={revealedHints >= 3}
+                    onClick={unlockNextHint}
+                    disabled={revealedHints >= 3 || consumables.drone < 1}
                     className="flex items-center gap-2 text-sm font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Lightbulb className="size-4" />
-                    {text.hint} · {3 - revealedHints} {text.hintsLeft}
+                    {revealedHints >= 3
+                      ? text.unlockedAid
+                      : `${consumableCatalog.drone.name[locale]} × ${consumables.drone}`}
                     <ChevronDown
                       className={`size-4 transition-transform ${revealedHints > 0 ? 'rotate-180' : ''}`}
                     />
@@ -3040,6 +3458,7 @@ export default function Home() {
               </div>
               {battleVisible && (
                 <BattleArena
+                  locale={locale}
                   gender={mascotGender}
                   profession={activeMascotProfession}
                   tier={mascotStage}
@@ -3053,6 +3472,7 @@ export default function Home() {
                     current.order,
                   )}
                   coinReward={coinReward}
+                  dropReward={dropReward}
                 />
               )}
             </div>
