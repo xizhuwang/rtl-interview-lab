@@ -148,12 +148,27 @@ verify(
   'Waveform viewer preserves VCD aliases and renders paired traces',
 );
 verify(
-  /visor:\s*50[\s\S]*crystal:\s*50[\s\S]*drone:\s*50/.test(pageSource),
-  'New and migrated profiles receive 50 of each learning tool',
+  /visor:\s*20[\s\S]*crystal:\s*20[\s\S]*drone:\s*50/.test(pageSource),
+  'Starter profiles receive 20 visors, 20 crystals, and 50 companions',
+);
+verify(
+  /schemaVersion,\s*'4'/.test(pageSource) && /normalized - 30/.test(pageSource),
+  'Schema v4 migrates the original visor and crystal starter grant',
 );
 verify(
   /Math\.floor\(equipmentCatalog\[id\]\.cost \/ 2\)/.test(pageSource),
   'Equipment resale returns half of the current shop price',
+);
+verify(
+  /equipmentUpgradeChance\s*=\s*\[1, 0\.8, 0\.65, 0\.45, 0\.3\]/.test(
+    pageSource,
+  ) && /before >= 2 \? before - 1 : before/.test(pageSource),
+  'Equipment star upgrades use declining odds and protected low-star failures',
+);
+verify(
+  /<LogicBriefCard challenge=\{current\} locale=\{locale\}/.test(pageSource) &&
+    /\{!logicUnlocked && \(/.test(pageSource),
+  'Timing Crystal logic briefs are available for every challenge',
 );
 verify(
   /roll < 0\.62[\s\S]*roll < 0\.77/.test(pageSource),

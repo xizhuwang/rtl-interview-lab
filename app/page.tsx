@@ -44,6 +44,7 @@ import {
   Shield,
   ShoppingBag,
   Sparkles,
+  Star,
   Sword,
   Swords,
   TerminalSquare,
@@ -77,6 +78,7 @@ import {
   kindLabel,
   localize,
   tracks,
+  type Challenge,
   type Locale,
   type TrackId,
 } from '@/lib/challenges';
@@ -330,6 +332,7 @@ type EquipmentIconId =
   | 'battery';
 type ConsumableId = 'visor' | 'crystal' | 'drone';
 type ConsumableInventory = Record<ConsumableId, number>;
+type EquipmentStars = Record<EquipmentId, number>;
 type AidUnlocks = {
   logic: string[];
   golden: string[];
@@ -348,9 +351,19 @@ const emptyElementLevels: ElementLevels = {
   wind: 0,
   earth: 0,
 };
+const emptyEquipmentStars: EquipmentStars = {
+  cpuBlade: 0,
+  cpuShield: 0,
+  socQuiver: 0,
+  socCompass: 0,
+  dftLantern: 0,
+  dftProbe: 0,
+  timingGrimoire: 0,
+  lowPowerCharm: 0,
+};
 const starterConsumables: ConsumableInventory = {
-  visor: 50,
-  crystal: 50,
+  visor: 20,
+  crystal: 20,
   drone: 50,
 };
 const emptyAidUnlocks: AidUnlocks = { logic: [], golden: [], hints: {} };
@@ -364,6 +377,8 @@ const storageKeys = {
   ownedEquipment: 'soc-rtl-lab:owned-equipment',
   equippedEquipment: 'soc-rtl-lab:equipped-equipment',
   equipmentSpend: 'soc-rtl-lab:equipment-spend',
+  equipmentStars: 'soc-rtl-lab:equipment-stars',
+  enhancementSpend: 'soc-rtl-lab:enhancement-spend',
   resaleCredits: 'soc-rtl-lab:resale-credits',
   consumables: 'soc-rtl-lab:consumables',
   consumableSpend: 'soc-rtl-lab:consumable-spend',
@@ -472,7 +487,8 @@ const copy = {
     equipment: '已擁有裝備',
     shopEquipment: '購買裝備',
     learningTools: '學習工具',
-    starterTools: '新手補給：三種工具各 50 個；解鎖結果會永久保留。',
+    starterTools:
+      '新手補給：Debug 護目鏡與 Timing 水晶各 20 個，晶片夥伴 50 個；解鎖結果會永久保留。',
     quantity: '持有',
     useTool: '使用 1 個',
     unlockedAid: '本題已解鎖',
@@ -494,6 +510,15 @@ const copy = {
     enchantmentBody:
       '每次強化都會提高戰鬥特效強度；集齊火、水、風、土可解鎖四靈根融合特效。',
     enhance: '強化',
+    forge: '裝備衝星',
+    forgeChance: '成功率',
+    forgeProtected: '失敗保護，不降星',
+    forgeDowngrade: '衝星失敗，裝備下降 1 星',
+    forgeSuccess: '衝星成功',
+    divineGear: '五星神裝',
+    maxStars: '已達最高星級',
+    forgeNotice:
+      '最高 5 星；0～1 星失敗不降級，2 星以上失敗會下降 1 星。星級只強化外觀與戰鬥特效，不影響判題或提示。',
     level: '階',
     fourRoots: '四靈根已解鎖',
     activeElement: '出戰屬性',
@@ -588,7 +613,7 @@ const copy = {
     shopEquipment: 'Buy equipment',
     learningTools: 'Learning tools',
     starterTools:
-      'Starter supply: 50 of each tool. Challenge unlocks are permanent.',
+      'Starter supply: 20 Debug Visors, 20 Timing Crystals, and 50 Chip Companions. Challenge unlocks are permanent.',
     quantity: 'Owned',
     useTool: 'Use one',
     unlockedAid: 'Unlocked for this challenge',
@@ -611,6 +636,15 @@ const copy = {
     enchantmentBody:
       'Each upgrade intensifies the visible battle effect. Collect fire, water, wind, and earth to unlock the Four Roots fusion.',
     enhance: 'Enhance',
+    forge: 'Star upgrade',
+    forgeChance: 'Success rate',
+    forgeProtected: 'Protected failure: no star lost',
+    forgeDowngrade: 'Upgrade failed: gear lost one star',
+    forgeSuccess: 'Upgrade succeeded',
+    divineGear: 'Five-star Divine Gear',
+    maxStars: 'Maximum star level',
+    forgeNotice:
+      'Maximum 5 stars. Failures at 0–1 stars are protected; failures at 2+ stars lose one star. Stars only improve visuals and battle effects, never judging or hints.',
     level: 'Lv.',
     fourRoots: 'Four Roots unlocked',
     activeElement: 'Active element',
@@ -706,7 +740,7 @@ const equipmentCatalog: Record<
 > = {
   cpuBlade: {
     icon: 'sword',
-    cost: 220,
+    cost: 360,
     profession: 'cpu',
     name: { zh: 'Forwarding 光刃', en: 'Forwarding Blade' },
     effect: {
@@ -716,7 +750,7 @@ const equipmentCatalog: Record<
   },
   cpuShield: {
     icon: 'shield',
-    cost: 340,
+    cost: 480,
     profession: 'cpu',
     name: { zh: 'Pipeline 護盾', en: 'Pipeline Shield' },
     effect: {
@@ -726,7 +760,7 @@ const equipmentCatalog: Record<
   },
   socQuiver: {
     icon: 'target',
-    cost: 220,
+    cost: 360,
     profession: 'soc',
     name: { zh: 'AXI 箭匣', en: 'AXI Quiver' },
     effect: {
@@ -736,7 +770,7 @@ const equipmentCatalog: Record<
   },
   socCompass: {
     icon: 'network',
-    cost: 360,
+    cost: 500,
     profession: 'soc',
     name: { zh: 'Interconnect 羅盤', en: 'Interconnect Compass' },
     effect: {
@@ -746,7 +780,7 @@ const equipmentCatalog: Record<
   },
   dftLantern: {
     icon: 'healer',
-    cost: 200,
+    cost: 350,
     profession: 'dft',
     name: { zh: 'Scan 診斷燈', en: 'Scan Diagnostic Lantern' },
     effect: {
@@ -756,7 +790,7 @@ const equipmentCatalog: Record<
   },
   dftProbe: {
     icon: 'scan',
-    cost: 340,
+    cost: 480,
     profession: 'dft',
     name: { zh: 'Fault 探針', en: 'Fault Probe' },
     effect: {
@@ -766,7 +800,7 @@ const equipmentCatalog: Record<
   },
   timingGrimoire: {
     icon: 'book',
-    cost: 260,
+    cost: 400,
     profession: 'timing',
     name: { zh: 'STA 魔導書', en: 'STA Grimoire' },
     effect: {
@@ -776,7 +810,7 @@ const equipmentCatalog: Record<
   },
   lowPowerCharm: {
     icon: 'battery',
-    cost: 380,
+    cost: 500,
     profession: 'timing',
     name: { zh: 'Low-Power 月墜', en: 'Low-Power Moon Charm' },
     effect: {
@@ -809,7 +843,7 @@ const consumableCatalog: Record<
   crystal: {
     icon: 'crystal',
     artwork: { src: './mascot/equipment-crystal.png' },
-    cost: 160,
+    cost: 140,
     name: { zh: 'Timing 水晶', en: 'Timing Crystal' },
     effect: {
       zh: '消耗 1 個，永久解鎖該題的關鍵邏輯整理。',
@@ -819,7 +853,7 @@ const consumableCatalog: Record<
   drone: {
     icon: 'drone',
     artwork: { src: './mascot/equipment-drone.png' },
-    cost: 100,
+    cost: 60,
     name: { zh: '晶片夥伴', en: 'Chip Companion' },
     effect: {
       zh: '每次消耗 1 個，永久解鎖下一層提示。',
@@ -870,7 +904,17 @@ const elementCatalog: Record<
   },
 };
 
-const elementUpgradeCost = (level: number) => Math.min(500, 140 + level * 80);
+const elementUpgradeCost = (level: number) => Math.min(500, 260 + level * 80);
+const equipmentUpgradeCost = (stars: number) => Math.min(500, 180 + stars * 70);
+const equipmentUpgradeChance = [1, 0.8, 0.65, 0.45, 0.3] as const;
+const equipmentUpgradeRate = (stars: number) =>
+  equipmentUpgradeChance[Math.min(4, Math.max(0, stars))] ?? 0;
+
+function rollEquipmentUpgrade(stars: number) {
+  const sample = new Uint32Array(1);
+  globalThis.crypto.getRandomValues(sample);
+  return (sample[0] ?? 0) / 0x1_0000_0000 < equipmentUpgradeRate(stars);
+}
 
 function EquipmentIcon({
   id,
@@ -894,6 +938,20 @@ function EquipmentIcon({
   };
   const Icon = icons[id];
   return <Icon className={className} aria-hidden="true" />;
+}
+
+function EquipmentStarRow({ stars }: { stars: number }) {
+  return (
+    <span className="equipment-star-row" aria-label={`${stars} / 5 stars`}>
+      {Array.from({ length: 5 }, (_, index) => (
+        <Star
+          key={index}
+          className={index < stars ? 'is-filled' : ''}
+          aria-hidden="true"
+        />
+      ))}
+    </span>
+  );
 }
 
 function EquipmentArtwork({
@@ -934,6 +992,7 @@ function MascotAvatar({
   profession,
   tier,
   equipment = null,
+  equipmentStarLevel = 0,
   elements = emptyElementLevels,
   equippedElement = null,
   className = '',
@@ -942,6 +1001,7 @@ function MascotAvatar({
   profession: MascotProfession;
   tier: number;
   equipment?: EquipmentId | null;
+  equipmentStarLevel?: number;
   elements?: ElementLevels;
   equippedElement?: ElementLoadout;
   className?: string;
@@ -962,7 +1022,8 @@ function MascotAvatar({
   const equippedItem = equipment ? equipmentCatalog[equipment] : null;
   return (
     <div
-      className={`mascot-avatar mascot-tier-${tier} mascot-gender-${gender} mascot-profession-${profession} ${selectedElement ? `mascot-enchanted mascot-enchanted-${selectedElement}` : ''} ${rootsEquipped ? 'mascot-enchanted mascot-four-roots' : ''} relative overflow-visible ${className}`}
+      className={`mascot-avatar mascot-tier-${tier} mascot-gender-${gender} mascot-profession-${profession} ${equipmentStarLevel > 0 ? 'equipment-starred' : ''} ${equipmentStarLevel >= 5 ? 'equipment-divine' : ''} ${selectedElement ? `mascot-enchanted mascot-enchanted-${selectedElement}` : ''} ${rootsEquipped ? 'mascot-enchanted mascot-four-roots' : ''} relative overflow-visible ${className}`}
+      style={{ '--gear-stars': equipmentStarLevel } as CSSProperties}
       aria-label={mascotProfessions[profession].title.en}
     >
       <div className="mascot-character-frame absolute inset-0 overflow-visible">
@@ -1018,6 +1079,7 @@ function BattleArena({
   profession,
   tier,
   equipment,
+  equipmentStarLevel,
   elements,
   equippedElement,
   status,
@@ -1030,6 +1092,7 @@ function BattleArena({
   profession: MascotProfession;
   tier: number;
   equipment: EquipmentId | null;
+  equipmentStarLevel: number;
   elements: ElementLevels;
   equippedElement: ElementLoadout;
   status: BattleStatus;
@@ -1092,11 +1155,12 @@ function BattleArena({
   );
   const battleStyle = {
     '--effect-level': Math.min(5, Math.max(1, totalElementLevel)),
+    '--gear-stars': equipmentStarLevel,
   } as CSSProperties;
 
   return (
     <div
-      className={`mascot-battle-arena battle-${status} profession-${profession} enemy-${enemy} ${dominantElement ? `battle-element-${dominantElement}` : ''} ${opponent.boss ? 'boss-battle' : ''} ${opponent.final ? 'final-boss-battle' : ''} ${rootsEquipped ? 'four-roots-active' : ''}`}
+      className={`mascot-battle-arena battle-${status} profession-${profession} enemy-${enemy} ${equipmentStarLevel > 0 ? 'gear-starred' : ''} ${equipmentStarLevel >= 5 ? 'gear-divine' : ''} ${dominantElement ? `battle-element-${dominantElement}` : ''} ${opponent.boss ? 'boss-battle' : ''} ${opponent.final ? 'final-boss-battle' : ''} ${rootsEquipped ? 'four-roots-active' : ''}`}
       style={battleStyle}
       aria-hidden="true"
     >
@@ -1106,6 +1170,7 @@ function BattleArena({
           profession={profession}
           tier={tier}
           equipment={equipment}
+          equipmentStarLevel={equipmentStarLevel}
           elements={elements}
           equippedElement={equippedElement}
           className="h-[116px] w-[88px] sm:h-[132px] sm:w-[99px]"
@@ -1243,6 +1308,85 @@ function AidUnlockCard({
   );
 }
 
+const logicStartingPoint: Record<TrackId, { zh: string; en: string }> = {
+  rtl: {
+    zh: '先分清楚組合邏輯與時序狀態；組合邏輯完整賦值，狀態只在 clock edge 更新。',
+    en: 'Separate combinational decisions from clocked state; fully assign combinational outputs and update state only on clock edges.',
+  },
+  cdc: {
+    zh: '先判斷跨域的是 level、pulse 或多位元資料；只有單位元控制能直接使用 2-FF synchronizer。',
+    en: 'Classify the crossing as a level, pulse, or multi-bit payload; only a single-bit control may directly use a 2-FF synchronizer.',
+  },
+  timing: {
+    zh: '沿著 launch edge、組合路徑與 capture edge 推一遍，再分別判斷 setup 與 hold。',
+    en: 'Trace launch edge, combinational path, and capture edge before separating setup from hold reasoning.',
+  },
+  'cpu-cache': {
+    zh: '先列出目前狀態、命中／相依條件與優先序，再決定 stall、flush、替換或回應。',
+    en: 'List current state, hit/dependency conditions, and priority before deciding stall, flush, replacement, or response.',
+  },
+  soc: {
+    zh: '先定義一次 transfer 的成立條件，再確認資料、valid／ready、位址與回應是否屬於同一筆交易。',
+    en: 'Define exactly when a transfer occurs, then keep data, valid/ready, address, and response aligned to the same transaction.',
+  },
+  verification: {
+    zh: '先定義可觀察的 expected result，再用 transaction ID、latency 或順序把 actual 對齊。',
+    en: 'Define an observable expected result, then align actual behavior by transaction ID, latency, or ordering.',
+  },
+  ppa: {
+    zh: '先保持功能等價，再比較運算子、位寬、暫存器與共享資源造成的結構差異。',
+    en: 'Preserve functional equivalence first, then compare operators, widths, registers, and resource sharing.',
+  },
+  dft: {
+    zh: '先區分 functional mode 與 test mode，再確認控制性、可觀察性及 reset／scan 優先序。',
+    en: 'Separate functional and test modes, then check controllability, observability, and reset/scan priority.',
+  },
+  'low-power': {
+    zh: '先列 power state 與合法轉移，再檢查 save、isolation、power、restore 的先後關係。',
+    en: 'List power states and legal transitions, then check the order of save, isolation, power, and restore.',
+  },
+};
+
+function LogicBriefCard({
+  challenge,
+  locale,
+}: {
+  challenge: Challenge;
+  locale: Locale;
+}) {
+  const contract = challenge.specs
+    .slice(0, 2)
+    .map((item) => localize(item, locale))
+    .join(' ');
+  const checks = challenge.testGroups
+    .slice(0, 3)
+    .map((item) => localize(item, locale))
+    .join(' · ');
+  return (
+    <section
+      className="logic-brief-card mt-4"
+      aria-label="Timing Crystal logic brief"
+    >
+      <div>
+        <Clock3 />
+        <span>
+          {locale === 'zh'
+            ? 'Timing 水晶推演卡'
+            : 'Timing Crystal reasoning card'}
+        </span>
+      </div>
+      <dl>
+        <dt>{locale === 'zh' ? '推演起點' : 'Starting point'}</dt>
+        <dd>{logicStartingPoint[challenge.track][locale]}</dd>
+        <dt>{locale === 'zh' ? '必守契約' : 'Required contract'}</dt>
+        <dd>{contract}</dd>
+        <dt>{locale === 'zh' ? '驗證焦點' : 'Verification focus'}</dt>
+        <dd>{checks}</dd>
+      </dl>
+    </section>
+  );
+}
+
 export default function Home() {
   const [locale, setLocale] = useState<Locale>('zh');
   const [selectedId, setSelectedId] = useState(challenges[0].id);
@@ -1268,6 +1412,16 @@ export default function Home() {
   const [equippedEquipment, setEquippedEquipment] =
     useState<EquipmentId | null>(null);
   const [equipmentSpend, setEquipmentSpend] = useState(0);
+  const [equipmentStars, setEquipmentStars] = useState<EquipmentStars>({
+    ...emptyEquipmentStars,
+  });
+  const [enhancementSpend, setEnhancementSpend] = useState(0);
+  const [enhancementOutcome, setEnhancementOutcome] = useState<{
+    id: EquipmentId;
+    success: boolean;
+    before: number;
+    after: number;
+  } | null>(null);
   const [resaleCredits, setResaleCredits] = useState(0);
   const [consumables, setConsumables] = useState<ConsumableInventory>({
     ...starterConsumables,
@@ -1465,6 +1619,12 @@ export default function Home() {
       const savedEquipmentSpend = browserStorage.getItem(
         storageKeys.equipmentSpend,
       );
+      const savedEquipmentStars = browserStorage.getItem(
+        storageKeys.equipmentStars,
+      );
+      const savedEnhancementSpend = browserStorage.getItem(
+        storageKeys.enhancementSpend,
+      );
       const savedSchemaVersion = Number(
         browserStorage.getItem(storageKeys.schemaVersion) ?? '1',
       );
@@ -1510,6 +1670,9 @@ export default function Home() {
         );
         const parsedElementLevels: unknown = JSON.parse(
           savedElementLevels ?? JSON.stringify(emptyElementLevels),
+        );
+        const parsedEquipmentStars: unknown = JSON.parse(
+          savedEquipmentStars ?? JSON.stringify(emptyEquipmentStars),
         );
         if (Array.isArray(parsedSolved))
           setSolved([
@@ -1579,15 +1742,43 @@ export default function Home() {
                 const value = Number(
                   (parsedConsumables as Record<string, unknown>)[id],
                 );
-                next[id] = Number.isFinite(value)
+                const normalized = Number.isFinite(value)
                   ? Math.max(0, Math.floor(value))
                   : starterConsumables[id];
+                next[id] =
+                  savedSchemaVersion < 4 &&
+                  savedConsumables !== null &&
+                  (id === 'visor' || id === 'crystal')
+                    ? Math.max(0, normalized - 30)
+                    : normalized;
                 return next;
               },
               { ...starterConsumables },
             ),
           );
         }
+        if (parsedEquipmentStars && typeof parsedEquipmentStars === 'object') {
+          setEquipmentStars(
+            (Object.keys(emptyEquipmentStars) as EquipmentId[]).reduce(
+              (next, id) => {
+                const value = Number(
+                  (parsedEquipmentStars as Record<string, unknown>)[id],
+                );
+                next[id] = Number.isFinite(value)
+                  ? Math.min(5, Math.max(0, Math.floor(value)))
+                  : 0;
+                return next;
+              },
+              { ...emptyEquipmentStars },
+            ),
+          );
+        }
+        const parsedEnhancementSpend = Number(savedEnhancementSpend);
+        if (
+          Number.isFinite(parsedEnhancementSpend) &&
+          parsedEnhancementSpend >= 0
+        )
+          setEnhancementSpend(parsedEnhancementSpend);
         const parsedConsumableSpend = Number(savedConsumableSpend);
         if (
           Number.isFinite(parsedConsumableSpend) &&
@@ -1707,7 +1898,7 @@ export default function Home() {
         /* Ignore malformed saved data without overwriting it. */
       }
       storageLoaded.current = true;
-      browserStorage.setItem(storageKeys.schemaVersion, '3');
+      browserStorage.setItem(storageKeys.schemaVersion, '4');
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
@@ -1745,6 +1936,20 @@ export default function Home() {
         String(equipmentSpend),
       );
   }, [equipmentSpend]);
+  useEffect(() => {
+    if (storageLoaded.current)
+      browserStorage.setItem(
+        storageKeys.equipmentStars,
+        JSON.stringify(equipmentStars),
+      );
+  }, [equipmentStars]);
+  useEffect(() => {
+    if (storageLoaded.current)
+      browserStorage.setItem(
+        storageKeys.enhancementSpend,
+        String(enhancementSpend),
+      );
+  }, [enhancementSpend]);
   useEffect(() => {
     if (storageLoaded.current)
       browserStorage.setItem(storageKeys.resaleCredits, String(resaleCredits));
@@ -2276,7 +2481,8 @@ export default function Home() {
       },
     ),
   ) as Record<UnlockableProfession, { count: number; unlocked: boolean }>;
-  const spentPoints = equipmentSpend + elementSpend + consumableSpend;
+  const spentPoints =
+    equipmentSpend + elementSpend + consumableSpend + enhancementSpend;
   const walletPoints = Math.max(0, points - spentPoints + resaleCredits);
   const progress = Math.round((solved.length / challenges.length) * 100);
   const mascotStage = mascotStageFor(points);
@@ -2292,6 +2498,9 @@ export default function Home() {
       equipmentCatalog[equippedEquipment].profession === activeMascotProfession)
       ? equippedEquipment
       : null;
+  const activeEquipmentStars = activeEquipment
+    ? equipmentStars[activeEquipment]
+    : 0;
   const battleStatus: BattleStatus = running
     ? 'running'
     : result
@@ -2349,6 +2558,21 @@ export default function Home() {
     setResaleCredits(
       (previous) => previous + Math.floor(equipmentCatalog[id].cost / 2),
     );
+    setEquipmentStars((previous) => ({ ...previous, [id]: 0 }));
+    if (enhancementOutcome?.id === id) setEnhancementOutcome(null);
+  };
+
+  const enhanceEquipment = (id: EquipmentId) => {
+    if (!ownedEquipment.includes(id)) return;
+    const before = equipmentStars[id];
+    if (before >= 5) return;
+    const cost = equipmentUpgradeCost(before);
+    if (walletPoints < cost) return;
+    const success = rollEquipmentUpgrade(before);
+    const after = success ? before + 1 : before >= 2 ? before - 1 : before;
+    setEnhancementSpend((previous) => previous + cost);
+    setEquipmentStars((previous) => ({ ...previous, [id]: after }));
+    setEnhancementOutcome({ id, success, before, after });
   };
 
   const buyConsumable = (id: ConsumableId) => {
@@ -2633,6 +2857,7 @@ export default function Home() {
                   profession={activeMascotProfession}
                   tier={mascotStage}
                   equipment={activeEquipment}
+                  equipmentStarLevel={activeEquipmentStars}
                   elements={elementLevels}
                   equippedElement={equippedElement}
                   className="h-[93px] w-[70px]"
@@ -2863,6 +3088,9 @@ export default function Home() {
                                       <span className="mt-2 block text-xs font-semibold">
                                         {item.name[locale]}
                                       </span>
+                                      <EquipmentStarRow
+                                        stars={equipmentStars[id]}
+                                      />
                                       <span className="mt-1 block text-[11px] text-muted-foreground">
                                         {classUnavailable
                                           ? text.professionRequired
@@ -2995,12 +3223,38 @@ export default function Home() {
                             <p className="mb-2 text-sm font-semibold">
                               {text.shopEquipment}
                             </p>
+                            <p className="mb-3 rounded-lg border border-amber-300/60 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-900 dark:text-amber-100">
+                              {text.forgeNotice}
+                            </p>
+                            {enhancementOutcome && (
+                              <output
+                                className={`mb-3 block rounded-lg px-3 py-2 text-xs font-semibold ${enhancementOutcome.success ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-200' : 'bg-rose-500/10 text-rose-800 dark:text-rose-200'}`}
+                              >
+                                {
+                                  equipmentCatalog[enhancementOutcome.id].name[
+                                    locale
+                                  ]
+                                }
+                                ：{' '}
+                                {enhancementOutcome.success
+                                  ? `${text.forgeSuccess} · ${enhancementOutcome.after}★`
+                                  : enhancementOutcome.after <
+                                      enhancementOutcome.before
+                                    ? `${text.forgeDowngrade} · ${enhancementOutcome.after}★`
+                                    : text.forgeProtected}
+                              </output>
+                            )}
                             <div className="grid gap-2 sm:grid-cols-3">
                               {(
                                 Object.keys(equipmentCatalog) as EquipmentId[]
                               ).map((id) => {
                                 const item = equipmentCatalog[id];
                                 const owned = ownedEquipment.includes(id);
+                                const stars = equipmentStars[id];
+                                const forgeCost = equipmentUpgradeCost(stars);
+                                const forgeRate = Math.round(
+                                  equipmentUpgradeRate(stars) * 100,
+                                );
                                 return (
                                   <div
                                     key={id}
@@ -3026,16 +3280,41 @@ export default function Home() {
                                     <p className="mt-1 min-h-10 text-center text-xs leading-5 text-muted-foreground">
                                       {item.effect[locale]}
                                     </p>
+                                    {owned && (
+                                      <>
+                                        <EquipmentStarRow stars={stars} />
+                                        <p className="mt-1 text-center font-mono text-[11px] text-muted-foreground">
+                                          {stars >= 5
+                                            ? text.divineGear
+                                            : `${text.forgeChance} ${forgeRate}%`}
+                                        </p>
+                                      </>
+                                    )}
                                     {owned ? (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="mt-2 w-full"
-                                        onClick={() => sellEquipment(id)}
-                                      >
-                                        <Coins /> {text.sell} ·{' '}
-                                        {Math.floor(item.cost / 2)}
-                                      </Button>
+                                      <div className="mt-2 grid grid-cols-2 gap-2">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          disabled={
+                                            stars >= 5 ||
+                                            walletPoints < forgeCost
+                                          }
+                                          onClick={() => enhanceEquipment(id)}
+                                        >
+                                          <Star />{' '}
+                                          {stars >= 5
+                                            ? text.maxStars
+                                            : `${text.forge} · ${forgeCost}`}
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => sellEquipment(id)}
+                                        >
+                                          <Coins /> {text.sell} ·{' '}
+                                          {Math.floor(item.cost / 2)}
+                                        </Button>
+                                      </div>
                                     ) : (
                                       <Button
                                         variant="outline"
@@ -3225,7 +3504,7 @@ export default function Home() {
             {socLearningAid && (
               <SocInterfaceGuide aid={socLearningAid} locale={locale} />
             )}
-            {current.id === 'soc-stream-register-slice' && !logicUnlocked && (
+            {!logicUnlocked && (
               <AidUnlockCard
                 id="crystal"
                 count={consumables.crystal}
@@ -3269,6 +3548,9 @@ export default function Home() {
                     : 'm_valid=0 means EMPTY; a push makes it FULL. A pop without a push returns to EMPTY. A simultaneous pop and push stays FULL and replaces the old word. While the sink stalls, s_ready=0 and both m_valid and m_data must remain stable.'}
                 </p>
               </section>
+            )}
+            {current.id !== 'soc-stream-register-slice' && logicUnlocked && (
+              <LogicBriefCard challenge={current} locale={locale} />
             )}
             {goldenPattern && !goldenUnlocked && (
               <AidUnlockCard
@@ -3376,6 +3658,7 @@ export default function Home() {
                   profession={activeMascotProfession}
                   tier={mascotStage}
                   equipment={activeEquipment}
+                  equipmentStarLevel={activeEquipmentStars}
                   elements={elementLevels}
                   equippedElement={equippedElement}
                   className="h-28 w-[84px] sm:h-[139px] sm:w-[104px]"
@@ -3463,6 +3746,7 @@ export default function Home() {
                   profession={activeMascotProfession}
                   tier={mascotStage}
                   equipment={activeEquipment}
+                  equipmentStarLevel={activeEquipmentStars}
                   elements={elementLevels}
                   equippedElement={equippedElement}
                   status={battleStatus}
