@@ -183,14 +183,16 @@ verify(
   'Daily review starts from a temporary fresh draft and hides solved aids',
 );
 verify(
-  /challenge\.hints\[0\]/.test(pageSource) &&
-    /challenge\.hints\[1\]/.test(pageSource) &&
-    /challenge\.hints\[2\]/.test(pageSource) &&
+  /const logicStartingPoint: Record<TrackId, \{ zh: string; en: string \}>/.test(
+    pageSource,
+  ) &&
+    /challenge\.hints\s*\.slice\(0, 2\)/.test(pageSource) &&
+    /logicStartingPoint\[challenge\.track\]\[locale\]/.test(pageSource) &&
     /<LogicBriefCard challenge=\{current\} locale=\{locale\}/.test(
       pageSource,
     ) &&
     /!dailyReviewNoAids && !logicUnlocked/.test(pageSource),
-  'Timing Crystal uses each challenge concrete three-step reasoning',
+  'Timing Crystal restores the domain baseline and adds task-specific reasoning',
 );
 verify(
   /roll < 0\.62[\s\S]*roll < 0\.77/.test(pageSource),

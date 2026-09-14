@@ -1393,6 +1393,45 @@ function AidUnlockCard({
   );
 }
 
+const logicStartingPoint: Record<TrackId, { zh: string; en: string }> = {
+  rtl: {
+    zh: '先分清楚組合邏輯與時序狀態；組合邏輯完整賦值，狀態只在 clock edge 更新。',
+    en: 'Separate combinational decisions from clocked state; fully assign combinational outputs and update state only on clock edges.',
+  },
+  cdc: {
+    zh: '先判斷跨域的是 level、pulse 或多位元資料；只有單位元控制能直接使用 2-FF synchronizer。',
+    en: 'Classify the crossing as a level, pulse, or multi-bit payload; only a single-bit control may directly use a 2-FF synchronizer.',
+  },
+  timing: {
+    zh: '沿著 launch edge、組合路徑與 capture edge 推一遍，再分別判斷 setup 與 hold。',
+    en: 'Trace the launch edge, combinational path, and capture edge before separating setup from hold reasoning.',
+  },
+  'cpu-cache': {
+    zh: '先列出目前狀態、命中／相依條件與優先序，再決定 stall、flush、替換或回應。',
+    en: 'List the current state, hit/dependency conditions, and priority before deciding stall, flush, replacement, or response.',
+  },
+  soc: {
+    zh: '先定義一次 transfer 的成立條件，再確認資料、valid／ready、位址與回應是否屬於同一筆交易。',
+    en: 'Define exactly when a transfer occurs, then keep data, valid/ready, address, and response aligned to the same transaction.',
+  },
+  verification: {
+    zh: '先定義可觀察的 expected result，再用 transaction ID、latency 或順序把 actual 對齊。',
+    en: 'Define an observable expected result, then align actual behavior by transaction ID, latency, or ordering.',
+  },
+  ppa: {
+    zh: '先保持功能等價，再比較運算子、位寬、暫存器與共享資源造成的結構差異。',
+    en: 'Preserve functional equivalence first, then compare operators, widths, registers, and resource sharing.',
+  },
+  dft: {
+    zh: '先區分 functional mode 與 test mode，再確認控制性、可觀察性及 reset／scan 優先序。',
+    en: 'Separate functional and test modes, then check controllability, observability, and reset/scan priority.',
+  },
+  'low-power': {
+    zh: '先列 power state 與合法轉移，再檢查 save、isolation、power、restore 的先後關係。',
+    en: 'List power states and legal transitions, then check the order of save, isolation, power, and restore.',
+  },
+};
+
 function LogicBriefCard({
   challenge,
   locale,
@@ -1400,19 +1439,17 @@ function LogicBriefCard({
   challenge: Challenge;
   locale: Locale;
 }) {
-  const verificationFallback = {
-    zh: `至少逐項檢查：${challenge.testGroups
-      .map((item) => localize(item, 'zh'))
-      .join('、')}。`,
-    en: `Check each of these explicitly: ${challenge.testGroups
-      .map((item) => localize(item, 'en'))
-      .join(', ')}.`,
-  };
-  const steps = [
-    challenge.hints[0] ?? challenge.specs[0],
-    challenge.hints[1] ?? challenge.specs[1] ?? challenge.specs[0],
-    challenge.hints[2] ?? verificationFallback,
-  ];
+  const keySteps = challenge.hints
+    .slice(0, 2)
+    .map((item) => localize(item, locale))
+    .join(' ');
+  const contract = challenge.specs
+    .slice(0, 2)
+    .map((item) => localize(item, locale))
+    .join(' ');
+  const checks = challenge.testGroups
+    .map((item) => localize(item, locale))
+    .join(locale === 'zh' ? '、' : ', ');
   return (
     <section
       className="logic-brief-card mt-4"
@@ -1427,14 +1464,14 @@ function LogicBriefCard({
         </span>
       </div>
       <dl>
-        <dt>{locale === 'zh' ? '① 先畫出關係' : '① Draw the relationship'}</dt>
-        <dd>{localize(steps[0], locale)}</dd>
-        <dt>
-          {locale === 'zh' ? '② 再逐拍推導' : '② Trace it cycle by cycle'}
-        </dt>
-        <dd>{localize(steps[1], locale)}</dd>
-        <dt>{locale === 'zh' ? '③ 最後驗證' : '③ Verify the result'}</dt>
-        <dd>{localize(steps[2], locale)}</dd>
+        <dt>{locale === 'zh' ? '基礎判斷' : 'Reasoning baseline'}</dt>
+        <dd>{logicStartingPoint[challenge.track][locale]}</dd>
+        <dt>{locale === 'zh' ? '這題起手式' : 'How to start this task'}</dt>
+        <dd>{keySteps || contract}</dd>
+        <dt>{locale === 'zh' ? '必守契約' : 'Required contract'}</dt>
+        <dd>{contract}</dd>
+        <dt>{locale === 'zh' ? '驗證焦點' : 'Verification focus'}</dt>
+        <dd>{checks}</dd>
       </dl>
     </section>
   );
