@@ -1393,42 +1393,42 @@ function AidUnlockCard({
   );
 }
 
-const logicStartingPoint: Record<TrackId, { zh: string; en: string }> = {
+const logicAnalogy: Record<TrackId, { zh: string; en: string }> = {
   rtl: {
-    zh: '先分清楚組合邏輯與時序狀態；組合邏輯完整賦值，狀態只在 clock edge 更新。',
-    en: 'Separate combinational decisions from clocked state; fully assign combinational outputs and update state only on clock edges.',
+    zh: '把暫存器想成只在鐘聲響起時拍照的相機；組合邏輯則像即時計算機，輸入一變，答案就跟著變。',
+    en: 'Think of a register as a camera that takes a picture only when the clock rings. Combinational logic is a live calculator whose answer follows its inputs.',
   },
   cdc: {
-    zh: '先判斷跨域的是 level、pulse 或多位元資料；只有單位元控制能直接使用 2-FF synchronizer。',
-    en: 'Classify the crossing as a level, pulse, or multi-bit payload; only a single-bit control may directly use a 2-FF synchronizer.',
+    zh: '兩個 clock domain 像兩個走不同節拍的房間。不能直接把東西丟過去，要用同步器或握手，確認對方真的接到了。',
+    en: 'Two clock domains are rooms moving to different rhythms. Do not throw data straight across; use a synchronizer or handshake so the receiver can accept it safely.',
   },
   timing: {
-    zh: '沿著 launch edge、組合路徑與 capture edge 推一遍，再分別判斷 setup 與 hold。',
-    en: 'Trace the launch edge, combinational path, and capture edge before separating setup from hold reasoning.',
+    zh: '資料像趕下一班車：太晚到是 setup violation，太早衝進下一站是 hold violation。Pipeline 就是在長路中間增設轉運站。',
+    en: 'Data is catching the next train: arriving too late is a setup violation, while racing into the next stop too early is a hold violation. A pipeline adds transfer stations along a long route.',
   },
   'cpu-cache': {
-    zh: '先列出目前狀態、命中／相依條件與優先序，再決定 stall、flush、替換或回應。',
-    en: 'List the current state, hit/dependency conditions, and priority before deciding stall, flush, replacement, or response.',
+    zh: 'CPU 像流水線工廠，Cache 像工作台旁的小倉庫。先看資料在不在、前後工序會不會撞車，再決定等待、轉送或重做。',
+    en: 'A CPU is an assembly line and a cache is the small shelf beside it. Check whether data is present and whether stages conflict before waiting, forwarding, or restarting work.',
   },
   soc: {
-    zh: '先定義一次 transfer 的成立條件，再確認資料、valid／ready、位址與回應是否屬於同一筆交易。',
-    en: 'Define exactly when a transfer occurs, then keep data, valid/ready, address, and response aligned to the same transaction.',
+    zh: '介面像交接包裹：送方說「貨到了」，收方說「我能收」，兩句同拍成立才算真正交貨；包裹內容也必須在那一拍保持不變。',
+    en: 'An interface is a parcel handoff: the sender says “valid” and the receiver says “ready.” The transfer happens only when both agree in the same cycle, with the parcel kept stable.',
   },
   verification: {
-    zh: '先定義可觀察的 expected result，再用 transaction ID、latency 或順序把 actual 對齊。',
-    en: 'Define an observable expected result, then align actual behavior by transaction ID, latency, or ordering.',
+    zh: '把 Golden model 想成標準答案，把 DUT 想成考生答案。要先把同一題、同一拍或同一個 ID 對齊，才能公平比較。',
+    en: 'Treat the Golden model as the answer key and the DUT as the student answer. Match the same transaction, cycle, or ID before comparing them.',
   },
   ppa: {
-    zh: '先保持功能等價，再比較運算子、位寬、暫存器與共享資源造成的結構差異。',
-    en: 'Preserve functional equivalence first, then compare operators, widths, registers, and resource sharing.',
+    zh: '像整理行李箱：功能是必帶物品，位寬、運算器與暫存器是占用空間。先確定東西沒少，再減少不必要的尺寸或共用工具。',
+    en: 'Think of packing a suitcase: function is what must arrive, while widths, operators, and registers consume space. Keep every required item, then trim or share the bulky parts.',
   },
   dft: {
-    zh: '先區分 functional mode 與 test mode，再確認控制性、可觀察性及 reset／scan 優先序。',
-    en: 'Separate functional and test modes, then check controllability, observability, and reset/scan priority.',
+    zh: 'DFT 像設備的維修模式：平常照常工作，測試時則打開檢修通道，讓內部狀態能被送入、移動並讀出。',
+    en: 'DFT is a maintenance mode: normal operation stays unchanged, while test mode opens a service path so internal state can be loaded, shifted, and observed.',
   },
   'low-power': {
-    zh: '先列 power state 與合法轉移，再檢查 save、isolation、power、restore 的先後關係。',
-    en: 'List power states and legal transitions, then check the order of save, isolation, power, and restore.',
+    zh: '像關閉大樓某一層：先把工作收尾、保存資料、關上對外通道，最後才能斷電；上電時則反方向恢復。',
+    en: 'It is like shutting down one floor of a building: finish work, save state, close external doors, then cut power. Power-up restores those steps in reverse.',
   },
 };
 
@@ -1443,10 +1443,7 @@ function LogicBriefCard({
     .slice(0, 2)
     .map((item) => localize(item, locale))
     .join(' ');
-  const contract = challenge.specs
-    .slice(0, 2)
-    .map((item) => localize(item, locale))
-    .join(' ');
+  const firstRule = localize(challenge.specs[0], locale);
   const checks = challenge.testGroups
     .map((item) => localize(item, locale))
     .join(locale === 'zh' ? '、' : ', ');
@@ -1464,14 +1461,15 @@ function LogicBriefCard({
         </span>
       </div>
       <dl>
-        <dt>{locale === 'zh' ? '基礎判斷' : 'Reasoning baseline'}</dt>
-        <dd>{logicStartingPoint[challenge.track][locale]}</dd>
-        <dt>{locale === 'zh' ? '這題起手式' : 'How to start this task'}</dt>
-        <dd>{keySteps || contract}</dd>
-        <dt>{locale === 'zh' ? '必守契約' : 'Required contract'}</dt>
-        <dd>{contract}</dd>
-        <dt>{locale === 'zh' ? '驗證焦點' : 'Verification focus'}</dt>
-        <dd>{checks}</dd>
+        <dt>{locale === 'zh' ? '先把它想成' : 'Picture it this way'}</dt>
+        <dd>{logicAnalogy[challenge.track][locale]}</dd>
+        <dt>{locale === 'zh' ? '這題先做什麼' : 'What to do first'}</dt>
+        <dd>{keySteps || firstRule}</dd>
+        <dt>{locale === 'zh' ? '怎樣才算做對' : 'How to know it works'}</dt>
+        <dd>
+          {firstRule}{' '}
+          {locale === 'zh' ? `再測：${checks}。` : `Then test: ${checks}.`}
+        </dd>
       </dl>
     </section>
   );
