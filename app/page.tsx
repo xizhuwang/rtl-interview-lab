@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type DragEvent,
 } from 'react';
 import {
   AlertTriangle,
@@ -29,6 +30,7 @@ import {
   Gauge,
   Gem,
   Gift,
+  Hammer,
   HeartPulse,
   Languages,
   Lightbulb,
@@ -329,8 +331,9 @@ type EquipmentIconId =
   | 'healer'
   | 'scan'
   | 'book'
-  | 'battery';
-type ConsumableId = 'visor' | 'crystal' | 'drone';
+  | 'battery'
+  | 'hammer';
+type ConsumableId = 'visor' | 'crystal' | 'drone' | 'hammer';
 type ConsumableInventory = Record<ConsumableId, number>;
 type EquipmentStars = Record<EquipmentId, number>;
 type AidUnlocks = {
@@ -345,6 +348,13 @@ type ElementId = 'fire' | 'water' | 'wind' | 'earth';
 type ElementLevels = Record<ElementId, number>;
 type ElementLoadout = ElementId | 'four-roots' | null;
 type BattleStatus = 'idle' | 'running' | 'success' | 'failure';
+type DailyProgress = {
+  lastCheckIn: string;
+  streak: number;
+  rewardCredits: number;
+  questDate: string;
+  questClaimed: boolean;
+};
 const emptyElementLevels: ElementLevels = {
   fire: 0,
   water: 0,
@@ -365,8 +375,16 @@ const starterConsumables: ConsumableInventory = {
   visor: 20,
   crystal: 20,
   drone: 50,
+  hammer: 0,
 };
 const emptyAidUnlocks: AidUnlocks = { logic: [], golden: [], hints: {} };
+const emptyDailyProgress: DailyProgress = {
+  lastCheckIn: '',
+  streak: 0,
+  rewardCredits: 0,
+  questDate: '',
+  questClaimed: false,
+};
 const storageKeys = {
   schemaVersion: 'soc-rtl-lab:schema-version',
   locale: 'soc-rtl-lab:locale',
@@ -386,6 +404,7 @@ const storageKeys = {
   elementLevels: 'soc-rtl-lab:element-levels',
   elementSpend: 'soc-rtl-lab:element-spend',
   equippedElement: 'soc-rtl-lab:equipped-element',
+  dailyProgress: 'soc-rtl-lab:daily-progress',
 };
 // Public collection links/assets may be kept in the client. Never place API
 // credentials or merchant signing secrets in this repository.
@@ -414,6 +433,27 @@ const initialHoldLab: HoldLabState = {
   message: '',
   ok: null,
 };
+
+function localDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function dateOrdinal(key: string) {
+  const [year, month, day] = key.split('-').map(Number);
+  if (!year || !month || !day) return Number.NaN;
+  return Math.floor(Date.UTC(year, month - 1, day) / 86_400_000);
+}
+
+function dailyChallengeFor(key: string) {
+  const seed = Array.from(key).reduce(
+    (sum, character, index) => sum + character.charCodeAt(0) * (index + 1),
+    0,
+  );
+  return challenges[seed % challenges.length] ?? challenges[0];
+}
 
 const copy = {
   zh: {
@@ -488,7 +528,7 @@ const copy = {
     shopEquipment: '購買裝備',
     learningTools: '學習工具',
     starterTools:
-      '新手補給：Debug 護目鏡與 Timing 水晶各 20 個，晶片夥伴 50 個；解鎖結果會永久保留。',
+      '新手補給：Debug 護目鏡與 Timing 水晶各 20 個、晶片夥伴 50 個；鍛造鐵鎚可購買或由 BOSS 掉落。',
     quantity: '持有',
     useTool: '使用 1 個',
     unlockedAid: '本題已解鎖',
@@ -518,7 +558,23 @@ const copy = {
     divineGear: '五星神裝',
     maxStars: '已達最高星級',
     forgeNotice:
-      '最高 5 星；0～1 星失敗不降級，2 星以上失敗會下降 1 星。星級只強化外觀與戰鬥特效，不影響判題或提示。',
+      '拖曳已擁有的裝備到鍛造台，或按下衝星；每次消耗 1 把鐵鎚。最高 5 星，0～1 星失敗不降級，2 星以上失敗下降 1 星。',
+    forgeStation: '裝備鍛造台',
+    forgeDrag: '將裝備拖曳到這裡衝星',
+    forgeHammerCount: '鍛造鐵鎚',
+    forgeNeedsHammer: '需要 1 把鍛造鐵鎚',
+    dailyTraining: '每日 RTL 修練',
+    dailyCheckIn: '簽到領 50 金幣',
+    checkedIn: '今日已簽到',
+    streak: '連續簽到',
+    streakReward: '第 7 天加碼 150 金幣與 1 把鐵鎚',
+    dailyQuest: '今日複習題',
+    dailyQuestReward: '通過可領 80 金幣',
+    dailyQuestDone: '今日獎勵已領取',
+    goDailyQuest: '前往挑戰',
+    dailyReviewMode: '每日重做模式',
+    dailyReviewModeBody:
+      '從 Starter code 重新開始；這份草稿不會覆蓋原答案。已完成題目的提示、Golden 與推演卡在本次複習中暫時關閉。',
     level: '階',
     fourRoots: '四靈根已解鎖',
     activeElement: '出戰屬性',
@@ -613,7 +669,7 @@ const copy = {
     shopEquipment: 'Buy equipment',
     learningTools: 'Learning tools',
     starterTools:
-      'Starter supply: 20 Debug Visors, 20 Timing Crystals, and 50 Chip Companions. Challenge unlocks are permanent.',
+      'Starter supply: 20 Debug Visors, 20 Timing Crystals, and 50 Chip Companions. Forge Hammers are sold or dropped by bosses.',
     quantity: 'Owned',
     useTool: 'Use one',
     unlockedAid: 'Unlocked for this challenge',
@@ -644,7 +700,23 @@ const copy = {
     divineGear: 'Five-star Divine Gear',
     maxStars: 'Maximum star level',
     forgeNotice:
-      'Maximum 5 stars. Failures at 0–1 stars are protected; failures at 2+ stars lose one star. Stars only improve visuals and battle effects, never judging or hints.',
+      'Drag owned gear onto the forge or use its upgrade button. Each attempt consumes one hammer. Maximum 5 stars; failures at 0–1 are protected and failures at 2+ lose one star.',
+    forgeStation: 'Equipment forge',
+    forgeDrag: 'Drag owned gear here to upgrade it',
+    forgeHammerCount: 'Forge Hammers',
+    forgeNeedsHammer: 'One Forge Hammer required',
+    dailyTraining: 'Daily RTL training',
+    dailyCheckIn: 'Check in for 50 coins',
+    checkedIn: 'Checked in today',
+    streak: 'Check-in streak',
+    streakReward: 'Day 7 adds 150 coins and one hammer',
+    dailyQuest: 'Daily review',
+    dailyQuestReward: 'Pass it for 80 coins',
+    dailyQuestDone: 'Daily reward claimed',
+    goDailyQuest: 'Go to challenge',
+    dailyReviewMode: 'Daily fresh-start mode',
+    dailyReviewModeBody:
+      'Start again from the starter code. This temporary draft never overwrites your saved answer; hints, Golden behavior, and reasoning cards stay hidden when reviewing a solved challenge.',
     level: 'Lv.',
     fourRoots: 'Four Roots unlocked',
     activeElement: 'Active element',
@@ -824,7 +896,7 @@ const consumableCatalog: Record<
   ConsumableId,
   {
     icon: EquipmentIconId;
-    artwork: { src: string };
+    artwork?: { src: string };
     cost: number;
     name: { zh: string; en: string };
     effect: { zh: string; en: string };
@@ -858,6 +930,15 @@ const consumableCatalog: Record<
     effect: {
       zh: '每次消耗 1 個，永久解鎖下一層提示。',
       en: 'Spend one to permanently unlock the next hint layer.',
+    },
+  },
+  hammer: {
+    icon: 'hammer',
+    cost: 220,
+    name: { zh: '鍛造鐵鎚', en: 'Forge Hammer' },
+    effect: {
+      zh: '每次裝備衝星消耗 1 把；高階 BOSS 也可能掉落。',
+      en: 'Consumed by each gear upgrade; advanced bosses may also drop it.',
     },
   },
 };
@@ -905,7 +986,6 @@ const elementCatalog: Record<
 };
 
 const elementUpgradeCost = (level: number) => Math.min(500, 260 + level * 80);
-const equipmentUpgradeCost = (stars: number) => Math.min(500, 180 + stars * 70);
 const equipmentUpgradeChance = [1, 0.8, 0.65, 0.45, 0.3] as const;
 const equipmentUpgradeRate = (stars: number) =>
   equipmentUpgradeChance[Math.min(4, Math.max(0, stars))] ?? 0;
@@ -935,6 +1015,7 @@ function EquipmentIcon({
     scan: ScanLine,
     book: BookOpenCheck,
     battery: BatteryCharging,
+    hammer: Hammer,
   };
   const Icon = icons[id];
   return <Icon className={className} aria-hidden="true" />;
@@ -1285,7 +1366,11 @@ function AidUnlockCard({
   return (
     <div className="mt-4 flex flex-col gap-3 rounded-xl border border-dashed border-primary/30 bg-primary/[0.035] p-3 sm:flex-row sm:items-center">
       <div className="equipment-shop-icon shrink-0">
-        <EquipmentArtwork src={item.artwork.src} />
+        {item.artwork ? (
+          <EquipmentArtwork src={item.artwork.src} />
+        ) : (
+          <EquipmentIcon id={item.icon} className="equipment-shop-main-icon" />
+        )}
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold">{item.name[locale]}</p>
@@ -1308,45 +1393,6 @@ function AidUnlockCard({
   );
 }
 
-const logicStartingPoint: Record<TrackId, { zh: string; en: string }> = {
-  rtl: {
-    zh: '先分清楚組合邏輯與時序狀態；組合邏輯完整賦值，狀態只在 clock edge 更新。',
-    en: 'Separate combinational decisions from clocked state; fully assign combinational outputs and update state only on clock edges.',
-  },
-  cdc: {
-    zh: '先判斷跨域的是 level、pulse 或多位元資料；只有單位元控制能直接使用 2-FF synchronizer。',
-    en: 'Classify the crossing as a level, pulse, or multi-bit payload; only a single-bit control may directly use a 2-FF synchronizer.',
-  },
-  timing: {
-    zh: '沿著 launch edge、組合路徑與 capture edge 推一遍，再分別判斷 setup 與 hold。',
-    en: 'Trace launch edge, combinational path, and capture edge before separating setup from hold reasoning.',
-  },
-  'cpu-cache': {
-    zh: '先列出目前狀態、命中／相依條件與優先序，再決定 stall、flush、替換或回應。',
-    en: 'List current state, hit/dependency conditions, and priority before deciding stall, flush, replacement, or response.',
-  },
-  soc: {
-    zh: '先定義一次 transfer 的成立條件，再確認資料、valid／ready、位址與回應是否屬於同一筆交易。',
-    en: 'Define exactly when a transfer occurs, then keep data, valid/ready, address, and response aligned to the same transaction.',
-  },
-  verification: {
-    zh: '先定義可觀察的 expected result，再用 transaction ID、latency 或順序把 actual 對齊。',
-    en: 'Define an observable expected result, then align actual behavior by transaction ID, latency, or ordering.',
-  },
-  ppa: {
-    zh: '先保持功能等價，再比較運算子、位寬、暫存器與共享資源造成的結構差異。',
-    en: 'Preserve functional equivalence first, then compare operators, widths, registers, and resource sharing.',
-  },
-  dft: {
-    zh: '先區分 functional mode 與 test mode，再確認控制性、可觀察性及 reset／scan 優先序。',
-    en: 'Separate functional and test modes, then check controllability, observability, and reset/scan priority.',
-  },
-  'low-power': {
-    zh: '先列 power state 與合法轉移，再檢查 save、isolation、power、restore 的先後關係。',
-    en: 'List power states and legal transitions, then check the order of save, isolation, power, and restore.',
-  },
-};
-
 function LogicBriefCard({
   challenge,
   locale,
@@ -1354,14 +1400,19 @@ function LogicBriefCard({
   challenge: Challenge;
   locale: Locale;
 }) {
-  const contract = challenge.specs
-    .slice(0, 2)
-    .map((item) => localize(item, locale))
-    .join(' ');
-  const checks = challenge.testGroups
-    .slice(0, 3)
-    .map((item) => localize(item, locale))
-    .join(' · ');
+  const verificationFallback = {
+    zh: `至少逐項檢查：${challenge.testGroups
+      .map((item) => localize(item, 'zh'))
+      .join('、')}。`,
+    en: `Check each of these explicitly: ${challenge.testGroups
+      .map((item) => localize(item, 'en'))
+      .join(', ')}.`,
+  };
+  const steps = [
+    challenge.hints[0] ?? challenge.specs[0],
+    challenge.hints[1] ?? challenge.specs[1] ?? challenge.specs[0],
+    challenge.hints[2] ?? verificationFallback,
+  ];
   return (
     <section
       className="logic-brief-card mt-4"
@@ -1376,12 +1427,14 @@ function LogicBriefCard({
         </span>
       </div>
       <dl>
-        <dt>{locale === 'zh' ? '推演起點' : 'Starting point'}</dt>
-        <dd>{logicStartingPoint[challenge.track][locale]}</dd>
-        <dt>{locale === 'zh' ? '必守契約' : 'Required contract'}</dt>
-        <dd>{contract}</dd>
-        <dt>{locale === 'zh' ? '驗證焦點' : 'Verification focus'}</dt>
-        <dd>{checks}</dd>
+        <dt>{locale === 'zh' ? '① 先畫出關係' : '① Draw the relationship'}</dt>
+        <dd>{localize(steps[0], locale)}</dd>
+        <dt>
+          {locale === 'zh' ? '② 再逐拍推導' : '② Trace it cycle by cycle'}
+        </dt>
+        <dd>{localize(steps[1], locale)}</dd>
+        <dt>{locale === 'zh' ? '③ 最後驗證' : '③ Verify the result'}</dt>
+        <dd>{localize(steps[2], locale)}</dd>
       </dl>
     </section>
   );
@@ -1422,6 +1475,7 @@ export default function Home() {
     before: number;
     after: number;
   } | null>(null);
+  const [forgeDragActive, setForgeDragActive] = useState(false);
   const [resaleCredits, setResaleCredits] = useState(0);
   const [consumables, setConsumables] = useState<ConsumableInventory>({
     ...starterConsumables,
@@ -1436,6 +1490,15 @@ export default function Home() {
   });
   const [equippedElement, setEquippedElement] = useState<ElementLoadout>(null);
   const [elementSpend, setElementSpend] = useState(0);
+  const [todayKey, setTodayKey] = useState('');
+  const [dailyProgress, setDailyProgress] = useState<DailyProgress>({
+    ...emptyDailyProgress,
+  });
+  const [dailyReview, setDailyReview] = useState<{
+    date: string;
+    challengeId: string;
+    draft: string;
+  } | null>(null);
   const [mascotPanel, setMascotPanel] = useState<'backpack' | 'shop'>(
     'backpack',
   );
@@ -1454,6 +1517,7 @@ export default function Home() {
   const storageLoaded = useRef(false);
   const current =
     challenges.find((item) => item.id === selectedId) ?? challenges[0];
+  const dailyChallenge = dailyChallengeFor(todayKey || '2026-01-01');
   const context = learningContext[current.id];
   const goldenPattern = goldenPatterns[current.id];
   const socLearningAid = socLearningAids[current.id];
@@ -1462,7 +1526,12 @@ export default function Home() {
     () => formatCodeForEditor(current.starter, current.language),
     [current.starter, current.language],
   );
-  const code = solutions[current.id] ?? starterCode;
+  const dailyReviewActive =
+    dailyReview?.date === todayKey && dailyReview.challengeId === current.id;
+  const dailyReviewNoAids = dailyReviewActive && solved.includes(current.id);
+  const code = dailyReviewActive
+    ? dailyReview.draft
+    : (solutions[current.id] ?? starterCode);
   const referenceCode = useMemo(
     () =>
       current.referenceSolution ??
@@ -1503,8 +1572,26 @@ export default function Home() {
     }
   }, []);
 
+  const awardDailyQuest = useCallback(
+    (id: string) => {
+      if (!todayKey || id !== dailyChallenge.id) return;
+      setDailyProgress((previous) => {
+        if (previous.questDate === todayKey && previous.questClaimed === true)
+          return previous;
+        return {
+          ...previous,
+          questDate: todayKey,
+          questClaimed: true,
+          rewardCredits: previous.rewardCredits + 80,
+        };
+      });
+    },
+    [dailyChallenge.id, todayKey],
+  );
+
   const markSolved = useCallback(
     (id: string) => {
+      awardDailyQuest(id);
       if (solved.includes(id)) return false;
       const solvedChallenge = challenges.find((item) => item.id === id);
       const next = [...solved, id];
@@ -1555,7 +1642,7 @@ export default function Home() {
       }
       return true;
     },
-    [ownedEquipment, solved],
+    [awardDailyQuest, ownedEquipment, solved],
   );
 
   const selectChallenge = useCallback(
@@ -1575,6 +1662,7 @@ export default function Home() {
       setDropReward(null);
       setEstimating(false);
       setSelectedId(id);
+      setDailyReview(null);
       setResult(null);
       setWaveforms({ current: '', golden: '' });
       setAreaResult(null);
@@ -1599,6 +1687,7 @@ export default function Home() {
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
+      setTodayKey(localDateKey(new Date()));
       const savedLocale = browserStorage.getItem(
         storageKeys.locale,
       ) as Locale | null;
@@ -1645,6 +1734,9 @@ export default function Home() {
       const savedEquippedElement = browserStorage.getItem(
         storageKeys.equippedElement,
       );
+      const savedDailyProgress = browserStorage.getItem(
+        storageKeys.dailyProgress,
+      );
       if (savedLocale === 'zh' || savedLocale === 'en') setLocale(savedLocale);
       if (savedMascotGender === 'masculine' || savedMascotGender === 'feminine')
         setMascotGender(savedMascotGender);
@@ -1673,6 +1765,9 @@ export default function Home() {
         );
         const parsedEquipmentStars: unknown = JSON.parse(
           savedEquipmentStars ?? JSON.stringify(emptyEquipmentStars),
+        );
+        const parsedDailyProgress: unknown = JSON.parse(
+          savedDailyProgress ?? JSON.stringify(emptyDailyProgress),
         );
         if (Array.isArray(parsedSolved))
           setSolved([
@@ -1772,6 +1867,25 @@ export default function Home() {
               { ...emptyEquipmentStars },
             ),
           );
+        }
+        if (
+          parsedDailyProgress &&
+          typeof parsedDailyProgress === 'object' &&
+          !Array.isArray(parsedDailyProgress)
+        ) {
+          const saved = parsedDailyProgress as Partial<DailyProgress>;
+          setDailyProgress({
+            lastCheckIn:
+              typeof saved.lastCheckIn === 'string' ? saved.lastCheckIn : '',
+            streak: Math.max(0, Math.floor(Number(saved.streak) || 0)),
+            rewardCredits: Math.max(
+              0,
+              Math.floor(Number(saved.rewardCredits) || 0),
+            ),
+            questDate:
+              typeof saved.questDate === 'string' ? saved.questDate : '',
+            questClaimed: saved.questClaimed === true,
+          });
         }
         const parsedEnhancementSpend = Number(savedEnhancementSpend);
         if (
@@ -1898,7 +2012,7 @@ export default function Home() {
         /* Ignore malformed saved data without overwriting it. */
       }
       storageLoaded.current = true;
-      browserStorage.setItem(storageKeys.schemaVersion, '4');
+      browserStorage.setItem(storageKeys.schemaVersion, '5');
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
@@ -1993,6 +2107,13 @@ export default function Home() {
         equippedElement ?? '',
       );
   }, [equippedElement]);
+  useEffect(() => {
+    if (storageLoaded.current)
+      browserStorage.setItem(
+        storageKeys.dailyProgress,
+        JSON.stringify(dailyProgress),
+      );
+  }, [dailyProgress]);
   useEffect(() => {
     if (!storageLoaded.current) return;
     const timer = window.setTimeout(() => {
@@ -2253,9 +2374,15 @@ export default function Home() {
     }
     if (areaResult) setAreaResult(null);
     if (areaError) setAreaError('');
-    setSolutions((previous) => {
-      return { ...previous, [current.id]: next };
-    });
+    if (dailyReviewActive) {
+      setDailyReview((previous) =>
+        previous ? { ...previous, draft: next } : previous,
+      );
+    } else {
+      setSolutions((previous) => {
+        return { ...previous, [current.id]: next };
+      });
+    }
     if (result) setResult(null);
     if (waveforms.current || waveforms.golden)
       setWaveforms({ current: '', golden: '' });
@@ -2483,7 +2610,10 @@ export default function Home() {
   ) as Record<UnlockableProfession, { count: number; unlocked: boolean }>;
   const spentPoints =
     equipmentSpend + elementSpend + consumableSpend + enhancementSpend;
-  const walletPoints = Math.max(0, points - spentPoints + resaleCredits);
+  const walletPoints = Math.max(
+    0,
+    points - spentPoints + resaleCredits + dailyProgress.rewardCredits,
+  );
   const progress = Math.round((solved.length / challenges.length) * 100);
   const mascotStage = mascotStageFor(points);
   const activeMascotProfession =
@@ -2539,6 +2669,48 @@ export default function Home() {
   const revealedHints = aidUnlocks.hints[current.id] ?? 0;
   const logicUnlocked = aidUnlocks.logic.includes(current.id);
   const goldenUnlocked = aidUnlocks.golden.includes(current.id);
+  const checkedInToday =
+    Boolean(todayKey) && dailyProgress.lastCheckIn === todayKey;
+  const dailyQuestClaimed =
+    Boolean(todayKey) &&
+    dailyProgress.questDate === todayKey &&
+    dailyProgress.questClaimed;
+  const streakCycleDay =
+    dailyProgress.streak === 0 ? 0 : ((dailyProgress.streak - 1) % 7) + 1;
+
+  const claimDailyCheckIn = () => {
+    if (!todayKey || checkedInToday) return;
+    const currentOrdinal = dateOrdinal(todayKey);
+    const previousOrdinal = dateOrdinal(dailyProgress.lastCheckIn);
+    const nextStreak =
+      Number.isFinite(previousOrdinal) && currentOrdinal - previousOrdinal === 1
+        ? dailyProgress.streak + 1
+        : 1;
+    const milestone = nextStreak % 7 === 0;
+    setDailyProgress((previous) => ({
+      ...previous,
+      lastCheckIn: todayKey,
+      streak: nextStreak,
+      rewardCredits: previous.rewardCredits + 50 + (milestone ? 150 : 0),
+    }));
+    if (milestone)
+      setConsumables((previous) => ({
+        ...previous,
+        hammer: previous.hammer + 1,
+      }));
+  };
+
+  const startDailyReview = () => {
+    selectChallenge(dailyChallenge.id);
+    setDailyReview({
+      date: todayKey,
+      challengeId: dailyChallenge.id,
+      draft: formatCodeForEditor(
+        dailyChallenge.starter,
+        dailyChallenge.language,
+      ),
+    });
+  };
 
   const buyEquipment = (id: EquipmentId) => {
     if (ownedEquipment.includes(id) || walletPoints < equipmentCatalog[id].cost)
@@ -2566,13 +2738,22 @@ export default function Home() {
     if (!ownedEquipment.includes(id)) return;
     const before = equipmentStars[id];
     if (before >= 5) return;
-    const cost = equipmentUpgradeCost(before);
-    if (walletPoints < cost) return;
+    if (consumables.hammer < 1) return;
     const success = rollEquipmentUpgrade(before);
     const after = success ? before + 1 : before >= 2 ? before - 1 : before;
-    setEnhancementSpend((previous) => previous + cost);
+    setConsumables((previous) => ({
+      ...previous,
+      hammer: Math.max(0, previous.hammer - 1),
+    }));
     setEquipmentStars((previous) => ({ ...previous, [id]: after }));
     setEnhancementOutcome({ id, success, before, after });
+  };
+
+  const forgeEquipmentDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setForgeDragActive(false);
+    const id = event.dataTransfer.getData('application/x-equipment-id');
+    if (id && id in equipmentCatalog) enhanceEquipment(id as EquipmentId);
   };
 
   const buyConsumable = (id: ConsumableId) => {
@@ -2850,6 +3031,56 @@ export default function Home() {
               </span>
             </div>
             <Progress value={progress} className="h-1.5" />
+            <section
+              className="daily-training-card mt-3"
+              aria-label={text.dailyTraining}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5 text-xs font-semibold">
+                  <Gift className="size-3.5 text-amber-500" />
+                  {text.dailyTraining}
+                </span>
+                <span className="font-mono text-[10px] text-muted-foreground">
+                  {text.streak} {dailyProgress.streak} ({streakCycleDay}/7)
+                </span>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-2 w-full justify-center"
+                disabled={!todayKey || checkedInToday}
+                onClick={claimDailyCheckIn}
+              >
+                <Coins />
+                {checkedInToday ? text.checkedIn : text.dailyCheckIn}
+              </Button>
+              <p className="mt-1 text-[10px] leading-4 text-muted-foreground">
+                {text.streakReward}
+              </p>
+              <div className="mt-2 border-t border-sidebar-border pt-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">
+                  {text.dailyQuest}
+                </p>
+                <p className="mt-1 line-clamp-2 text-xs font-medium leading-4">
+                  {localize(dailyChallenge.title, locale)}
+                </p>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <span className="text-[10px] text-muted-foreground">
+                    {dailyQuestClaimed
+                      ? text.dailyQuestDone
+                      : text.dailyQuestReward}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={startDailyReview}
+                    disabled={!todayKey}
+                    className="text-[10px] font-semibold text-primary hover:underline disabled:opacity-50"
+                  >
+                    {text.goDailyQuest}
+                  </button>
+                </div>
+              </div>
+            </section>
             <div className="mt-3 overflow-hidden rounded-xl border border-sidebar-border bg-sidebar-accent">
               <div className="grid grid-cols-[70px_minmax(0,1fr)] items-center gap-3 p-2.5">
                 <MascotAvatar
@@ -3011,7 +3242,7 @@ export default function Home() {
                             <p className="mb-3 text-xs leading-5 text-muted-foreground">
                               {text.starterTools}
                             </p>
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                               {(
                                 Object.keys(consumableCatalog) as ConsumableId[]
                               ).map((id) => {
@@ -3022,9 +3253,16 @@ export default function Home() {
                                     className="rounded-xl border border-border bg-muted/25 p-2 text-center"
                                   >
                                     <div className="equipment-shop-icon mx-auto">
-                                      <EquipmentArtwork
-                                        src={item.artwork.src}
-                                      />
+                                      {item.artwork ? (
+                                        <EquipmentArtwork
+                                          src={item.artwork.src}
+                                        />
+                                      ) : (
+                                        <EquipmentIcon
+                                          id={item.icon}
+                                          className="equipment-shop-main-icon"
+                                        />
+                                      )}
                                     </div>
                                     <span className="mt-1 block text-[11px] font-semibold leading-4">
                                       {item.name[locale]}
@@ -3180,7 +3418,7 @@ export default function Home() {
                             <p className="mb-3 text-xs leading-5 text-muted-foreground">
                               {text.starterTools}
                             </p>
-                            <div className="grid gap-2 sm:grid-cols-3">
+                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                               {(
                                 Object.keys(consumableCatalog) as ConsumableId[]
                               ).map((id) => {
@@ -3191,9 +3429,16 @@ export default function Home() {
                                     className="rounded-xl border border-border p-3"
                                   >
                                     <div className="equipment-shop-icon mx-auto">
-                                      <EquipmentArtwork
-                                        src={item.artwork.src}
-                                      />
+                                      {item.artwork ? (
+                                        <EquipmentArtwork
+                                          src={item.artwork.src}
+                                        />
+                                      ) : (
+                                        <EquipmentIcon
+                                          id={item.icon}
+                                          className="equipment-shop-main-icon"
+                                        />
+                                      )}
                                     </div>
                                     <p className="mt-2 text-center text-sm font-semibold">
                                       {item.name[locale]}
@@ -3226,6 +3471,38 @@ export default function Home() {
                             <p className="mb-3 rounded-lg border border-amber-300/60 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-900 dark:text-amber-100">
                               {text.forgeNotice}
                             </p>
+                            <div
+                              className={`forge-station mb-3 ${forgeDragActive ? 'is-drag-active' : ''}`}
+                              onDragEnter={(event) => {
+                                event.preventDefault();
+                                setForgeDragActive(true);
+                              }}
+                              onDragOver={(event) => event.preventDefault()}
+                              onDragLeave={(event) => {
+                                if (
+                                  !event.currentTarget.contains(
+                                    event.relatedTarget as Node,
+                                  )
+                                )
+                                  setForgeDragActive(false);
+                              }}
+                              onDrop={forgeEquipmentDrop}
+                            >
+                              <span className="forge-hammer-icon">
+                                <Hammer aria-hidden="true" />
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <strong className="block text-sm">
+                                  {text.forgeStation}
+                                </strong>
+                                <span className="block text-xs text-muted-foreground">
+                                  {text.forgeDrag}
+                                </span>
+                              </span>
+                              <span className="rounded-full bg-card px-2 py-1 font-mono text-xs font-semibold">
+                                {text.forgeHammerCount} × {consumables.hammer}
+                              </span>
+                            </div>
                             {enhancementOutcome && (
                               <output
                                 className={`mb-3 block rounded-lg px-3 py-2 text-xs font-semibold ${enhancementOutcome.success ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-200' : 'bg-rose-500/10 text-rose-800 dark:text-rose-200'}`}
@@ -3251,7 +3528,6 @@ export default function Home() {
                                 const item = equipmentCatalog[id];
                                 const owned = ownedEquipment.includes(id);
                                 const stars = equipmentStars[id];
-                                const forgeCost = equipmentUpgradeCost(stars);
                                 const forgeRate = Math.round(
                                   equipmentUpgradeRate(stars) * 100,
                                 );
@@ -3259,6 +3535,15 @@ export default function Home() {
                                   <div
                                     key={id}
                                     className="rounded-xl border border-border p-3"
+                                    draggable={owned}
+                                    onDragStart={(event) => {
+                                      event.dataTransfer.effectAllowed = 'move';
+                                      event.dataTransfer.setData(
+                                        'application/x-equipment-id',
+                                        id,
+                                      );
+                                    }}
+                                    onDragEnd={() => setForgeDragActive(false)}
                                   >
                                     <div
                                       className={`equipment-shop-icon equipment-${item.profession}`}
@@ -3296,15 +3581,19 @@ export default function Home() {
                                           variant="outline"
                                           size="sm"
                                           disabled={
-                                            stars >= 5 ||
-                                            walletPoints < forgeCost
+                                            stars >= 5 || consumables.hammer < 1
+                                          }
+                                          title={
+                                            consumables.hammer < 1
+                                              ? text.forgeNeedsHammer
+                                              : undefined
                                           }
                                           onClick={() => enhanceEquipment(id)}
                                         >
                                           <Star />{' '}
                                           {stars >= 5
                                             ? text.maxStars
-                                            : `${text.forge} · ${forgeCost}`}
+                                            : `${text.forge} · ×1`}
                                         </Button>
                                         <Button
                                           variant="outline"
@@ -3467,6 +3756,12 @@ export default function Home() {
               <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
                 {localize(current.title, locale)}
               </h2>
+              {dailyReviewActive && (
+                <div className="mt-3 rounded-lg border border-violet-300/60 bg-violet-500/10 px-3 py-2 text-xs leading-5 text-violet-900 dark:text-violet-100">
+                  <strong>{text.dailyReviewMode}：</strong>{' '}
+                  {text.dailyReviewModeBody}
+                </div>
+              )}
               <p className="mt-1 font-mono text-xs text-muted-foreground">
                 {current.id}
               </p>
@@ -3501,10 +3796,10 @@ export default function Home() {
                 ))}
               </ul>
             </div>
-            {socLearningAid && (
+            {socLearningAid && !dailyReviewNoAids && (
               <SocInterfaceGuide aid={socLearningAid} locale={locale} />
             )}
-            {!logicUnlocked && (
+            {!dailyReviewNoAids && !logicUnlocked && (
               <AidUnlockCard
                 id="crystal"
                 count={consumables.crystal}
@@ -3512,47 +3807,51 @@ export default function Home() {
                 onUnlock={unlockLogicAid}
               />
             )}
-            {current.id === 'soc-stream-register-slice' && logicUnlocked && (
-              <section
-                className="elastic-buffer-guide mt-4"
-                aria-label={
-                  locale === 'zh'
-                    ? '一格彈性緩衝邏輯'
-                    : 'One-entry elastic buffer logic'
-                }
-              >
-                <div className="elastic-buffer-flow" aria-hidden="true">
-                  <span>
-                    {locale === 'zh' ? '上游' : 'Source'}
-                    <code>s_valid / s_data</code>
-                  </span>
-                  <ArrowRight className="size-4" />
-                  <span>
-                    {locale === 'zh' ? '一格座位' : '1-entry seat'}
-                    <code>m_valid / m_data</code>
-                  </span>
-                  <ArrowRight className="size-4" />
-                  <span>
-                    {locale === 'zh' ? '下游' : 'Sink'}
-                    <code>m_ready</code>
-                  </span>
-                </div>
-                <div className="elastic-buffer-rules">
-                  <code>push = s_valid &amp;&amp; s_ready</code>
-                  <code>pop = m_valid &amp;&amp; m_ready</code>
-                  <code>s_ready = !m_valid || m_ready</code>
-                </div>
-                <p>
-                  {locale === 'zh'
-                    ? 'm_valid=0 是 EMPTY；push 後變 FULL。FULL 只 pop 會回 EMPTY；pop 與 push 同拍發生則仍為 FULL，舊資料直接換成新資料。下游卡住時 s_ready=0，m_valid 與 m_data 必須保持不變。'
-                    : 'm_valid=0 means EMPTY; a push makes it FULL. A pop without a push returns to EMPTY. A simultaneous pop and push stays FULL and replaces the old word. While the sink stalls, s_ready=0 and both m_valid and m_data must remain stable.'}
-                </p>
-              </section>
-            )}
-            {current.id !== 'soc-stream-register-slice' && logicUnlocked && (
-              <LogicBriefCard challenge={current} locale={locale} />
-            )}
-            {goldenPattern && !goldenUnlocked && (
+            {current.id === 'soc-stream-register-slice' &&
+              logicUnlocked &&
+              !dailyReviewNoAids && (
+                <section
+                  className="elastic-buffer-guide mt-4"
+                  aria-label={
+                    locale === 'zh'
+                      ? '一格彈性緩衝邏輯'
+                      : 'One-entry elastic buffer logic'
+                  }
+                >
+                  <div className="elastic-buffer-flow" aria-hidden="true">
+                    <span>
+                      {locale === 'zh' ? '上游' : 'Source'}
+                      <code>s_valid / s_data</code>
+                    </span>
+                    <ArrowRight className="size-4" />
+                    <span>
+                      {locale === 'zh' ? '一格座位' : '1-entry seat'}
+                      <code>m_valid / m_data</code>
+                    </span>
+                    <ArrowRight className="size-4" />
+                    <span>
+                      {locale === 'zh' ? '下游' : 'Sink'}
+                      <code>m_ready</code>
+                    </span>
+                  </div>
+                  <div className="elastic-buffer-rules">
+                    <code>push = s_valid &amp;&amp; s_ready</code>
+                    <code>pop = m_valid &amp;&amp; m_ready</code>
+                    <code>s_ready = !m_valid || m_ready</code>
+                  </div>
+                  <p>
+                    {locale === 'zh'
+                      ? 'm_valid=0 是 EMPTY；push 後變 FULL。FULL 只 pop 會回 EMPTY；pop 與 push 同拍發生則仍為 FULL，舊資料直接換成新資料。下游卡住時 s_ready=0，m_valid 與 m_data 必須保持不變。'
+                      : 'm_valid=0 means EMPTY; a push makes it FULL. A pop without a push returns to EMPTY. A simultaneous pop and push stays FULL and replaces the old word. While the sink stalls, s_ready=0 and both m_valid and m_data must remain stable.'}
+                  </p>
+                </section>
+              )}
+            {current.id !== 'soc-stream-register-slice' &&
+              logicUnlocked &&
+              !dailyReviewNoAids && (
+                <LogicBriefCard challenge={current} locale={locale} />
+              )}
+            {goldenPattern && !goldenUnlocked && !dailyReviewNoAids && (
               <AidUnlockCard
                 id="visor"
                 count={consumables.visor}
@@ -3560,7 +3859,7 @@ export default function Home() {
                 onUnlock={unlockGoldenAid}
               />
             )}
-            {goldenPattern && goldenUnlocked && (
+            {goldenPattern && goldenUnlocked && !dailyReviewNoAids && (
               <section
                 className="golden-pattern mt-4 border-t border-border pt-4"
                 aria-labelledby="golden-pattern-title"
@@ -3685,20 +3984,22 @@ export default function Home() {
                   )}
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={unlockNextHint}
-                    disabled={revealedHints >= 3 || consumables.drone < 1}
-                    className="flex items-center gap-2 text-sm font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Lightbulb className="size-4" />
-                    {revealedHints >= 3
-                      ? text.unlockedAid
-                      : `${consumableCatalog.drone.name[locale]} × ${consumables.drone}`}
-                    <ChevronDown
-                      className={`size-4 transition-transform ${revealedHints > 0 ? 'rotate-180' : ''}`}
-                    />
-                  </button>
+                  {!dailyReviewNoAids && (
+                    <button
+                      type="button"
+                      onClick={unlockNextHint}
+                      disabled={revealedHints >= 3 || consumables.drone < 1}
+                      className="flex items-center gap-2 text-sm font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Lightbulb className="size-4" />
+                      {revealedHints >= 3
+                        ? text.unlockedAid
+                        : `${consumableCatalog.drone.name[locale]} × ${consumables.drone}`}
+                      <ChevronDown
+                        className={`size-4 transition-transform ${revealedHints > 0 ? 'rotate-180' : ''}`}
+                      />
+                    </button>
+                  )}
                   {current.judge !== 'interactive' && (
                     <Button
                       size="sm"
@@ -3726,7 +4027,7 @@ export default function Home() {
                     </Badge>
                   )}
                 </div>
-                {revealedHints > 0 && (
+                {revealedHints > 0 && !dailyReviewNoAids && (
                   <ol className="mt-3 space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
                     {hintLayers.slice(0, revealedHints).map((hint, index) => (
                       <li key={index}>

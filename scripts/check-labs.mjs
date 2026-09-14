@@ -152,8 +152,8 @@ verify(
   'Starter profiles receive 20 visors, 20 crystals, and 50 companions',
 );
 verify(
-  /schemaVersion,\s*'4'/.test(pageSource) && /normalized - 30/.test(pageSource),
-  'Schema v4 migrates the original visor and crystal starter grant',
+  /schemaVersion,\s*'5'/.test(pageSource) && /normalized - 30/.test(pageSource),
+  'Schema v5 preserves the original starter-grant migration',
 );
 verify(
   /Math\.floor\(equipmentCatalog\[id\]\.cost \/ 2\)/.test(pageSource),
@@ -162,13 +162,35 @@ verify(
 verify(
   /equipmentUpgradeChance\s*=\s*\[1, 0\.8, 0\.65, 0\.45, 0\.3\]/.test(
     pageSource,
-  ) && /before >= 2 \? before - 1 : before/.test(pageSource),
-  'Equipment star upgrades use declining odds and protected low-star failures',
+  ) &&
+    /before >= 2 \? before - 1 : before/.test(pageSource) &&
+    /hammer: Math\.max\(0, previous\.hammer - 1\)/.test(pageSource) &&
+    /application\/x-equipment-id/.test(pageSource),
+  'Equipment forging supports drag/drop and consumes a hammer with protected low stars',
 );
 verify(
-  /<LogicBriefCard challenge=\{current\} locale=\{locale\}/.test(pageSource) &&
-    /\{!logicUnlocked && \(/.test(pageSource),
-  'Timing Crystal logic briefs are available for every challenge',
+  /dailyProgress:\s*'soc-rtl-lab:daily-progress'/.test(pageSource) &&
+    /rewardCredits: previous\.rewardCredits \+ 50 \+ \(milestone \? 150 : 0\)/.test(
+      pageSource,
+    ) &&
+    /previous\.rewardCredits \+ 80/.test(pageSource),
+  'Daily check-in, seven-day milestone, and rotating RTL review rewards persist locally',
+);
+verify(
+  /dailyReviewActive\s*\?\s*dailyReview\.draft/.test(pageSource) &&
+    /setDailyReview\(\{[\s\S]*draft: formatCodeForEditor/.test(pageSource) &&
+    /dailyReviewNoAids/.test(pageSource),
+  'Daily review starts from a temporary fresh draft and hides solved aids',
+);
+verify(
+  /challenge\.hints\[0\]/.test(pageSource) &&
+    /challenge\.hints\[1\]/.test(pageSource) &&
+    /challenge\.hints\[2\]/.test(pageSource) &&
+    /<LogicBriefCard challenge=\{current\} locale=\{locale\}/.test(
+      pageSource,
+    ) &&
+    /!dailyReviewNoAids && !logicUnlocked/.test(pageSource),
+  'Timing Crystal uses each challenge concrete three-step reasoning',
 );
 verify(
   /roll < 0\.62[\s\S]*roll < 0\.77/.test(pageSource),
