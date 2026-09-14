@@ -335,7 +335,11 @@ type EquipmentIconId =
   | 'hammer';
 type ConsumableId = 'visor' | 'crystal' | 'drone' | 'hammer';
 type ConsumableInventory = Record<ConsumableId, number>;
-type EquipmentStars = Record<EquipmentId, number>;
+type EquipmentInstance = {
+  uid: string;
+  id: EquipmentId;
+  stars: number;
+};
 type AidUnlocks = {
   logic: string[];
   golden: string[];
@@ -361,16 +365,6 @@ const emptyElementLevels: ElementLevels = {
   wind: 0,
   earth: 0,
 };
-const emptyEquipmentStars: EquipmentStars = {
-  cpuBlade: 0,
-  cpuShield: 0,
-  socQuiver: 0,
-  socCompass: 0,
-  dftLantern: 0,
-  dftProbe: 0,
-  timingGrimoire: 0,
-  lowPowerCharm: 0,
-};
 const starterConsumables: ConsumableInventory = {
   visor: 20,
   crystal: 20,
@@ -394,6 +388,8 @@ const storageKeys = {
   mascotProfession: 'soc-rtl-lab:mascot-profession',
   ownedEquipment: 'soc-rtl-lab:owned-equipment',
   equippedEquipment: 'soc-rtl-lab:equipped-equipment',
+  equipmentInventory: 'soc-rtl-lab:equipment-inventory',
+  equippedEquipmentUid: 'soc-rtl-lab:equipped-equipment-uid',
   equipmentSpend: 'soc-rtl-lab:equipment-spend',
   equipmentStars: 'soc-rtl-lab:equipment-stars',
   enhancementSpend: 'soc-rtl-lab:enhancement-spend',
@@ -406,6 +402,18 @@ const storageKeys = {
   equippedElement: 'soc-rtl-lab:equipped-element',
   dailyProgress: 'soc-rtl-lab:daily-progress',
 };
+let equipmentUidSerial = 0;
+function createEquipmentInstance(
+  id: EquipmentId,
+  stars = 0,
+): EquipmentInstance {
+  equipmentUidSerial += 1;
+  return {
+    uid: `${id}-${Date.now().toString(36)}-${equipmentUidSerial.toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+    id,
+    stars: Math.min(5, Math.max(0, Math.floor(stars))),
+  };
+}
 // Public collection links/assets may be kept in the client. Never place API
 // credentials or merchant signing secrets in this repository.
 const supportConfig = {
@@ -536,7 +544,7 @@ const copy = {
     resaleValue: '回收價',
     bossDrop: 'BOSS 掉落',
     bossDropBody:
-      '高階與最終 BOSS 首次通關時有機會掉落學習工具或未持有的裝備。',
+      '高階與最終 BOSS 首次通關時有機會掉落學習工具或裝備；同款裝備也能重複取得。',
     buy: '購買',
     equip: '裝備',
     equipped: '使用中',
@@ -558,7 +566,7 @@ const copy = {
     divineGear: '五星神裝',
     maxStars: '已達最高星級',
     forgeNotice:
-      '拖曳已擁有的裝備到鍛造台，或按下衝星；每次消耗 1 把鐵鎚。最高 5 星，0～1 星失敗不降級，2 星以上失敗下降 1 星。',
+      '每件裝備會獨立保存星數。拖曳指定裝備到鍛造台，或按下衝星；每次消耗 1 把鐵鎚。最高 5 星，0～1 星失敗不降級，2 星以上失敗下降 1 星，但裝備本體不會消失。',
     forgeStation: '裝備鍛造台',
     forgeDrag: '將裝備拖曳到這裡衝星',
     forgeHammerCount: '鍛造鐵鎚',
@@ -677,7 +685,7 @@ const copy = {
     resaleValue: 'Resale',
     bossDrop: 'BOSS drop',
     bossDropBody:
-      'Advanced and final bosses may drop learning tools or unowned gear on the first clear.',
+      'Advanced and final bosses may drop learning tools or equipment on the first clear. Duplicate gear can drop.',
     buy: 'Buy',
     equip: 'Equip',
     equipped: 'Equipped',
@@ -700,7 +708,7 @@ const copy = {
     divineGear: 'Five-star Divine Gear',
     maxStars: 'Maximum star level',
     forgeNotice:
-      'Drag owned gear onto the forge or use its upgrade button. Each attempt consumes one hammer. Maximum 5 stars; failures at 0–1 are protected and failures at 2+ lose one star.',
+      'Every copy keeps its own star level. Drag a specific copy onto the forge or use its upgrade button. Each attempt consumes one hammer. Maximum 5 stars; failures at 0–1 are protected and failures at 2+ lose one star, but gear is never destroyed.',
     forgeStation: 'Equipment forge',
     forgeDrag: 'Drag owned gear here to upgrade it',
     forgeHammerCount: 'Forge Hammers',
@@ -1496,15 +1504,16 @@ export default function Home() {
   const [mascotGender, setMascotGender] = useState<MascotGender>('masculine');
   const [mascotProfession, setMascotProfession] =
     useState<MascotProfession>('novice');
-  const [ownedEquipment, setOwnedEquipment] = useState<EquipmentId[]>([]);
-  const [equippedEquipment, setEquippedEquipment] =
-    useState<EquipmentId | null>(null);
+  const [equipmentInventory, setEquipmentInventory] = useState<
+    EquipmentInstance[]
+  >([]);
+  const [equippedEquipmentUid, setEquippedEquipmentUid] = useState<
+    string | null
+  >(null);
   const [equipmentSpend, setEquipmentSpend] = useState(0);
-  const [equipmentStars, setEquipmentStars] = useState<EquipmentStars>({
-    ...emptyEquipmentStars,
-  });
   const [enhancementSpend, setEnhancementSpend] = useState(0);
   const [enhancementOutcome, setEnhancementOutcome] = useState<{
+    uid: string;
     id: EquipmentId;
     success: boolean;
     before: number;
@@ -1654,21 +1663,14 @@ export default function Home() {
         if (roll < 0.62) {
           grantConsumable();
         } else if (roll < 0.77) {
-          const availableEquipment = (
-            Object.keys(equipmentCatalog) as EquipmentId[]
-          ).filter((item) => !ownedEquipment.includes(item));
-          if (availableEquipment.length === 0) {
-            grantConsumable();
-          } else {
-            const item =
-              availableEquipment[
-                Math.floor(Math.random() * availableEquipment.length)
-              ];
-            setOwnedEquipment((previous) =>
-              previous.includes(item) ? previous : [...previous, item],
-            );
-            setDropReward({ kind: 'equipment', id: item });
-          }
+          const equipmentIds = Object.keys(equipmentCatalog) as EquipmentId[];
+          const item =
+            equipmentIds[Math.floor(Math.random() * equipmentIds.length)];
+          setEquipmentInventory((previous) => [
+            ...previous,
+            createEquipmentInstance(item),
+          ]);
+          setDropReward({ kind: 'equipment', id: item });
         } else {
           setDropReward(null);
         }
@@ -1677,7 +1679,7 @@ export default function Home() {
       }
       return true;
     },
-    [awardDailyQuest, ownedEquipment, solved],
+    [awardDailyQuest, solved],
   );
 
   const selectChallenge = useCallback(
@@ -1740,6 +1742,12 @@ export default function Home() {
       const savedEquippedEquipment = browserStorage.getItem(
         storageKeys.equippedEquipment,
       );
+      const savedEquipmentInventory = browserStorage.getItem(
+        storageKeys.equipmentInventory,
+      );
+      const savedEquippedEquipmentUid = browserStorage.getItem(
+        storageKeys.equippedEquipmentUid,
+      );
       const savedEquipmentSpend = browserStorage.getItem(
         storageKeys.equipmentSpend,
       );
@@ -1789,6 +1797,9 @@ export default function Home() {
         const parsedOwnedEquipment: unknown = JSON.parse(
           savedOwnedEquipment ?? '[]',
         );
+        const parsedEquipmentInventory: unknown = JSON.parse(
+          savedEquipmentInventory ?? '[]',
+        );
         const parsedConsumables: unknown = JSON.parse(
           savedConsumables ?? JSON.stringify(starterConsumables),
         );
@@ -1799,7 +1810,7 @@ export default function Home() {
           savedElementLevels ?? JSON.stringify(emptyElementLevels),
         );
         const parsedEquipmentStars: unknown = JSON.parse(
-          savedEquipmentStars ?? JSON.stringify(emptyEquipmentStars),
+          savedEquipmentStars ?? '{}',
         );
         const parsedDailyProgress: unknown = JSON.parse(
           savedDailyProgress ?? JSON.stringify(emptyDailyProgress),
@@ -1814,16 +1825,70 @@ export default function Home() {
               ),
             ),
           ]);
-        if (Array.isArray(parsedOwnedEquipment)) {
-          const migratedOwned = [
-            ...new Set(
-              parsedOwnedEquipment.filter(
-                (id): id is EquipmentId =>
-                  typeof id === 'string' && id in equipmentCatalog,
+        const migratedOwned = Array.isArray(parsedOwnedEquipment)
+          ? [
+              ...new Set(
+                parsedOwnedEquipment.filter(
+                  (id): id is EquipmentId =>
+                    typeof id === 'string' && id in equipmentCatalog,
+                ),
               ),
-            ),
-          ];
-          setOwnedEquipment(migratedOwned);
+            ]
+          : [];
+        const migratedInventory: EquipmentInstance[] = [];
+        const seenEquipmentUids = new Set<string>();
+        if (
+          savedEquipmentInventory !== null &&
+          Array.isArray(parsedEquipmentInventory)
+        ) {
+          parsedEquipmentInventory.forEach((raw) => {
+            if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return;
+            const item = raw as Partial<EquipmentInstance>;
+            if (
+              typeof item.uid !== 'string' ||
+              seenEquipmentUids.has(item.uid) ||
+              typeof item.id !== 'string' ||
+              !(item.id in equipmentCatalog)
+            )
+              return;
+            seenEquipmentUids.add(item.uid);
+            migratedInventory.push({
+              uid: item.uid,
+              id: item.id as EquipmentId,
+              stars: Math.min(
+                5,
+                Math.max(0, Math.floor(Number(item.stars) || 0)),
+              ),
+            });
+          });
+        } else {
+          migratedOwned.forEach((id) => {
+            const legacyStars =
+              parsedEquipmentStars &&
+              typeof parsedEquipmentStars === 'object' &&
+              !Array.isArray(parsedEquipmentStars)
+                ? Number((parsedEquipmentStars as Record<string, unknown>)[id])
+                : 0;
+            migratedInventory.push(
+              createEquipmentInstance(
+                id,
+                Number.isFinite(legacyStars) ? legacyStars : 0,
+              ),
+            );
+          });
+        }
+        setEquipmentInventory(migratedInventory);
+        const restoredEquippedUid =
+          savedEquippedEquipmentUid &&
+          migratedInventory.some(
+            (item) => item.uid === savedEquippedEquipmentUid,
+          )
+            ? savedEquippedEquipmentUid
+            : migratedInventory.find(
+                (item) => item.id === savedEquippedEquipment,
+              )?.uid;
+        setEquippedEquipmentUid(restoredEquippedUid ?? null);
+        {
           const parsedSpend = Number(savedEquipmentSpend);
           if (
             savedEquipmentSpend !== null &&
@@ -1848,7 +1913,10 @@ export default function Home() {
                       Math.max(0, legacyPrices[id] - equipmentCatalog[id].cost),
                     0,
                   ) +
-                  parsedOwnedEquipment.reduce((sum, id) => {
+                  (Array.isArray(parsedOwnedEquipment)
+                    ? parsedOwnedEquipment
+                    : []
+                  ).reduce<number>((sum, id: unknown) => {
                     if (id === 'visor') return sum + 600;
                     if (id === 'crystal') return sum + 900;
                     if (id === 'drone') return sum + 1200;
@@ -1858,8 +1926,8 @@ export default function Home() {
             setEquipmentSpend(Math.max(0, parsedSpend - migrationRefund));
           } else {
             setEquipmentSpend(
-              migratedOwned.reduce(
-                (sum, id) => sum + equipmentCatalog[id].cost,
+              migratedInventory.reduce(
+                (sum, item) => sum + equipmentCatalog[item.id].cost,
                 0,
               ),
             );
@@ -1884,22 +1952,6 @@ export default function Home() {
                 return next;
               },
               { ...starterConsumables },
-            ),
-          );
-        }
-        if (parsedEquipmentStars && typeof parsedEquipmentStars === 'object') {
-          setEquipmentStars(
-            (Object.keys(emptyEquipmentStars) as EquipmentId[]).reduce(
-              (next, id) => {
-                const value = Number(
-                  (parsedEquipmentStars as Record<string, unknown>)[id],
-                );
-                next[id] = Number.isFinite(value)
-                  ? Math.min(5, Math.max(0, Math.floor(value)))
-                  : 0;
-                return next;
-              },
-              { ...emptyEquipmentStars },
             ),
           );
         }
@@ -1956,11 +2008,6 @@ export default function Home() {
           );
           setAidUnlocks({ logic, golden, hints });
         }
-        if (
-          savedEquippedEquipment &&
-          savedEquippedEquipment in equipmentCatalog
-        )
-          setEquippedEquipment(savedEquippedEquipment as EquipmentId);
         if (parsedElementLevels && typeof parsedElementLevels === 'object') {
           const migratedElements = (
             Object.keys(emptyElementLevels) as ElementId[]
@@ -2047,7 +2094,7 @@ export default function Home() {
         /* Ignore malformed saved data without overwriting it. */
       }
       storageLoaded.current = true;
-      browserStorage.setItem(storageKeys.schemaVersion, '5');
+      browserStorage.setItem(storageKeys.schemaVersion, '6');
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
@@ -2067,17 +2114,17 @@ export default function Home() {
   useEffect(() => {
     if (storageLoaded.current)
       browserStorage.setItem(
-        storageKeys.ownedEquipment,
-        JSON.stringify(ownedEquipment),
+        storageKeys.equipmentInventory,
+        JSON.stringify(equipmentInventory),
       );
-  }, [ownedEquipment]);
+  }, [equipmentInventory]);
   useEffect(() => {
     if (storageLoaded.current)
       browserStorage.setItem(
-        storageKeys.equippedEquipment,
-        equippedEquipment ?? '',
+        storageKeys.equippedEquipmentUid,
+        equippedEquipmentUid ?? '',
       );
-  }, [equippedEquipment]);
+  }, [equippedEquipmentUid]);
   useEffect(() => {
     if (storageLoaded.current)
       browserStorage.setItem(
@@ -2085,13 +2132,6 @@ export default function Home() {
         String(equipmentSpend),
       );
   }, [equipmentSpend]);
-  useEffect(() => {
-    if (storageLoaded.current)
-      browserStorage.setItem(
-        storageKeys.equipmentStars,
-        JSON.stringify(equipmentStars),
-      );
-  }, [equipmentStars]);
   useEffect(() => {
     if (storageLoaded.current)
       browserStorage.setItem(
@@ -2656,15 +2696,18 @@ export default function Home() {
     !professionProgress[mascotProfession].unlocked
       ? 'novice'
       : mascotProfession;
+  const equippedEquipment = equipmentInventory.find(
+    (item) => item.uid === equippedEquipmentUid,
+  );
   const activeEquipment =
     equippedEquipment &&
-    ownedEquipment.includes(equippedEquipment) &&
-    (equipmentCatalog[equippedEquipment].profession === 'all' ||
-      equipmentCatalog[equippedEquipment].profession === activeMascotProfession)
-      ? equippedEquipment
+    (equipmentCatalog[equippedEquipment.id].profession === 'all' ||
+      equipmentCatalog[equippedEquipment.id].profession ===
+        activeMascotProfession)
+      ? equippedEquipment.id
       : null;
   const activeEquipmentStars = activeEquipment
-    ? equipmentStars[activeEquipment]
+    ? (equippedEquipment?.stars ?? 0)
     : 0;
   const battleStatus: BattleStatus = running
     ? 'running'
@@ -2748,30 +2791,34 @@ export default function Home() {
   };
 
   const buyEquipment = (id: EquipmentId) => {
-    if (ownedEquipment.includes(id) || walletPoints < equipmentCatalog[id].cost)
-      return;
-    setOwnedEquipment((previous) => [...previous, id]);
+    if (walletPoints < equipmentCatalog[id].cost) return;
+    const instance = createEquipmentInstance(id);
+    setEquipmentInventory((previous) => [...previous, instance]);
     setEquipmentSpend((previous) => previous + equipmentCatalog[id].cost);
     const profession = equipmentCatalog[id].profession;
     if (profession === 'all' || profession === activeMascotProfession) {
-      setEquippedEquipment(id);
+      setEquippedEquipmentUid(instance.uid);
     }
   };
 
-  const sellEquipment = (id: EquipmentId) => {
-    if (!ownedEquipment.includes(id)) return;
-    setOwnedEquipment((previous) => previous.filter((item) => item !== id));
-    if (equippedEquipment === id) setEquippedEquipment(null);
-    setResaleCredits(
-      (previous) => previous + Math.floor(equipmentCatalog[id].cost / 2),
+  const sellEquipment = (uid: string) => {
+    const instance = equipmentInventory.find((item) => item.uid === uid);
+    if (!instance) return;
+    setEquipmentInventory((previous) =>
+      previous.filter((item) => item.uid !== uid),
     );
-    setEquipmentStars((previous) => ({ ...previous, [id]: 0 }));
-    if (enhancementOutcome?.id === id) setEnhancementOutcome(null);
+    if (equippedEquipmentUid === uid) setEquippedEquipmentUid(null);
+    setResaleCredits(
+      (previous) =>
+        previous + Math.floor(equipmentCatalog[instance.id].cost / 2),
+    );
+    if (enhancementOutcome?.uid === uid) setEnhancementOutcome(null);
   };
 
-  const enhanceEquipment = (id: EquipmentId) => {
-    if (!ownedEquipment.includes(id)) return;
-    const before = equipmentStars[id];
+  const enhanceEquipment = (uid: string) => {
+    const instance = equipmentInventory.find((item) => item.uid === uid);
+    if (!instance) return;
+    const before = instance.stars;
     if (before >= 5) return;
     if (consumables.hammer < 1) return;
     const success = rollEquipmentUpgrade(before);
@@ -2780,15 +2827,19 @@ export default function Home() {
       ...previous,
       hammer: Math.max(0, previous.hammer - 1),
     }));
-    setEquipmentStars((previous) => ({ ...previous, [id]: after }));
-    setEnhancementOutcome({ id, success, before, after });
+    setEquipmentInventory((previous) =>
+      previous.map((item) =>
+        item.uid === uid ? { ...item, stars: after } : item,
+      ),
+    );
+    setEnhancementOutcome({ uid, id: instance.id, success, before, after });
   };
 
   const forgeEquipmentDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setForgeDragActive(false);
-    const id = event.dataTransfer.getData('application/x-equipment-id');
-    if (id && id in equipmentCatalog) enhanceEquipment(id as EquipmentId);
+    const uid = event.dataTransfer.getData('application/x-equipment-uid');
+    if (uid) enhanceEquipment(uid);
   };
 
   const buyConsumable = (id: ConsumableId) => {
@@ -3372,32 +3423,40 @@ export default function Home() {
                                     : text.forgeProtected}
                               </output>
                             )}
-                            {ownedEquipment.length === 0 ? (
+                            {equipmentInventory.length === 0 ? (
                               <p className="rounded-lg bg-muted/50 px-3 py-4 text-center text-xs text-muted-foreground">
                                 {text.noOwnedEquipment}
                               </p>
                             ) : (
                               <div className="grid gap-2 sm:grid-cols-3">
-                                {ownedEquipment.map((id) => {
+                                {equipmentInventory.map((instance, index) => {
+                                  const { id, uid, stars } = instance;
                                   const item = equipmentCatalog[id];
-                                  const equipped = activeEquipment === id;
+                                  const equipped =
+                                    equippedEquipmentUid === uid &&
+                                    activeEquipment === id;
                                   const classUnavailable =
                                     item.profession !== 'all' &&
                                     item.profession !== activeMascotProfession;
-                                  const stars = equipmentStars[id];
+                                  const copyNumber = equipmentInventory
+                                    .slice(0, index + 1)
+                                    .filter((owned) => owned.id === id).length;
+                                  const copyTotal = equipmentInventory.filter(
+                                    (owned) => owned.id === id,
+                                  ).length;
                                   const forgeRate = Math.round(
                                     equipmentUpgradeRate(stars) * 100,
                                   );
                                   return (
                                     <div
-                                      key={id}
+                                      key={uid}
                                       draggable
                                       onDragStart={(event) => {
                                         event.dataTransfer.effectAllowed =
                                           'move';
                                         event.dataTransfer.setData(
-                                          'application/x-equipment-id',
-                                          id,
+                                          'application/x-equipment-uid',
+                                          uid,
                                         );
                                       }}
                                       onDragEnd={() =>
@@ -3422,6 +3481,13 @@ export default function Home() {
                                       <span className="mt-2 block text-xs font-semibold">
                                         {item.name[locale]}
                                       </span>
+                                      {copyTotal > 1 && (
+                                        <span className="mt-0.5 block text-[11px] font-medium text-muted-foreground">
+                                          {locale === 'zh'
+                                            ? `第 ${copyNumber} 件`
+                                            : `Copy ${copyNumber}`}
+                                        </span>
+                                      )}
                                       <EquipmentStarRow stars={stars} />
                                       <span className="mt-1 block text-[11px] text-muted-foreground">
                                         {stars >= 5
@@ -3440,8 +3506,8 @@ export default function Home() {
                                               : undefined
                                           }
                                           onClick={() =>
-                                            setEquippedEquipment(
-                                              equipped ? null : id,
+                                            setEquippedEquipmentUid(
+                                              equipped ? null : uid,
                                             )
                                           }
                                         >
@@ -3458,7 +3524,7 @@ export default function Home() {
                                               ? text.forgeNeedsHammer
                                               : undefined
                                           }
-                                          onClick={() => enhanceEquipment(id)}
+                                          onClick={() => enhanceEquipment(uid)}
                                         >
                                           <Star />{' '}
                                           {stars >= 5
@@ -3468,7 +3534,7 @@ export default function Home() {
                                         <Button
                                           variant="outline"
                                           size="sm"
-                                          onClick={() => sellEquipment(id)}
+                                          onClick={() => sellEquipment(uid)}
                                         >
                                           <Coins /> {text.sell}
                                         </Button>
@@ -3610,7 +3676,9 @@ export default function Home() {
                                 Object.keys(equipmentCatalog) as EquipmentId[]
                               ).map((id) => {
                                 const item = equipmentCatalog[id];
-                                const owned = ownedEquipment.includes(id);
+                                const ownedCount = equipmentInventory.filter(
+                                  (owned) => owned.id === id,
+                                ).length;
                                 return (
                                   <div
                                     key={id}
@@ -3636,26 +3704,20 @@ export default function Home() {
                                     <p className="mt-1 min-h-10 text-center text-xs leading-5 text-muted-foreground">
                                       {item.effect[locale]}
                                     </p>
-                                    {owned ? (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="mt-2 w-full"
-                                        disabled
-                                      >
-                                        <Check /> {text.owned}
-                                      </Button>
-                                    ) : (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="mt-2 w-full"
-                                        disabled={walletPoints < item.cost}
-                                        onClick={() => buyEquipment(id)}
-                                      >
-                                        <Coins /> {text.buy} · {item.cost}
-                                      </Button>
-                                    )}
+                                    <p className="mt-1 text-center text-[11px] font-medium text-muted-foreground">
+                                      {locale === 'zh'
+                                        ? `持有 × ${ownedCount}`
+                                        : `Owned × ${ownedCount}`}
+                                    </p>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="mt-2 w-full"
+                                      disabled={walletPoints < item.cost}
+                                      onClick={() => buyEquipment(id)}
+                                    >
+                                      <Coins /> {text.buy} · {item.cost}
+                                    </Button>
                                   </div>
                                 );
                               })}

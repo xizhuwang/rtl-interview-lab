@@ -152,11 +152,11 @@ verify(
   'Starter profiles receive 20 visors, 20 crystals, and 50 companions',
 );
 verify(
-  /schemaVersion,\s*'5'/.test(pageSource) && /normalized - 30/.test(pageSource),
-  'Schema v5 preserves the original starter-grant migration',
+  /schemaVersion,\s*'6'/.test(pageSource) && /normalized - 30/.test(pageSource),
+  'Schema v6 preserves the original starter-grant migration',
 );
 verify(
-  /Math\.floor\(equipmentCatalog\[id\]\.cost \/ 2\)/.test(pageSource),
+  /Math\.floor\(equipmentCatalog\[instance\.id\]\.cost \/ 2\)/.test(pageSource),
   'Equipment resale returns half of the current shop price',
 );
 verify(
@@ -165,16 +165,27 @@ verify(
   ) &&
     /before >= 2 \? before - 1 : before/.test(pageSource) &&
     /hammer: Math\.max\(0, previous\.hammer - 1\)/.test(pageSource) &&
-    /application\/x-equipment-id/.test(pageSource),
+    /application\/x-equipment-uid/.test(pageSource),
   'Equipment forging supports drag/drop and consumes a hammer with protected low stars',
 );
 verify(
   pageSource.indexOf('{text.equipment}') <
     pageSource.indexOf('className={`forge-station') &&
     pageSource.indexOf('className={`forge-station') <
-      pageSource.indexOf('{text.shopEquipment}') &&
-    /disabled\s*>\s*<Check \/> \{text\.owned\}/.test(pageSource),
+      pageSource.indexOf('{text.shopEquipment}'),
   'Forge and owned-equipment actions live in the backpack while the shop is purchase-only',
+);
+verify(
+  /type EquipmentInstance = \{[\s\S]*uid: string;[\s\S]*stars: number;/.test(
+    pageSource,
+  ) &&
+    /setEquipmentInventory\(\(previous\) => \[\.\.\.previous, instance\]\)/.test(
+      pageSource,
+    ) &&
+    /equipmentInventory\.map\(\(instance, index\)/.test(pageSource) &&
+    /const ownedCount = equipmentInventory\.filter/.test(pageSource) &&
+    /setEquippedEquipmentUid\(\s*equipped \? null : uid/.test(pageSource),
+  'Duplicate equipment copies keep independent stars, equip, forge, and resale state',
 );
 verify(
   /dailyProgress:\s*'soc-rtl-lab:daily-progress'/.test(pageSource) &&
