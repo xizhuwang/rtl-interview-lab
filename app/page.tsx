@@ -3319,6 +3319,59 @@ export default function Home() {
                             <p className="mb-2 text-sm font-semibold">
                               {text.equipment}
                             </p>
+                            <p className="mb-3 rounded-lg border border-amber-300/60 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-900 dark:text-amber-100">
+                              {text.forgeNotice}
+                            </p>
+                            <div
+                              className={`forge-station mb-3 ${forgeDragActive ? 'is-drag-active' : ''}`}
+                              onDragEnter={(event) => {
+                                event.preventDefault();
+                                setForgeDragActive(true);
+                              }}
+                              onDragOver={(event) => event.preventDefault()}
+                              onDragLeave={(event) => {
+                                if (
+                                  !event.currentTarget.contains(
+                                    event.relatedTarget as Node,
+                                  )
+                                )
+                                  setForgeDragActive(false);
+                              }}
+                              onDrop={forgeEquipmentDrop}
+                            >
+                              <span className="forge-hammer-icon">
+                                <Hammer aria-hidden="true" />
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <strong className="block text-sm">
+                                  {text.forgeStation}
+                                </strong>
+                                <span className="block text-xs text-muted-foreground">
+                                  {text.forgeDrag}
+                                </span>
+                              </span>
+                              <span className="rounded-full bg-card px-2 py-1 font-mono text-xs font-semibold">
+                                {text.forgeHammerCount} × {consumables.hammer}
+                              </span>
+                            </div>
+                            {enhancementOutcome && (
+                              <output
+                                className={`mb-3 block rounded-lg px-3 py-2 text-xs font-semibold ${enhancementOutcome.success ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-200' : 'bg-rose-500/10 text-rose-800 dark:text-rose-200'}`}
+                              >
+                                {
+                                  equipmentCatalog[enhancementOutcome.id].name[
+                                    locale
+                                  ]
+                                }
+                                ：{' '}
+                                {enhancementOutcome.success
+                                  ? `${text.forgeSuccess} · ${enhancementOutcome.after}★`
+                                  : enhancementOutcome.after <
+                                      enhancementOutcome.before
+                                    ? `${text.forgeDowngrade} · ${enhancementOutcome.after}★`
+                                    : text.forgeProtected}
+                              </output>
+                            )}
                             {ownedEquipment.length === 0 ? (
                               <p className="rounded-lg bg-muted/50 px-3 py-4 text-center text-xs text-muted-foreground">
                                 {text.noOwnedEquipment}
@@ -3331,18 +3384,26 @@ export default function Home() {
                                   const classUnavailable =
                                     item.profession !== 'all' &&
                                     item.profession !== activeMascotProfession;
+                                  const stars = equipmentStars[id];
+                                  const forgeRate = Math.round(
+                                    equipmentUpgradeRate(stars) * 100,
+                                  );
                                   return (
-                                    <button
+                                    <div
                                       key={id}
-                                      type="button"
-                                      disabled={classUnavailable}
-                                      aria-pressed={equipped}
-                                      onClick={() =>
-                                        setEquippedEquipment(
-                                          equipped ? null : id,
-                                        )
+                                      draggable
+                                      onDragStart={(event) => {
+                                        event.dataTransfer.effectAllowed =
+                                          'move';
+                                        event.dataTransfer.setData(
+                                          'application/x-equipment-id',
+                                          id,
+                                        );
+                                      }}
+                                      onDragEnd={() =>
+                                        setForgeDragActive(false)
                                       }
-                                      className={`rounded-xl border p-3 text-center transition-colors ${equipped ? 'border-primary bg-primary/10' : classUnavailable ? 'cursor-not-allowed opacity-45' : 'border-border hover:bg-muted'}`}
+                                      className={`rounded-xl border p-3 text-center transition-colors ${equipped ? 'border-primary bg-primary/10' : 'border-border'}`}
                                     >
                                       <div
                                         className={`equipment-shop-icon equipment-${item.profession}`}
@@ -3361,17 +3422,58 @@ export default function Home() {
                                       <span className="mt-2 block text-xs font-semibold">
                                         {item.name[locale]}
                                       </span>
-                                      <EquipmentStarRow
-                                        stars={equipmentStars[id]}
-                                      />
+                                      <EquipmentStarRow stars={stars} />
                                       <span className="mt-1 block text-[11px] text-muted-foreground">
-                                        {classUnavailable
-                                          ? text.professionRequired
-                                          : equipped
-                                            ? text.unequip
-                                            : text.equip}
+                                        {stars >= 5
+                                          ? text.divineGear
+                                          : `${text.forgeChance} ${forgeRate}%`}
                                       </span>
-                                    </button>
+                                      <div className="mt-2 grid grid-cols-2 gap-1.5">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="col-span-2"
+                                          disabled={classUnavailable}
+                                          title={
+                                            classUnavailable
+                                              ? text.professionRequired
+                                              : undefined
+                                          }
+                                          onClick={() =>
+                                            setEquippedEquipment(
+                                              equipped ? null : id,
+                                            )
+                                          }
+                                        >
+                                          {equipped ? text.unequip : text.equip}
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          disabled={
+                                            stars >= 5 || consumables.hammer < 1
+                                          }
+                                          title={
+                                            consumables.hammer < 1
+                                              ? text.forgeNeedsHammer
+                                              : undefined
+                                          }
+                                          onClick={() => enhanceEquipment(id)}
+                                        >
+                                          <Star />{' '}
+                                          {stars >= 5
+                                            ? text.maxStars
+                                            : text.forge}
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => sellEquipment(id)}
+                                        >
+                                          <Coins /> {text.sell}
+                                        </Button>
+                                      </div>
+                                    </div>
                                   );
                                 })}
                               </div>
@@ -3503,82 +3605,16 @@ export default function Home() {
                             <p className="mb-2 text-sm font-semibold">
                               {text.shopEquipment}
                             </p>
-                            <p className="mb-3 rounded-lg border border-amber-300/60 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-900 dark:text-amber-100">
-                              {text.forgeNotice}
-                            </p>
-                            <div
-                              className={`forge-station mb-3 ${forgeDragActive ? 'is-drag-active' : ''}`}
-                              onDragEnter={(event) => {
-                                event.preventDefault();
-                                setForgeDragActive(true);
-                              }}
-                              onDragOver={(event) => event.preventDefault()}
-                              onDragLeave={(event) => {
-                                if (
-                                  !event.currentTarget.contains(
-                                    event.relatedTarget as Node,
-                                  )
-                                )
-                                  setForgeDragActive(false);
-                              }}
-                              onDrop={forgeEquipmentDrop}
-                            >
-                              <span className="forge-hammer-icon">
-                                <Hammer aria-hidden="true" />
-                              </span>
-                              <span className="min-w-0 flex-1">
-                                <strong className="block text-sm">
-                                  {text.forgeStation}
-                                </strong>
-                                <span className="block text-xs text-muted-foreground">
-                                  {text.forgeDrag}
-                                </span>
-                              </span>
-                              <span className="rounded-full bg-card px-2 py-1 font-mono text-xs font-semibold">
-                                {text.forgeHammerCount} × {consumables.hammer}
-                              </span>
-                            </div>
-                            {enhancementOutcome && (
-                              <output
-                                className={`mb-3 block rounded-lg px-3 py-2 text-xs font-semibold ${enhancementOutcome.success ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-200' : 'bg-rose-500/10 text-rose-800 dark:text-rose-200'}`}
-                              >
-                                {
-                                  equipmentCatalog[enhancementOutcome.id].name[
-                                    locale
-                                  ]
-                                }
-                                ：{' '}
-                                {enhancementOutcome.success
-                                  ? `${text.forgeSuccess} · ${enhancementOutcome.after}★`
-                                  : enhancementOutcome.after <
-                                      enhancementOutcome.before
-                                    ? `${text.forgeDowngrade} · ${enhancementOutcome.after}★`
-                                    : text.forgeProtected}
-                              </output>
-                            )}
                             <div className="grid gap-2 sm:grid-cols-3">
                               {(
                                 Object.keys(equipmentCatalog) as EquipmentId[]
                               ).map((id) => {
                                 const item = equipmentCatalog[id];
                                 const owned = ownedEquipment.includes(id);
-                                const stars = equipmentStars[id];
-                                const forgeRate = Math.round(
-                                  equipmentUpgradeRate(stars) * 100,
-                                );
                                 return (
                                   <div
                                     key={id}
                                     className="rounded-xl border border-border p-3"
-                                    draggable={owned}
-                                    onDragStart={(event) => {
-                                      event.dataTransfer.effectAllowed = 'move';
-                                      event.dataTransfer.setData(
-                                        'application/x-equipment-id',
-                                        id,
-                                      );
-                                    }}
-                                    onDragEnd={() => setForgeDragActive(false)}
                                   >
                                     <div
                                       className={`equipment-shop-icon equipment-${item.profession}`}
@@ -3600,45 +3636,15 @@ export default function Home() {
                                     <p className="mt-1 min-h-10 text-center text-xs leading-5 text-muted-foreground">
                                       {item.effect[locale]}
                                     </p>
-                                    {owned && (
-                                      <>
-                                        <EquipmentStarRow stars={stars} />
-                                        <p className="mt-1 text-center font-mono text-[11px] text-muted-foreground">
-                                          {stars >= 5
-                                            ? text.divineGear
-                                            : `${text.forgeChance} ${forgeRate}%`}
-                                        </p>
-                                      </>
-                                    )}
                                     {owned ? (
-                                      <div className="mt-2 grid grid-cols-2 gap-2">
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          disabled={
-                                            stars >= 5 || consumables.hammer < 1
-                                          }
-                                          title={
-                                            consumables.hammer < 1
-                                              ? text.forgeNeedsHammer
-                                              : undefined
-                                          }
-                                          onClick={() => enhanceEquipment(id)}
-                                        >
-                                          <Star />{' '}
-                                          {stars >= 5
-                                            ? text.maxStars
-                                            : `${text.forge} · ×1`}
-                                        </Button>
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => sellEquipment(id)}
-                                        >
-                                          <Coins /> {text.sell} ·{' '}
-                                          {Math.floor(item.cost / 2)}
-                                        </Button>
-                                      </div>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="mt-2 w-full"
+                                        disabled
+                                      >
+                                        <Check /> {text.owned}
+                                      </Button>
                                     ) : (
                                       <Button
                                         variant="outline"

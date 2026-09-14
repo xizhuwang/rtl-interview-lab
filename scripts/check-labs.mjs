@@ -169,6 +169,14 @@ verify(
   'Equipment forging supports drag/drop and consumes a hammer with protected low stars',
 );
 verify(
+  pageSource.indexOf('{text.equipment}') <
+    pageSource.indexOf('className={`forge-station') &&
+    pageSource.indexOf('className={`forge-station') <
+      pageSource.indexOf('{text.shopEquipment}') &&
+    /disabled\s*>\s*<Check \/> \{text\.owned\}/.test(pageSource),
+  'Forge and owned-equipment actions live in the backpack while the shop is purchase-only',
+);
+verify(
   /dailyProgress:\s*'soc-rtl-lab:daily-progress'/.test(pageSource) &&
     /rewardCredits: previous\.rewardCredits \+ 50 \+ \(milestone \? 150 : 0\)/.test(
       pageSource,
