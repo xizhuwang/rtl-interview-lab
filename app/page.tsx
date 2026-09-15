@@ -74,6 +74,7 @@ import { Progress } from '@/components/ui/progress';
 import { WaveformViewer } from '@/components/waveform-viewer';
 import { CodeEditor, ReadOnlyCodeBlock } from '@/components/code-editor';
 import { SocInterfaceGuide } from '@/components/soc-interface-guide';
+import { AdSenseUnit } from '@/components/adsense-unit';
 import {
   challenges,
   difficultyLabel,
@@ -4648,6 +4649,7 @@ export default function Home() {
           </div>
         </aside>
       </div>
+      <AdSenseUnit locale={locale} />
       <footer className="border-t border-border bg-card px-5 py-6 text-center text-sm leading-6 text-muted-foreground">
         <p>{text.independent}</p>
         <p>
@@ -4668,8 +4670,8 @@ export default function Home() {
           </summary>
           <p className="mt-3">
             {locale === 'zh'
-              ? '本站沒有登入、廣告或追蹤分析程式，也沒有接收解題程式碼的後端。程式與進度存於此瀏覽器的 localStorage；同一 GitHub Pages 網域的其他頁面也可能存取這份儲存空間，請勿輸入公司 RTL、NDA 內容、密碼或個資。可透過瀏覽器網站資料設定清除本機紀錄。'
-              : 'No accounts, ads, analytics or source-code submission backend. Code and progress use browser localStorage, shared with other pages on this GitHub Pages origin. Do not enter company RTL, NDA material, passwords or personal data. Clear browser site data to remove local records.'}
+              ? '本站沒有登入、追蹤分析程式或接收解題程式碼的後端。若啟用頁尾廣告，廣告由 Google 提供，可能依其政策處理裝置、IP、Cookie 或廣告互動資料；廣告不會讀取編輯器內容，也不會影響判題、提示或獎勵。程式與進度存於此瀏覽器的 localStorage；同一 GitHub Pages 網域的其他頁面也可能存取這份儲存空間，請勿輸入公司 RTL、NDA 內容、密碼或個資。可透過瀏覽器網站資料設定清除本機紀錄。'
+              : 'There are no accounts, analytics trackers or source-code submission backend. When the footer ad is enabled, Google serves it and may process device, IP, cookie or ad-interaction data under its policies. Ads cannot read editor contents and never affect judging, hints or rewards. Code and progress use browser localStorage, shared with other pages on this GitHub Pages origin. Do not enter company RTL, NDA material, passwords or personal data. Clear browser site data to remove local records.'}
           </p>
           <p className="mt-2">
             {locale === 'zh'
@@ -4722,6 +4724,15 @@ export default function Home() {
               rel="noreferrer"
             >
               jsDelivr privacy
+            </a>
+            {' · '}
+            <a
+              className="underline"
+              href="https://policies.google.com/privacy"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Google privacy
             </a>
           </p>
         </details>

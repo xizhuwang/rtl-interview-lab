@@ -16,6 +16,11 @@ PayPal.Me is the current public voluntary-support option and does not grant poin
 
 See [MONETIZATION.md](MONETIZATION.md) for the paid-point architecture, suggested packs, privacy boundaries, and launch checklist.
 
+The codebase also contains an optional, lazy-loaded manual AdSense footer slot.
+It remains completely disabled until an approved publisher ID and display-ad
+slot are configured. See [ADS.md](ADS.md) for placement, privacy, `ads.txt`,
+consent, and safe-testing requirements.
+
 ## Penguin companion and profession guide
 
 The four columns below are the definitive profession artwork used by the site. Each cell shows the masculine and feminine option at the same scale. Gender is cosmetic and never changes points, unlock conditions, equipment rules, hints, or judging.

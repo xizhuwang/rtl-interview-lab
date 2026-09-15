@@ -32,6 +32,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
       - run: pnpm build:github
+        env:
+          VITE_ADSENSE_CLIENT_ID: ${{ vars.ADSENSE_CLIENT_ID }}
+          VITE_ADSENSE_FOOTER_SLOT_ID: ${{ vars.ADSENSE_FOOTER_SLOT_ID }}
       - run: node scripts/release-audit.mjs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

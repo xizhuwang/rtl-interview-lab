@@ -9,6 +9,9 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://xizhuwang.github.io/rtl-interview-lab/'),
   title: 'SoC RTL Lab | Xi-Zhu Wang',
   description: 'Hands-on bilingual RTL, CDC, timing, verification and PPA practice for SoC engineers.',
+  other: {
+    'google-adsense-account': 'ca-pub-1191948823193656',
+  },
   openGraph: {
     type: 'website',
     url: 'https://xizhuwang.github.io/rtl-interview-lab/',

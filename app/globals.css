@@ -2418,3 +2418,44 @@ body {
     contain-intrinsic-size: auto 320px;
   }
 }
+
+/* A single manual ad placement stays outside the click-heavy lab. It only
+   exists when production publisher settings are present, so an unavailable
+   network never leaves a blank placeholder or shifts the exercise UI. */
+.site-ad-shell {
+  box-sizing: border-box;
+  display: block;
+  margin-inline: auto;
+  max-width: 970px;
+  min-height: 118px;
+  padding: 162px 16px 18px;
+  text-align: center;
+  width: 100%;
+}
+
+.site-ad-label {
+  color: var(--muted-foreground);
+  display: block;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.site-ad-unit {
+  display: block;
+  min-height: 90px;
+  overflow: hidden;
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .site-ad-shell {
+    min-height: 100px;
+    padding-inline: 12px;
+  }
+
+  .site-ad-unit {
+    min-height: 72px;
+  }
+}
