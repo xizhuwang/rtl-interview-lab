@@ -402,6 +402,8 @@ const storageKeys = {
   elementSpend: 'soc-rtl-lab:element-spend',
   equippedElement: 'soc-rtl-lab:equipped-element',
   dailyProgress: 'soc-rtl-lab:daily-progress',
+  sharedSocEarned: 'academy-shared:v1:soc-earned',
+  sharedHbmEarned: 'academy-shared:v1:hbm-earned',
 };
 let equipmentUidSerial = 0;
 function createEquipmentInstance(
@@ -1539,6 +1541,7 @@ export default function Home() {
   const [dailyProgress, setDailyProgress] = useState<DailyProgress>({
     ...emptyDailyProgress,
   });
+  const [hbmEarnedPoints, setHbmEarnedPoints] = useState(0);
   const [dailyReview, setDailyReview] = useState<{
     date: string;
     challengeId: string;
@@ -1725,6 +1728,7 @@ export default function Home() {
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
+      let restoredSolvedIds: string[] = [];
       setTodayKey(localDateKey(new Date()));
       const savedLocale = browserStorage.getItem(
         storageKeys.locale,
@@ -1781,6 +1785,11 @@ export default function Home() {
       const savedDailyProgress = browserStorage.getItem(
         storageKeys.dailyProgress,
       );
+      const savedHbmEarned = Number(
+        browserStorage.getItem(storageKeys.sharedHbmEarned) ?? '0',
+      );
+      if (Number.isFinite(savedHbmEarned) && savedHbmEarned >= 0)
+        setHbmEarnedPoints(savedHbmEarned);
       if (savedLocale === 'zh' || savedLocale === 'en') setLocale(savedLocale);
       if (savedMascotGender === 'masculine' || savedMascotGender === 'feminine')
         setMascotGender(savedMascotGender);
@@ -1816,8 +1825,8 @@ export default function Home() {
         const parsedDailyProgress: unknown = JSON.parse(
           savedDailyProgress ?? JSON.stringify(emptyDailyProgress),
         );
-        if (Array.isArray(parsedSolved))
-          setSolved([
+        if (Array.isArray(parsedSolved)) {
+          restoredSolvedIds = [
             ...new Set(
               parsedSolved.filter(
                 (id) =>
@@ -1825,7 +1834,9 @@ export default function Home() {
                   challenges.some((item) => item.id === id),
               ),
             ),
-          ]);
+          ];
+          setSolved(restoredSolvedIds);
+        }
         const migratedOwned = Array.isArray(parsedOwnedEquipment)
           ? [
               ...new Set(
@@ -2094,6 +2105,13 @@ export default function Home() {
       } catch {
         /* Ignore malformed saved data without overwriting it. */
       }
+      const restoredSocPoints = challenges
+        .filter((challenge) => restoredSolvedIds.includes(challenge.id))
+        .reduce((sum, challenge) => sum + challenge.points, 0);
+      browserStorage.setItem(
+        storageKeys.sharedSocEarned,
+        String(restoredSocPoints),
+      );
       storageLoaded.current = true;
       browserStorage.setItem(storageKeys.schemaVersion, '6');
     });
@@ -2688,8 +2706,30 @@ export default function Home() {
     equipmentSpend + elementSpend + consumableSpend + enhancementSpend;
   const walletPoints = Math.max(
     0,
-    points - spentPoints + resaleCredits + dailyProgress.rewardCredits,
+    points +
+      hbmEarnedPoints -
+      spentPoints +
+      resaleCredits +
+      dailyProgress.rewardCredits,
   );
+  useEffect(() => {
+    if (storageLoaded.current)
+      browserStorage.setItem(storageKeys.sharedSocEarned, String(points));
+  }, [points]);
+  useEffect(() => {
+    const syncHbmPoints = () => {
+      const value = Number(
+        browserStorage.getItem(storageKeys.sharedHbmEarned) ?? '0',
+      );
+      if (Number.isFinite(value) && value >= 0) setHbmEarnedPoints(value);
+    };
+    window.addEventListener('storage', syncHbmPoints);
+    window.addEventListener('focus', syncHbmPoints);
+    return () => {
+      window.removeEventListener('storage', syncHbmPoints);
+      window.removeEventListener('focus', syncHbmPoints);
+    };
+  }, []);
   const progress = Math.round((solved.length / challenges.length) * 100);
   const mascotStage = mascotStageFor(points);
   const activeMascotProfession =
