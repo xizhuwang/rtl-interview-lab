@@ -373,29 +373,107 @@ body {
 }
 
 .mascot-equipment {
-  align-items: center;
-  background: oklch(0.17 0.04 248 / 90%);
-  border: 1px solid currentColor;
-  border-radius: 0.7rem;
-  bottom: 4%;
-  box-shadow:
-    0 5px 12px oklch(0.18 0.04 245 / 35%),
-    inset 0 0 10px oklch(0.74 0.15 205 / 18%);
-  display: flex;
-  height: 34%;
-  justify-content: center;
+  display: block;
   overflow: hidden;
+  pointer-events: none;
   position: absolute;
-  right: -5%;
-  width: 38%;
-  z-index: 14;
+  transform-origin: 50% 70%;
+  z-index: 8;
 }
 
-.mascot-equipment-icon {
-  height: 68%;
-  filter: drop-shadow(0 0 5px currentColor);
-  stroke-width: 1.8;
-  width: 68%;
+.wearable-equipment-sprite {
+  display: block;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.wearable-equipment-sprite img {
+  height: 200%;
+  left: calc(var(--sprite-column) * -100%);
+  max-width: none;
+  pointer-events: none;
+  position: absolute;
+  top: calc(var(--sprite-row) * -100%);
+  width: 400%;
+}
+
+.mascot-equipment-stars {
+  bottom: -0.1rem;
+  color: oklch(0.88 0.18 92);
+  filter: drop-shadow(0 1px 2px oklch(0.2 0.04 250 / 90%));
+  font-size: clamp(0.35rem, 9%, 0.65rem);
+  left: 50%;
+  letter-spacing: -0.08em;
+  line-height: 1;
+  position: absolute;
+  translate: -50% 0;
+  white-space: nowrap;
+}
+
+.mascot-equipment-cpuBlade {
+  height: 62%;
+  left: -15%;
+  top: 4%;
+  transform: rotate(-5deg);
+  width: 47%;
+}
+
+.mascot-equipment-cpuShield {
+  height: 43%;
+  right: -7%;
+  top: 42%;
+  transform: rotate(8deg);
+  width: 43%;
+}
+
+.mascot-equipment-socQuiver {
+  height: 49%;
+  left: -13%;
+  top: 15%;
+  transform: rotate(-9deg);
+  width: 39%;
+  z-index: 1;
+}
+
+.mascot-equipment-socCompass {
+  bottom: 18%;
+  height: 31%;
+  right: 3%;
+  transform: rotate(7deg);
+  width: 31%;
+}
+
+.mascot-equipment-dftLantern {
+  bottom: 9%;
+  height: 43%;
+  left: -12%;
+  transform: rotate(-8deg);
+  width: 37%;
+}
+
+.mascot-equipment-dftProbe {
+  height: 48%;
+  right: -11%;
+  top: 24%;
+  transform: rotate(10deg);
+  width: 34%;
+}
+
+.mascot-equipment-timingGrimoire {
+  bottom: 13%;
+  height: 38%;
+  left: -14%;
+  transform: rotate(-8deg);
+  width: 42%;
+}
+
+.mascot-equipment-lowPowerCharm {
+  height: 28%;
+  left: 38%;
+  top: 42%;
+  width: 28%;
 }
 
 .mascot-equipment-cpu {
@@ -412,20 +490,13 @@ body {
 }
 
 .equipment-starred .mascot-equipment {
-  border-color: color-mix(
-    in oklab,
-    currentColor calc(35% + var(--gear-stars) * 8%),
-    white
-  );
-  box-shadow:
-    0 5px 12px oklch(0.18 0.04 245 / 35%),
-    0 0 calc(4px + var(--gear-stars) * 2px) currentColor,
-    inset 0 0 calc(8px + var(--gear-stars) * 2px) currentColor;
+  filter: brightness(calc(1 + var(--item-stars) * 0.05))
+    drop-shadow(0 0 calc(2px + var(--item-stars) * 1px) currentColor);
 }
 
 .equipment-divine .mascot-equipment {
-  outline: 2px solid oklch(0.87 0.17 90 / 70%);
-  outline-offset: 2px;
+  filter: brightness(1.25) saturate(1.18)
+    drop-shadow(0 0 8px oklch(0.87 0.17 90 / 80%));
 }
 
 .mascot-gender-emblem {
@@ -1027,7 +1098,121 @@ body {
   z-index: 4;
 }
 
-.battle-running .mascot-battle-actor {
+.attack-pose-sprite {
+  display: none;
+  height: 142%;
+  left: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+  top: -27%;
+  width: 152%;
+  z-index: 18;
+}
+
+.attack-pose-sprite img {
+  height: 100%;
+  left: calc(var(--attack-column) * -100%);
+  max-width: none;
+  position: absolute;
+  top: 0;
+  width: 400%;
+}
+
+.battle-running .attack-pose-sprite {
+  animation: attack-pose-strike 820ms cubic-bezier(0.22, 0.72, 0.18, 1) 3;
+  display: block;
+}
+
+.battle-success .attack-pose-sprite,
+.battle-failure .attack-pose-sprite {
+  animation: attack-pose-impact 1050ms cubic-bezier(0.2, 0.72, 0.2, 1)
+    forwards;
+  display: block;
+}
+
+.battle-success .mascot-battle-actor .mascot-avatar,
+.battle-failure .mascot-battle-actor .mascot-avatar {
+  animation: battle-avatar-return 1050ms linear forwards;
+}
+
+.battle-running .mascot-battle-actor .mascot-character-frame,
+.battle-running .mascot-battle-actor .mascot-equipment,
+.battle-running .mascot-battle-actor .mascot-tier-ornament,
+.battle-running .mascot-battle-actor .mascot-gender-emblem {
+  opacity: 0;
+}
+
+@keyframes attack-pose-strike {
+  0%,
+  100% {
+    opacity: 0;
+    scale: 0.88;
+    translate: -9px 6px;
+  }
+  18% {
+    opacity: 1;
+    scale: 0.96;
+    translate: -4px 1px;
+  }
+  52% {
+    opacity: 1;
+    scale: 1.08;
+    translate: 12px -5px;
+  }
+  78% {
+    opacity: 0.95;
+    scale: 1.02;
+    translate: 20px -2px;
+  }
+}
+
+@keyframes attack-pose-impact {
+  0% {
+    opacity: 1;
+    scale: 1.02;
+    translate: 8px -3px;
+  }
+  55% {
+    opacity: 1;
+    scale: 1.1;
+    translate: 22px -7px;
+  }
+  100% {
+    opacity: 0;
+    scale: 1.02;
+    translate: 28px -2px;
+  }
+}
+
+@keyframes battle-avatar-return {
+  0%,
+  58% {
+    opacity: 0;
+  }
+  80%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.battle-running.profession-cpu .mascot-battle-actor {
+  animation: cpu-lunge 820ms cubic-bezier(0.32, 0.74, 0.24, 1) 3;
+}
+
+.battle-running.profession-soc .mascot-battle-actor {
+  animation: archer-draw 900ms ease-in-out 3;
+}
+
+.battle-running.profession-dft .mascot-battle-actor {
+  animation: healer-cast 920ms ease-in-out 3;
+}
+
+.battle-running.profession-timing .mascot-battle-actor {
+  animation: mage-cast 980ms ease-in-out 3;
+}
+
+.battle-running.profession-novice .mascot-battle-actor {
   animation: fighter-charge 780ms ease-in-out 3 alternate;
 }
 
@@ -1045,6 +1230,139 @@ body {
   }
   to {
     transform: translateX(18px) translateY(-3px) rotate(2deg);
+  }
+}
+
+@keyframes cpu-lunge {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0);
+  }
+  24% {
+    transform: translate(-5px, 3px) rotate(-5deg);
+  }
+  52% {
+    transform: translate(39px, -8px) rotate(8deg) scale(1.04);
+  }
+  72% {
+    transform: translate(28px, -2px) rotate(2deg);
+  }
+}
+
+@keyframes archer-draw {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0);
+  }
+  28% {
+    transform: translate(-9px, 1px) rotate(-5deg) scaleX(0.98);
+  }
+  52% {
+    transform: translate(5px, -3px) rotate(3deg) scaleX(1.03);
+  }
+  70% {
+    transform: translate(17px, -1px) rotate(1deg);
+  }
+}
+
+@keyframes healer-cast {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0);
+  }
+  30% {
+    transform: translate(-3px, -13px) rotate(-4deg);
+  }
+  56% {
+    transform: translate(13px, -18px) rotate(6deg) scale(1.04);
+  }
+  78% {
+    transform: translate(7px, -5px) rotate(1deg);
+  }
+}
+
+@keyframes mage-cast {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0);
+  }
+  24% {
+    transform: translate(-3px, -10px) rotate(-5deg);
+  }
+  50% {
+    transform: translate(10px, -22px) rotate(7deg) scale(1.05);
+  }
+  76% {
+    transform: translate(18px, -10px) rotate(2deg);
+  }
+}
+
+.battle-running.profession-cpu .mascot-equipment-cpuBlade {
+  animation: sword-swing 820ms cubic-bezier(0.3, 0.7, 0.25, 1) 3;
+}
+
+.battle-running.profession-soc .mascot-equipment-socQuiver {
+  animation: quiver-release 900ms ease-in-out 3;
+}
+
+.battle-running.profession-dft .mascot-equipment-dftLantern,
+.battle-running.profession-dft .mascot-equipment-dftProbe {
+  animation: healing-raise 920ms ease-in-out 3;
+}
+
+.battle-running.profession-timing .mascot-equipment-timingGrimoire {
+  animation: grimoire-cast 980ms ease-in-out 3;
+}
+
+@keyframes sword-swing {
+  0%,
+  100% {
+    transform: rotate(-12deg) translate(0, 0);
+  }
+  34% {
+    transform: rotate(-58deg) translate(-5px, -3px);
+  }
+  60% {
+    transform: rotate(28deg) translate(8px, -8px) scale(1.08);
+  }
+}
+
+@keyframes quiver-release {
+  0%,
+  100% {
+    transform: rotate(-9deg) translate(0, 0);
+  }
+  38% {
+    transform: rotate(-15deg) translate(-5px, 2px);
+  }
+  58% {
+    transform: rotate(-3deg) translate(6px, -3px);
+  }
+}
+
+@keyframes healing-raise {
+  0%,
+  100% {
+    transform: rotate(-8deg) translate(0, 0);
+  }
+  45% {
+    transform: rotate(12deg) translate(5px, -18px) scale(1.08);
+  }
+  68% {
+    transform: rotate(2deg) translate(7px, -10px);
+  }
+}
+
+@keyframes grimoire-cast {
+  0%,
+  100% {
+    transform: rotate(-8deg) translate(0, 0) scale(1);
+  }
+  38% {
+    transform: rotate(8deg) translate(-4px, -14px) scale(1.12);
+  }
+  66% {
+    transform: rotate(-2deg) translate(7px, -10px) scale(1.05);
   }
 }
 
@@ -1091,6 +1409,134 @@ body {
   min-width: 0;
   position: relative;
   z-index: 3;
+}
+
+.actor-motion-accent {
+  border-radius: 999px;
+  height: 66px;
+  left: -42px;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+  width: 66px;
+}
+
+.battle-running.profession-cpu .actor-motion-accent {
+  animation: sword-arc-accent 820ms ease-out 3;
+  border-right: 7px solid oklch(0.82 0.17 205);
+  border-top: 3px solid white;
+  filter: drop-shadow(0 0 7px oklch(0.72 0.18 220));
+}
+
+.battle-running.profession-soc .actor-motion-accent {
+  animation: bow-release-accent 900ms ease-out 3;
+  border: 3px solid oklch(0.78 0.17 190 / 80%);
+  border-left-color: transparent;
+  width: 42px;
+}
+
+.battle-running.profession-dft .actor-motion-accent {
+  animation: healer-sigil-accent 920ms ease-out 3;
+  background: radial-gradient(
+    circle,
+    white 0 5%,
+    oklch(0.82 0.19 145 / 42%) 8% 25%,
+    transparent 28% 44%,
+    oklch(0.82 0.19 145 / 70%) 46% 50%,
+    transparent 52%
+  );
+  box-shadow: 0 0 18px oklch(0.78 0.2 145 / 65%);
+}
+
+.battle-running.profession-timing .actor-motion-accent {
+  animation: mage-ring-accent 980ms ease-out 3;
+  background: repeating-conic-gradient(
+    from 0deg,
+    oklch(0.86 0.16 78) 0 5deg,
+    transparent 5deg 20deg
+  );
+  border: 2px solid oklch(0.87 0.15 82);
+  box-shadow:
+    inset 0 0 0 8px oklch(0.75 0.18 285 / 18%),
+    0 0 16px oklch(0.76 0.18 285 / 58%);
+}
+
+@keyframes sword-arc-accent {
+  0%,
+  28%,
+  100% {
+    opacity: 0;
+    rotate: -60deg;
+    scale: 0.55;
+  }
+  48% {
+    opacity: 1;
+  }
+  68% {
+    opacity: 0;
+    rotate: 65deg;
+    scale: 1.25;
+  }
+}
+
+@keyframes bow-release-accent {
+  0%,
+  32%,
+  100% {
+    opacity: 0;
+    scale: 0.7 1;
+  }
+  45% {
+    opacity: 0.9;
+    scale: 1 1.08;
+  }
+  60% {
+    opacity: 0;
+    translate: 14px -50%;
+    scale: 0.35 0.9;
+  }
+}
+
+@keyframes healer-sigil-accent {
+  0%,
+  24%,
+  100% {
+    opacity: 0;
+    rotate: -30deg;
+    scale: 0.45;
+  }
+  54% {
+    opacity: 1;
+    rotate: 25deg;
+    scale: 1.08;
+  }
+  78% {
+    opacity: 0;
+    rotate: 65deg;
+    scale: 1.32;
+  }
+}
+
+@keyframes mage-ring-accent {
+  0%,
+  20%,
+  100% {
+    opacity: 0;
+    rotate: -30deg;
+    scale: 0.4;
+  }
+  48% {
+    opacity: 0.95;
+    rotate: 30deg;
+    scale: 1;
+  }
+  76% {
+    opacity: 0;
+    rotate: 85deg;
+    scale: 1.38;
+  }
 }
 
 .attack-core,
@@ -1153,16 +1599,14 @@ body {
 }
 
 .profession-timing .profession-projectile {
-  background: conic-gradient(
-    from 10deg,
-    transparent,
-    currentColor 8% 18%,
-    transparent 22% 34%,
-    currentColor 38% 48%,
-    transparent 52% 66%,
-    currentColor 70% 80%,
-    transparent 84%
+  background: radial-gradient(
+    circle,
+    transparent 0 36%,
+    white 38% 42%,
+    currentColor 44% 56%,
+    transparent 58%
   );
+  border: 1px solid color-mix(in oklab, currentColor 72%, white);
   border-radius: 999px;
   box-shadow: 0 0 calc(9px + var(--effect-level) * 3px) currentColor;
   height: calc(22px + var(--effect-level) * 2px);
@@ -1266,20 +1710,19 @@ body {
 }
 
 .profession-timing .attack-core {
-  background: oklch(0.82 0.18 78);
-  clip-path: polygon(
-    0 40%,
-    32% 34%,
-    42% 0,
-    55% 54%,
-    100% 46%,
-    64% 60%,
-    54% 100%,
-    42% 62%,
-    0 68%
+  background: radial-gradient(
+    circle,
+    white 0 14%,
+    currentColor 18% 34%,
+    transparent 38% 48%,
+    currentColor 51% 57%,
+    transparent 60%
   );
+  border: 2px solid currentColor;
+  border-radius: 999px;
   color: oklch(0.82 0.18 78);
-  height: 36px;
+  height: 42px;
+  width: 42px;
 }
 
 .battle-element-fire .attack-core,
@@ -2370,6 +2813,17 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .battle-running .attack-pose-sprite,
+  .battle-success .attack-pose-sprite,
+  .battle-failure .attack-pose-sprite {
+    display: none;
+  }
+
+  .battle-success .mascot-battle-actor .mascot-avatar,
+  .battle-failure .mascot-battle-actor .mascot-avatar {
+    opacity: 1;
+  }
+
   .mascot-avatar,
   .mascot-tier-3::before,
   .mascot-equipment,
@@ -2377,7 +2831,10 @@ body {
   .battle-running .mascot-battle-actor,
   .attack-core,
   .attack-trail,
+  .attack-pose-sprite,
+  .actor-motion-accent,
   .element-particle,
+  .profession-projectile,
   .dummy-hit-ring,
   .rtl-dummy,
   .rtl-boss,

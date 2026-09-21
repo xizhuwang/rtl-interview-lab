@@ -184,8 +184,18 @@ verify(
     ) &&
     /equipmentInventory\.map\(\(instance, index\)/.test(pageSource) &&
     /const ownedCount = equipmentInventory\.filter/.test(pageSource) &&
-    /setEquippedEquipmentUid\(\s*equipped \? null : uid/.test(pageSource),
+    /setEquippedEquipmentUids\(/.test(pageSource) &&
+    /\[item\.slot\]: equipped[\s\S]*\? null[\s\S]*: uid/.test(pageSource),
   'Duplicate equipment copies keep independent stars, equip, forge, and resale state',
+);
+verify(
+  /type EquipmentSlot = 'weapon' \| 'relic'/.test(pageSource) &&
+    /equippedEquipmentUids: 'soc-rtl-lab:equipped-equipment-uids'/.test(
+      pageSource,
+    ) &&
+    /equipment\.map\(\(instance\)/.test(pageSource) &&
+    /equipment-wearable-sprite\.webp/.test(pageSource),
+  'Companion supports a persistent two-slot wearable equipment loadout',
 );
 verify(
   /dailyProgress:\s*'soc-rtl-lab:daily-progress'/.test(pageSource) &&

@@ -341,6 +341,14 @@ type EquipmentInstance = {
   id: EquipmentId;
   stars: number;
 };
+type EquipmentSlot = 'weapon' | 'relic';
+type EquipmentLoadout = Record<EquipmentSlot, string | null>;
+type ActiveEquipment = {
+  uid: string;
+  id: EquipmentId;
+  stars: number;
+  slot: EquipmentSlot;
+};
 type AidUnlocks = {
   logic: string[];
   golden: string[];
@@ -372,6 +380,10 @@ const starterConsumables: ConsumableInventory = {
   drone: 50,
   hammer: 0,
 };
+const emptyEquipmentLoadout: EquipmentLoadout = {
+  weapon: null,
+  relic: null,
+};
 const emptyAidUnlocks: AidUnlocks = { logic: [], golden: [], hints: {} };
 const emptyDailyProgress: DailyProgress = {
   lastCheckIn: '',
@@ -391,6 +403,7 @@ const storageKeys = {
   equippedEquipment: 'soc-rtl-lab:equipped-equipment',
   equipmentInventory: 'soc-rtl-lab:equipment-inventory',
   equippedEquipmentUid: 'soc-rtl-lab:equipped-equipment-uid',
+  equippedEquipmentUids: 'soc-rtl-lab:equipped-equipment-uids',
   equipmentSpend: 'soc-rtl-lab:equipment-spend',
   equipmentStars: 'soc-rtl-lab:equipment-stars',
   enhancementSpend: 'soc-rtl-lab:enhancement-spend',
@@ -819,12 +832,16 @@ const equipmentCatalog: Record<
     name: { zh: string; en: string };
     effect: { zh: string; en: string };
     artwork?: { src: string };
+    slot: EquipmentSlot;
+    sprite: { column: number; row: number };
   }
 > = {
   cpuBlade: {
     icon: 'sword',
     cost: 360,
     profession: 'cpu',
+    slot: 'weapon',
+    sprite: { column: 0, row: 0 },
     name: { zh: 'Forwarding 光刃', en: 'Forwarding Blade' },
     effect: {
       zh: '把資料相依化成可追蹤的旁路斬擊。',
@@ -835,6 +852,8 @@ const equipmentCatalog: Record<
     icon: 'shield',
     cost: 480,
     profession: 'cpu',
+    slot: 'relic',
+    sprite: { column: 1, row: 0 },
     name: { zh: 'Pipeline 護盾', en: 'Pipeline Shield' },
     effect: {
       zh: '提醒你同步檢查 stall、flush 與 valid。',
@@ -845,6 +864,8 @@ const equipmentCatalog: Record<
     icon: 'target',
     cost: 360,
     profession: 'soc',
+    slot: 'weapon',
+    sprite: { column: 2, row: 0 },
     name: { zh: 'AXI 箭匣', en: 'AXI Quiver' },
     effect: {
       zh: '瞄準 ready／valid、burst 與 backpressure。',
@@ -855,6 +876,8 @@ const equipmentCatalog: Record<
     icon: 'network',
     cost: 500,
     profession: 'soc',
+    slot: 'relic',
+    sprite: { column: 3, row: 0 },
     name: { zh: 'Interconnect 羅盤', en: 'Interconnect Compass' },
     effect: {
       zh: '沿著 address map 與資料流定位整合錯誤。',
@@ -865,6 +888,8 @@ const equipmentCatalog: Record<
     icon: 'healer',
     cost: 350,
     profession: 'dft',
+    slot: 'weapon',
+    sprite: { column: 0, row: 1 },
     name: { zh: 'Scan 診斷燈', en: 'Scan Diagnostic Lantern' },
     effect: {
       zh: '照亮可控制性、可觀察性與未知值來源。',
@@ -875,6 +900,8 @@ const equipmentCatalog: Record<
     icon: 'scan',
     cost: 480,
     profession: 'dft',
+    slot: 'relic',
+    sprite: { column: 1, row: 1 },
     name: { zh: 'Fault 探針', en: 'Fault Probe' },
     effect: {
       zh: '追蹤 stuck-at、transition 與 MBIST failure。',
@@ -885,6 +912,8 @@ const equipmentCatalog: Record<
     icon: 'book',
     cost: 400,
     profession: 'timing',
+    slot: 'weapon',
+    sprite: { column: 2, row: 1 },
     name: { zh: 'STA 魔導書', en: 'STA Grimoire' },
     effect: {
       zh: '把 clock、constraint 與 path report 串成因果。',
@@ -895,6 +924,8 @@ const equipmentCatalog: Record<
     icon: 'battery',
     cost: 500,
     profession: 'timing',
+    slot: 'relic',
+    sprite: { column: 3, row: 1 },
     name: { zh: 'Low-Power 月墜', en: 'Low-Power Moon Charm' },
     effect: {
       zh: '守護 clock gating、isolation 與 retention 順序。',
@@ -1067,6 +1098,73 @@ function EquipmentArtwork({
   );
 }
 
+function WearableEquipmentSprite({
+  id,
+  className = '',
+}: {
+  id: EquipmentId;
+  className?: string;
+}) {
+  const { column, row } = equipmentCatalog[id].sprite;
+  return (
+    <span
+      className={`wearable-equipment-sprite ${className}`}
+      style={
+        {
+          '--sprite-column': column,
+          '--sprite-row': row,
+        } as CSSProperties
+      }
+      aria-hidden="true"
+    >
+      <img
+        src="./mascot/equipment-wearable-sprite.webp"
+        alt=""
+        width={1254}
+        height={1254}
+        decoding="async"
+        draggable={false}
+      />
+    </span>
+  );
+}
+
+function AttackPoseSprite({
+  gender,
+  profession,
+}: {
+  gender: MascotGender;
+  profession: MascotProfession;
+}) {
+  if (profession === 'novice') return null;
+  const columns: Record<UnlockableProfession, number> = {
+    cpu: 0,
+    soc: 1,
+    dft: 2,
+    timing: 3,
+  };
+  return (
+    <span
+      className="attack-pose-sprite"
+      style={
+        {
+          '--attack-column': columns[profession],
+        } as CSSProperties
+      }
+      aria-hidden="true"
+    >
+      <img
+        src={`./mascot/attack-poses-${gender}.webp`}
+        alt=""
+        width={2172}
+        height={724}
+        decoding="async"
+        draggable={false}
+      />
+    </span>
+  );
+}
+
 const mascotTiers = {
   zh: ['見習', '進階', '菁英', '傳奇'],
   en: ['Apprentice', 'Advanced', 'Elite', 'Legendary'],
@@ -1083,8 +1181,7 @@ function MascotAvatar({
   gender,
   profession,
   tier,
-  equipment = null,
-  equipmentStarLevel = 0,
+  equipment = [],
   elements = emptyElementLevels,
   equippedElement = null,
   className = '',
@@ -1092,8 +1189,7 @@ function MascotAvatar({
   gender: MascotGender;
   profession: MascotProfession;
   tier: number;
-  equipment?: EquipmentId | null;
-  equipmentStarLevel?: number;
+  equipment?: ActiveEquipment[];
   elements?: ElementLevels;
   equippedElement?: ElementLoadout;
   className?: string;
@@ -1111,7 +1207,10 @@ function MascotAvatar({
   const rootsEquipped =
     equippedElement === 'four-roots' &&
     Object.values(elements).every((level) => level > 0);
-  const equippedItem = equipment ? equipmentCatalog[equipment] : null;
+  const equipmentStarLevel = equipment.reduce(
+    (maximum, item) => Math.max(maximum, item.stars),
+    0,
+  );
   return (
     <div
       className={`mascot-avatar mascot-tier-${tier} mascot-gender-${gender} mascot-profession-${profession} ${equipmentStarLevel > 0 ? 'equipment-starred' : ''} ${equipmentStarLevel >= 5 ? 'equipment-divine' : ''} ${selectedElement ? `mascot-enchanted mascot-enchanted-${selectedElement}` : ''} ${rootsEquipped ? 'mascot-enchanted mascot-four-roots' : ''} relative overflow-visible ${className}`}
@@ -1147,20 +1246,20 @@ function MascotAvatar({
       <span className="mascot-gender-emblem" aria-hidden="true">
         {gender === 'masculine' ? <Mars /> : <Venus />}
       </span>
-      {equipment && equippedItem && (
-        <div
-          className={`mascot-equipment mascot-equipment-${equippedItem.profession}`}
+      {equipment.map((instance) => (
+        <span
+          key={instance.uid}
+          className={`mascot-equipment mascot-equipment-${instance.slot} mascot-equipment-${instance.id}`}
+          style={{ '--item-stars': instance.stars } as CSSProperties}
         >
-          {equippedItem.artwork ? (
-            <EquipmentArtwork src={equippedItem.artwork.src} />
-          ) : (
-            <EquipmentIcon
-              id={equippedItem.icon}
-              className="mascot-equipment-icon"
-            />
+          <WearableEquipmentSprite id={instance.id} />
+          {instance.stars > 0 && (
+            <span className="mascot-equipment-stars" aria-hidden="true">
+              {'★'.repeat(instance.stars)}
+            </span>
           )}
-        </div>
-      )}
+        </span>
+      ))}
     </div>
   );
 }
@@ -1171,7 +1270,6 @@ function BattleArena({
   profession,
   tier,
   equipment,
-  equipmentStarLevel,
   elements,
   equippedElement,
   status,
@@ -1183,8 +1281,7 @@ function BattleArena({
   gender: MascotGender;
   profession: MascotProfession;
   tier: number;
-  equipment: EquipmentId | null;
-  equipmentStarLevel: number;
+  equipment: ActiveEquipment[];
   elements: ElementLevels;
   equippedElement: ElementLoadout;
   status: BattleStatus;
@@ -1245,6 +1342,10 @@ function BattleArena({
     (sum, element) => sum + elements[element],
     0,
   );
+  const equipmentStarLevel = equipment.reduce(
+    (maximum, item) => Math.max(maximum, item.stars),
+    0,
+  );
   const battleStyle = {
     '--effect-level': Math.min(5, Math.max(1, totalElementLevel)),
     '--gear-stars': equipmentStarLevel,
@@ -1257,18 +1358,19 @@ function BattleArena({
       aria-hidden="true"
     >
       <div className="mascot-battle-actor">
+        <AttackPoseSprite gender={gender} profession={profession} />
         <MascotAvatar
           gender={gender}
           profession={profession}
           tier={tier}
           equipment={equipment}
-          equipmentStarLevel={equipmentStarLevel}
           elements={elements}
           equippedElement={equippedElement}
           className="h-[116px] w-[88px] sm:h-[132px] sm:w-[99px]"
         />
       </div>
       <div className="mascot-attack-path" aria-hidden="true">
+        <span className="actor-motion-accent" />
         <span className="attack-core" />
         <span className="attack-trail attack-trail-a" />
         <span className="attack-trail attack-trail-b" />
@@ -1510,9 +1612,8 @@ export default function Home() {
   const [equipmentInventory, setEquipmentInventory] = useState<
     EquipmentInstance[]
   >([]);
-  const [equippedEquipmentUid, setEquippedEquipmentUid] = useState<
-    string | null
-  >(null);
+  const [equippedEquipmentUids, setEquippedEquipmentUids] =
+    useState<EquipmentLoadout>({ ...emptyEquipmentLoadout });
   const [equipmentSpend, setEquipmentSpend] = useState(0);
   const [enhancementSpend, setEnhancementSpend] = useState(0);
   const [enhancementOutcome, setEnhancementOutcome] = useState<{
@@ -1753,6 +1854,9 @@ export default function Home() {
       const savedEquippedEquipmentUid = browserStorage.getItem(
         storageKeys.equippedEquipmentUid,
       );
+      const savedEquippedEquipmentUids = browserStorage.getItem(
+        storageKeys.equippedEquipmentUids,
+      );
       const savedEquipmentSpend = browserStorage.getItem(
         storageKeys.equipmentSpend,
       );
@@ -1824,6 +1928,9 @@ export default function Home() {
         );
         const parsedDailyProgress: unknown = JSON.parse(
           savedDailyProgress ?? JSON.stringify(emptyDailyProgress),
+        );
+        const parsedEquipmentLoadout: unknown = JSON.parse(
+          savedEquippedEquipmentUids ?? 'null',
         );
         if (Array.isArray(parsedSolved)) {
           restoredSolvedIds = [
@@ -1899,7 +2006,36 @@ export default function Home() {
             : migratedInventory.find(
                 (item) => item.id === savedEquippedEquipment,
               )?.uid;
-        setEquippedEquipmentUid(restoredEquippedUid ?? null);
+        const restoredLoadout: EquipmentLoadout = {
+          ...emptyEquipmentLoadout,
+        };
+        if (
+          parsedEquipmentLoadout &&
+          typeof parsedEquipmentLoadout === 'object' &&
+          !Array.isArray(parsedEquipmentLoadout)
+        ) {
+          (['weapon', 'relic'] as EquipmentSlot[]).forEach((slot) => {
+            const uid = (parsedEquipmentLoadout as Record<string, unknown>)[
+              slot
+            ];
+            if (
+              typeof uid === 'string' &&
+              migratedInventory.some(
+                (item) =>
+                  item.uid === uid && equipmentCatalog[item.id].slot === slot,
+              )
+            )
+              restoredLoadout[slot] = uid;
+          });
+        } else if (restoredEquippedUid) {
+          const legacyItem = migratedInventory.find(
+            (item) => item.uid === restoredEquippedUid,
+          );
+          if (legacyItem)
+            restoredLoadout[equipmentCatalog[legacyItem.id].slot] =
+              legacyItem.uid;
+        }
+        setEquippedEquipmentUids(restoredLoadout);
         {
           const parsedSpend = Number(savedEquipmentSpend);
           if (
@@ -2138,12 +2274,18 @@ export default function Home() {
       );
   }, [equipmentInventory]);
   useEffect(() => {
-    if (storageLoaded.current)
-      browserStorage.setItem(
-        storageKeys.equippedEquipmentUid,
-        equippedEquipmentUid ?? '',
-      );
-  }, [equippedEquipmentUid]);
+    if (!storageLoaded.current) return;
+    browserStorage.setItem(
+      storageKeys.equippedEquipmentUids,
+      JSON.stringify(equippedEquipmentUids),
+    );
+    // Keep the original single-slot value in sync so older Academy pages can
+    // still render one equipped item while they migrate to the shared loadout.
+    browserStorage.setItem(
+      storageKeys.equippedEquipmentUid,
+      equippedEquipmentUids.weapon ?? equippedEquipmentUids.relic ?? '',
+    );
+  }, [equippedEquipmentUids]);
   useEffect(() => {
     if (storageLoaded.current)
       browserStorage.setItem(
@@ -2737,19 +2879,22 @@ export default function Home() {
     !professionProgress[mascotProfession].unlocked
       ? 'novice'
       : mascotProfession;
-  const equippedEquipment = equipmentInventory.find(
-    (item) => item.uid === equippedEquipmentUid,
-  );
-  const activeEquipment =
-    equippedEquipment &&
-    (equipmentCatalog[equippedEquipment.id].profession === 'all' ||
-      equipmentCatalog[equippedEquipment.id].profession ===
-        activeMascotProfession)
-      ? equippedEquipment.id
-      : null;
-  const activeEquipmentStars = activeEquipment
-    ? (equippedEquipment?.stars ?? 0)
-    : 0;
+  const activeEquipment: ActiveEquipment[] = (
+    ['weapon', 'relic'] as EquipmentSlot[]
+  ).flatMap((slot) => {
+    const item = equipmentInventory.find(
+      (candidate) => candidate.uid === equippedEquipmentUids[slot],
+    );
+    if (!item) return [];
+    const catalogItem = equipmentCatalog[item.id];
+    if (
+      catalogItem.slot !== slot ||
+      (catalogItem.profession !== 'all' &&
+        catalogItem.profession !== activeMascotProfession)
+    )
+      return [];
+    return [{ ...item, slot }];
+  });
   const battleStatus: BattleStatus = running
     ? 'running'
     : result
@@ -2838,7 +2983,11 @@ export default function Home() {
     setEquipmentSpend((previous) => previous + equipmentCatalog[id].cost);
     const profession = equipmentCatalog[id].profession;
     if (profession === 'all' || profession === activeMascotProfession) {
-      setEquippedEquipmentUid(instance.uid);
+      const slot = equipmentCatalog[id].slot;
+      setEquippedEquipmentUids((previous) => ({
+        ...previous,
+        [slot]: instance.uid,
+      }));
     }
   };
 
@@ -2848,7 +2997,10 @@ export default function Home() {
     setEquipmentInventory((previous) =>
       previous.filter((item) => item.uid !== uid),
     );
-    if (equippedEquipmentUid === uid) setEquippedEquipmentUid(null);
+    setEquippedEquipmentUids((previous) => ({
+      weapon: previous.weapon === uid ? null : previous.weapon,
+      relic: previous.relic === uid ? null : previous.relic,
+    }));
     setResaleCredits(
       (previous) =>
         previous + Math.floor(equipmentCatalog[instance.id].cost / 2),
@@ -3215,7 +3367,6 @@ export default function Home() {
                   profession={activeMascotProfession}
                   tier={mascotStage}
                   equipment={activeEquipment}
-                  equipmentStarLevel={activeEquipmentStars}
                   elements={elementLevels}
                   equippedElement={equippedElement}
                   className="h-[93px] w-[70px]"
@@ -3474,8 +3625,10 @@ export default function Home() {
                                   const { id, uid, stars } = instance;
                                   const item = equipmentCatalog[id];
                                   const equipped =
-                                    equippedEquipmentUid === uid &&
-                                    activeEquipment === id;
+                                    equippedEquipmentUids[item.slot] === uid &&
+                                    activeEquipment.some(
+                                      (active) => active.uid === uid,
+                                    );
                                   const classUnavailable =
                                     item.profession !== 'all' &&
                                     item.profession !== activeMascotProfession;
@@ -3508,19 +3661,19 @@ export default function Home() {
                                       <div
                                         className={`equipment-shop-icon equipment-${item.profession}`}
                                       >
-                                        {item.artwork ? (
-                                          <EquipmentArtwork
-                                            src={item.artwork.src}
-                                          />
-                                        ) : (
-                                          <EquipmentIcon
-                                            id={item.icon}
-                                            className="equipment-shop-main-icon"
-                                          />
-                                        )}
+                                        <WearableEquipmentSprite id={id} />
                                       </div>
                                       <span className="mt-2 block text-xs font-semibold">
                                         {item.name[locale]}
+                                      </span>
+                                      <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-wide text-primary/80">
+                                        {item.slot === 'weapon'
+                                          ? locale === 'zh'
+                                            ? '武器槽'
+                                            : 'Weapon slot'
+                                          : locale === 'zh'
+                                            ? '輔助槽'
+                                            : 'Relic slot'}
                                       </span>
                                       {copyTotal > 1 && (
                                         <span className="mt-0.5 block text-[11px] font-medium text-muted-foreground">
@@ -3547,8 +3700,13 @@ export default function Home() {
                                               : undefined
                                           }
                                           onClick={() =>
-                                            setEquippedEquipmentUid(
-                                              equipped ? null : uid,
+                                            setEquippedEquipmentUids(
+                                              (previous) => ({
+                                                ...previous,
+                                                [item.slot]: equipped
+                                                  ? null
+                                                  : uid,
+                                              }),
                                             )
                                           }
                                         >
@@ -3728,16 +3886,7 @@ export default function Home() {
                                     <div
                                       className={`equipment-shop-icon equipment-${item.profession}`}
                                     >
-                                      {item.artwork ? (
-                                        <EquipmentArtwork
-                                          src={item.artwork.src}
-                                        />
-                                      ) : (
-                                        <EquipmentIcon
-                                          id={item.icon}
-                                          className="equipment-shop-main-icon"
-                                        />
-                                      )}
+                                      <WearableEquipmentSprite id={id} />
                                     </div>
                                     <p className="mt-2 text-center text-sm font-semibold">
                                       {item.name[locale]}
@@ -4101,7 +4250,6 @@ export default function Home() {
                   profession={activeMascotProfession}
                   tier={mascotStage}
                   equipment={activeEquipment}
-                  equipmentStarLevel={activeEquipmentStars}
                   elements={elementLevels}
                   equippedElement={equippedElement}
                   className="h-28 w-[84px] sm:h-[139px] sm:w-[104px]"
@@ -4191,7 +4339,6 @@ export default function Home() {
                   profession={activeMascotProfession}
                   tier={mascotStage}
                   equipment={activeEquipment}
-                  equipmentStarLevel={activeEquipmentStars}
                   elements={elementLevels}
                   equippedElement={equippedElement}
                   status={battleStatus}
