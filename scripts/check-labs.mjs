@@ -194,7 +194,8 @@ verify(
       pageSource,
     ) &&
     /equipment\.map\(\(instance\)/.test(pageSource) &&
-    /equipment-wearable-sprite\.webp/.test(pageSource),
+    /equipment-wearable-sprite-v2\.webp/.test(pageSource) &&
+    /penguin-classes-\$\{gender\}-unequipped\.webp/.test(pageSource),
   'Companion supports a persistent two-slot wearable equipment loadout',
 );
 verify(

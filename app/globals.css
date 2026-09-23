@@ -372,6 +372,25 @@ body {
   z-index: 2;
 }
 
+.unequipped-profession-sprite {
+  display: block;
+  height: 100%;
+  inset: 0;
+  overflow: hidden;
+  position: absolute;
+  width: 100%;
+}
+
+.unequipped-profession-sprite img {
+  height: 100%;
+  left: var(--profession-x);
+  max-width: none;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  width: 400%;
+}
+
 .mascot-equipment {
   display: block;
   overflow: hidden;
@@ -391,11 +410,11 @@ body {
 
 .wearable-equipment-sprite img {
   height: 200%;
-  left: calc(var(--sprite-column) * -100%);
+  left: var(--sprite-x);
   max-width: none;
   pointer-events: none;
   position: absolute;
-  top: calc(var(--sprite-row) * -100%);
+  top: var(--sprite-y);
   width: 400%;
 }
 
@@ -413,67 +432,67 @@ body {
 }
 
 .mascot-equipment-cpuBlade {
-  height: 62%;
-  left: -15%;
-  top: 4%;
-  transform: rotate(-5deg);
-  width: 47%;
+  height: 70%;
+  left: -14%;
+  top: 0;
+  transform: rotate(-7deg);
+  width: 51%;
 }
 
 .mascot-equipment-cpuShield {
-  height: 43%;
-  right: -7%;
-  top: 42%;
-  transform: rotate(8deg);
-  width: 43%;
+  height: 50%;
+  right: -6%;
+  top: 38%;
+  transform: rotate(6deg);
+  width: 48%;
 }
 
 .mascot-equipment-socQuiver {
-  height: 49%;
-  left: -13%;
-  top: 15%;
-  transform: rotate(-9deg);
-  width: 39%;
+  height: 58%;
+  left: -8%;
+  top: 9%;
+  transform: rotate(-8deg);
+  width: 44%;
   z-index: 1;
 }
 
 .mascot-equipment-socCompass {
-  bottom: 18%;
-  height: 31%;
-  right: 3%;
-  transform: rotate(7deg);
-  width: 31%;
-}
-
-.mascot-equipment-dftLantern {
-  bottom: 9%;
-  height: 43%;
-  left: -12%;
-  transform: rotate(-8deg);
-  width: 37%;
-}
-
-.mascot-equipment-dftProbe {
-  height: 48%;
-  right: -11%;
-  top: 24%;
-  transform: rotate(10deg);
+  bottom: 23%;
+  height: 34%;
+  right: 20%;
+  transform: rotate(5deg);
   width: 34%;
 }
 
-.mascot-equipment-timingGrimoire {
-  bottom: 13%;
-  height: 38%;
-  left: -14%;
-  transform: rotate(-8deg);
+.mascot-equipment-dftLantern {
+  bottom: 5%;
+  height: 52%;
+  left: 2%;
+  transform: rotate(-5deg);
   width: 42%;
 }
 
+.mascot-equipment-dftProbe {
+  height: 58%;
+  right: -2%;
+  top: 14%;
+  transform: rotate(8deg);
+  width: 38%;
+}
+
+.mascot-equipment-timingGrimoire {
+  bottom: 11%;
+  height: 46%;
+  left: 2%;
+  transform: rotate(-7deg);
+  width: 48%;
+}
+
 .mascot-equipment-lowPowerCharm {
-  height: 28%;
-  left: 38%;
-  top: 42%;
-  width: 28%;
+  height: 32%;
+  left: 39%;
+  top: 38%;
+  width: 32%;
 }
 
 .mascot-equipment-cpu {
@@ -1112,7 +1131,7 @@ body {
 
 .attack-pose-sprite img {
   height: 100%;
-  left: calc(var(--attack-column) * -100%);
+  left: var(--attack-x);
   max-width: none;
   position: absolute;
   top: 0;

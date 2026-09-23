@@ -1111,17 +1111,52 @@ function WearableEquipmentSprite({
       className={`wearable-equipment-sprite ${className}`}
       style={
         {
-          '--sprite-column': column,
-          '--sprite-row': row,
+          '--sprite-x': `${column * -100}%`,
+          '--sprite-y': `${row * -100}%`,
         } as CSSProperties
       }
       aria-hidden="true"
     >
       <img
-        src="./mascot/equipment-wearable-sprite.webp"
+        src="./mascot/equipment-wearable-sprite-v2.webp"
         alt=""
-        width={1254}
-        height={1254}
+        width={2048}
+        height={1024}
+        decoding="async"
+        draggable={false}
+      />
+    </span>
+  );
+}
+
+function UnequippedProfessionSprite({
+  gender,
+  profession,
+}: {
+  gender: MascotGender;
+  profession: UnlockableProfession;
+}) {
+  const columns: Record<UnlockableProfession, number> = {
+    cpu: 0,
+    soc: 1,
+    dft: 2,
+    timing: 3,
+  };
+  return (
+    <span
+      className="unequipped-profession-sprite"
+      style={
+        {
+          '--profession-x': `${columns[profession] * -100}%`,
+        } as CSSProperties
+      }
+      aria-hidden="true"
+    >
+      <img
+        src={`./mascot/penguin-classes-${gender}-unequipped.webp`}
+        alt=""
+        width={2172}
+        height={724}
         decoding="async"
         draggable={false}
       />
@@ -1148,7 +1183,7 @@ function AttackPoseSprite({
       className="attack-pose-sprite"
       style={
         {
-          '--attack-column': columns[profession],
+          '--attack-x': `${columns[profession] * -100}%`,
         } as CSSProperties
       }
       aria-hidden="true"
@@ -1194,10 +1229,7 @@ function MascotAvatar({
   equippedElement?: ElementLoadout;
   className?: string;
 }) {
-  const image =
-    gender === 'masculine' && profession === 'soc'
-      ? './mascot/penguin-masculine-soc-v2.png'
-      : `./mascot/penguin-${gender}-${profession}.png`;
+  const noviceImage = `./mascot/penguin-${gender}-novice.png`;
   const selectedElement =
     equippedElement &&
     equippedElement !== 'four-roots' &&
@@ -1218,14 +1250,21 @@ function MascotAvatar({
       aria-label={mascotProfessions[profession].title.en}
     >
       <div className="mascot-character-frame absolute inset-0 overflow-visible">
-        <img
-          src={image}
-          alt=""
-          width={360}
-          height={480}
-          decoding="async"
-          className="mascot-character absolute inset-0 h-full w-full object-contain transition-transform duration-500 ease-out"
-        />
+        {profession === 'novice' ? (
+          <img
+            src={noviceImage}
+            alt=""
+            width={360}
+            height={480}
+            decoding="async"
+            className="mascot-character absolute inset-0 h-full w-full object-contain transition-transform duration-500 ease-out"
+          />
+        ) : (
+          <UnequippedProfessionSprite
+            gender={gender}
+            profession={profession}
+          />
+        )}
       </div>
       {(selectedElement || rootsEquipped) && (
         <span className="mascot-element-cloak" aria-hidden="true" />
