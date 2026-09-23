@@ -1187,18 +1187,69 @@ function BasicProfessionWeapon({
   );
 }
 
+const primaryProfessionEquipment: Partial<
+  Record<UnlockableProfession, EquipmentId>
+> = {
+  cpu: 'cpuBlade',
+  dft: 'dftLantern',
+  timing: 'timingGrimoire',
+};
+
+function equippedPrimaryWeapon(
+  profession: UnlockableProfession,
+  equipment: ActiveEquipment[],
+) {
+  const equipmentId = primaryProfessionEquipment[profession];
+  return equipmentId
+    ? (equipment.find((item) => item.id === equipmentId) ?? null)
+    : null;
+}
+
+function BattleHeldWeapon({
+  profession,
+  equipment,
+}: {
+  profession: UnlockableProfession;
+  equipment: ActiveEquipment[];
+}) {
+  const equippedWeapon = equippedPrimaryWeapon(profession, equipment);
+
+  return (
+    <span
+      className={`attack-held-weapon attack-held-weapon-${profession} ${equippedWeapon ? `attack-held-equipment attack-held-equipment-${equippedWeapon.id}` : 'attack-held-basic'}`}
+      aria-hidden="true"
+    >
+      {equippedWeapon ? (
+        <WearableEquipmentSprite id={equippedWeapon.id} />
+      ) : (
+        <img
+          src={`./mascot/basic-weapon-${profession}-v2.webp`}
+          alt=""
+          width={512}
+          height={512}
+          decoding="async"
+          draggable={false}
+        />
+      )}
+    </span>
+  );
+}
+
 function AttackPoseSprite({
   gender,
   profession,
+  equipment,
 }: {
   gender: MascotGender;
   profession: MascotProfession;
+  equipment: ActiveEquipment[];
 }) {
   if (profession === 'novice') return null;
   return (
     <span className="attack-pose-sprite" aria-hidden="true">
+      <BattleHeldWeapon profession={profession} equipment={equipment} />
       <img
-        src={`./mascot/attack-${gender}-${profession}-v2.webp`}
+        src={`./mascot/attack-unarmed-${gender}-${profession}-v3.webp`}
         alt=""
         width={768}
         height={768}
@@ -1253,10 +1304,8 @@ function MascotAvatar({
     0,
   );
   const hidesBasicWeapon =
-    (profession === 'cpu' &&
-      equipment.some((item) => item.id === 'cpuBlade')) ||
-    (profession === 'dft' &&
-      equipment.some((item) => item.id === 'dftProbe'));
+    profession !== 'novice' &&
+    equippedPrimaryWeapon(profession, equipment) !== null;
   return (
     <div
       className={`mascot-avatar mascot-tier-${tier} mascot-gender-${gender} mascot-profession-${profession} ${equipmentStarLevel > 0 ? 'equipment-starred' : ''} ${equipmentStarLevel >= 5 ? 'equipment-divine' : ''} ${selectedElement ? `mascot-enchanted mascot-enchanted-${selectedElement}` : ''} ${rootsEquipped ? 'mascot-enchanted mascot-four-roots' : ''} relative overflow-visible ${className}`}
@@ -1274,10 +1323,7 @@ function MascotAvatar({
             className="mascot-character absolute inset-0 h-full w-full object-contain transition-transform duration-500 ease-out"
           />
         ) : (
-          <UnequippedProfessionSprite
-            gender={gender}
-            profession={profession}
-          />
+          <UnequippedProfessionSprite gender={gender} profession={profession} />
         )}
       </div>
       {(selectedElement || rootsEquipped) && (
@@ -1417,7 +1463,11 @@ function BattleArena({
       aria-hidden="true"
     >
       <div className="mascot-battle-actor">
-        <AttackPoseSprite gender={gender} profession={profession} />
+        <AttackPoseSprite
+          gender={gender}
+          profession={profession}
+          equipment={equipment}
+        />
         <MascotAvatar
           gender={gender}
           profession={profession}

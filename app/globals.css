@@ -397,7 +397,9 @@ body {
   pointer-events: none;
   position: absolute;
   width: 104%;
-  z-index: 7;
+  /* The character paints over the grip so the weapon reads as held, not as a
+     sticker floating in front of the hand. */
+  z-index: 1;
 }
 
 .basic-profession-weapon-cpu {
@@ -470,6 +472,7 @@ body {
   top: 0;
   transform: rotate(-7deg);
   width: 51%;
+  z-index: 1;
 }
 
 .mascot-equipment-cpuShield {
@@ -490,35 +493,37 @@ body {
 }
 
 .mascot-equipment-socCompass {
-  bottom: 23%;
-  height: 34%;
-  right: 20%;
-  transform: rotate(5deg);
-  width: 34%;
+  bottom: 12%;
+  height: 30%;
+  left: -1%;
+  transform: rotate(-7deg);
+  width: 30%;
 }
 
 .mascot-equipment-dftLantern {
-  bottom: 5%;
-  height: 52%;
-  left: 2%;
-  transform: rotate(-5deg);
-  width: 42%;
+  bottom: 2%;
+  height: 64%;
+  right: -4%;
+  transform: rotate(6deg);
+  width: 48%;
+  z-index: 1;
 }
 
 .mascot-equipment-dftProbe {
   height: 58%;
-  right: -2%;
+  left: -7%;
   top: 14%;
-  transform: rotate(8deg);
+  transform: rotate(-8deg);
   width: 38%;
 }
 
 .mascot-equipment-timingGrimoire {
   bottom: 11%;
   height: 46%;
-  left: 2%;
-  transform: rotate(-7deg);
+  right: -2%;
+  transform: rotate(7deg);
   width: 48%;
+  z-index: 1;
 }
 
 .mascot-equipment-lowPowerCharm {
@@ -1162,10 +1167,87 @@ body {
   z-index: 18;
 }
 
-.attack-pose-sprite img {
+.attack-pose-sprite > img {
+  height: 100%;
+  object-fit: contain;
+  position: relative;
+  width: 100%;
+  z-index: 2;
+}
+
+.attack-held-weapon {
+  display: block;
+  overflow: visible;
+  pointer-events: none;
+  position: absolute;
+  transform-origin: 50% 72%;
+  z-index: 1;
+}
+
+.attack-held-weapon > img {
   height: 100%;
   object-fit: contain;
   width: 100%;
+}
+
+.attack-held-weapon-cpu {
+  height: 88%;
+  left: -7%;
+  top: -2%;
+  transform: rotate(-34deg);
+  width: 64%;
+}
+
+.attack-held-weapon-soc {
+  height: 96%;
+  right: -1%;
+  top: 0;
+  transform: rotate(3deg);
+  width: 72%;
+}
+
+.attack-held-weapon-dft {
+  height: 96%;
+  right: -2%;
+  top: -2%;
+  transform: rotate(7deg);
+  width: 66%;
+}
+
+.attack-held-weapon-timing {
+  height: 92%;
+  right: -1%;
+  top: 1%;
+  transform: rotate(8deg);
+  width: 66%;
+}
+
+.attack-held-equipment {
+  overflow: hidden;
+}
+
+.attack-held-equipment-cpuBlade {
+  height: 76%;
+  left: -2%;
+  top: 6%;
+  transform: rotate(-28deg);
+  width: 50%;
+}
+
+.attack-held-equipment-dftLantern {
+  height: 66%;
+  right: 2%;
+  top: 22%;
+  transform: rotate(7deg);
+  width: 45%;
+}
+
+.attack-held-equipment-timingGrimoire {
+  height: 55%;
+  right: 4%;
+  top: 28%;
+  transform: rotate(7deg);
+  width: 44%;
 }
 
 .battle-running .attack-pose-sprite {
@@ -1175,8 +1257,7 @@ body {
 
 .battle-success .attack-pose-sprite,
 .battle-failure .attack-pose-sprite {
-  animation: attack-pose-impact 1050ms cubic-bezier(0.2, 0.72, 0.2, 1)
-    forwards;
+  animation: attack-pose-impact 1050ms cubic-bezier(0.2, 0.72, 0.2, 1) forwards;
   display: block;
 }
 
