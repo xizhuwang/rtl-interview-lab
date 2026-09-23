@@ -1164,6 +1164,29 @@ function UnequippedProfessionSprite({
   );
 }
 
+function BasicProfessionWeapon({
+  profession,
+  hidden = false,
+}: {
+  profession: UnlockableProfession;
+  hidden?: boolean;
+}) {
+  if (hidden) return null;
+
+  return (
+    <img
+      src={`./mascot/basic-weapon-${profession}-v2.webp`}
+      alt=""
+      width={512}
+      height={512}
+      decoding="async"
+      draggable={false}
+      className={`basic-profession-weapon basic-profession-weapon-${profession}`}
+      aria-hidden="true"
+    />
+  );
+}
+
 function AttackPoseSprite({
   gender,
   profession,
@@ -1172,27 +1195,13 @@ function AttackPoseSprite({
   profession: MascotProfession;
 }) {
   if (profession === 'novice') return null;
-  const columns: Record<UnlockableProfession, number> = {
-    cpu: 0,
-    soc: 1,
-    dft: 2,
-    timing: 3,
-  };
   return (
-    <span
-      className="attack-pose-sprite"
-      style={
-        {
-          '--attack-x': `${columns[profession] * -100}%`,
-        } as CSSProperties
-      }
-      aria-hidden="true"
-    >
+    <span className="attack-pose-sprite" aria-hidden="true">
       <img
-        src={`./mascot/attack-poses-${gender}.webp`}
+        src={`./mascot/attack-${gender}-${profession}-v2.webp`}
         alt=""
-        width={2172}
-        height={724}
+        width={768}
+        height={768}
         decoding="async"
         draggable={false}
       />
@@ -1243,6 +1252,11 @@ function MascotAvatar({
     (maximum, item) => Math.max(maximum, item.stars),
     0,
   );
+  const hidesBasicWeapon =
+    (profession === 'cpu' &&
+      equipment.some((item) => item.id === 'cpuBlade')) ||
+    (profession === 'dft' &&
+      equipment.some((item) => item.id === 'dftProbe'));
   return (
     <div
       className={`mascot-avatar mascot-tier-${tier} mascot-gender-${gender} mascot-profession-${profession} ${equipmentStarLevel > 0 ? 'equipment-starred' : ''} ${equipmentStarLevel >= 5 ? 'equipment-divine' : ''} ${selectedElement ? `mascot-enchanted mascot-enchanted-${selectedElement}` : ''} ${rootsEquipped ? 'mascot-enchanted mascot-four-roots' : ''} relative overflow-visible ${className}`}
@@ -1268,6 +1282,12 @@ function MascotAvatar({
       </div>
       {(selectedElement || rootsEquipped) && (
         <span className="mascot-element-cloak" aria-hidden="true" />
+      )}
+      {profession !== 'novice' && (
+        <BasicProfessionWeapon
+          profession={profession}
+          hidden={hidesBasicWeapon}
+        />
       )}
       {rootsEquipped && (
         <span className="mascot-roots-orbit" aria-hidden="true">

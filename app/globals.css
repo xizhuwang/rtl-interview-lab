@@ -391,6 +391,39 @@ body {
   width: 400%;
 }
 
+.basic-profession-weapon {
+  height: 104%;
+  object-fit: contain;
+  pointer-events: none;
+  position: absolute;
+  width: 104%;
+  z-index: 7;
+}
+
+.basic-profession-weapon-cpu {
+  left: -34%;
+  top: -1%;
+  transform: rotate(-12deg);
+}
+
+.basic-profession-weapon-soc {
+  right: -41%;
+  top: -3%;
+  transform: rotate(4deg) scale(1.08);
+}
+
+.basic-profession-weapon-dft {
+  right: -39%;
+  top: -2%;
+  transform: rotate(7deg);
+}
+
+.basic-profession-weapon-timing {
+  right: -40%;
+  top: -2%;
+  transform: rotate(8deg);
+}
+
 .mascot-equipment {
   display: block;
   overflow: hidden;
@@ -1119,23 +1152,20 @@ body {
 
 .attack-pose-sprite {
   display: none;
-  height: 142%;
-  left: 0;
-  overflow: hidden;
+  height: 150%;
+  left: -18%;
+  overflow: visible;
   pointer-events: none;
   position: absolute;
-  top: -27%;
-  width: 152%;
+  top: -32%;
+  width: 170%;
   z-index: 18;
 }
 
 .attack-pose-sprite img {
   height: 100%;
-  left: var(--attack-x);
-  max-width: none;
-  position: absolute;
-  top: 0;
-  width: 400%;
+  object-fit: contain;
+  width: 100%;
 }
 
 .battle-running .attack-pose-sprite {
@@ -1156,6 +1186,7 @@ body {
 }
 
 .battle-running .mascot-battle-actor .mascot-character-frame,
+.battle-running .mascot-battle-actor .basic-profession-weapon,
 .battle-running .mascot-battle-actor .mascot-equipment,
 .battle-running .mascot-battle-actor .mascot-tier-ornament,
 .battle-running .mascot-battle-actor .mascot-gender-emblem {
@@ -1633,16 +1664,16 @@ body {
 }
 
 .profession-projectile.projectile-a {
-  top: 16%;
+  top: 32%;
 }
 .profession-projectile.projectile-b {
-  top: 38%;
+  top: 44%;
 }
 .profession-projectile.projectile-c {
-  top: 62%;
+  top: 56%;
 }
 .profession-projectile.projectile-d {
-  top: 84%;
+  top: 68%;
 }
 
 .battle-running .profession-projectile,
@@ -1668,8 +1699,9 @@ body {
 
 @keyframes profession-skill-flight {
   0% {
+    left: 0;
     opacity: 0;
-    translate: 0 -50%;
+    translate: -15% -50%;
     scale: 0.45;
     rotate: -8deg;
   }
@@ -1680,8 +1712,9 @@ body {
     opacity: 0.95;
   }
   100% {
+    left: calc(100% + 18px);
     opacity: 0;
-    translate: min(620%, 315px) -50%;
+    translate: -50% -50%;
     scale: 1.15;
     rotate: 8deg;
   }
@@ -1799,6 +1832,7 @@ body {
 
 @keyframes attack-flight {
   0% {
+    left: 0;
     opacity: 0;
     scale: 0.15 0.7;
     translate: 0 -50%;
@@ -1810,9 +1844,10 @@ body {
     opacity: 1;
   }
   100% {
+    left: calc(100% + 18px);
     opacity: 0;
     scale: 1 1;
-    translate: 92% -50%;
+    translate: -100% -50%;
   }
 }
 
@@ -1822,6 +1857,7 @@ body {
 
 @keyframes scan-pulse {
   0% {
+    left: 0;
     opacity: 0;
     scale: 0.3;
     translate: 0 -50%;
@@ -1830,9 +1866,10 @@ body {
     opacity: 1;
   }
   100% {
+    left: calc(100% + 18px);
     opacity: 0;
     scale: 1.4;
-    translate: min(420%, 240px) -50%;
+    translate: -50% -50%;
   }
 }
 
