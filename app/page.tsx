@@ -1187,7 +1187,7 @@ function ProfessionCharacterSprite({
       height={768}
       decoding="async"
       draggable={false}
-      className="profession-character-sprite"
+      className={`profession-character-sprite ${profession === 'cpu' && state === 'idle' ? 'cpu-idle-hand-corrected' : ''}`}
       aria-hidden="true"
     />
   );
@@ -1432,7 +1432,7 @@ function BattleArena({
           equipment={equipment}
           elements={elements}
           equippedElement={equippedElement}
-          className="h-[116px] w-[88px] sm:h-[132px] sm:w-[99px]"
+          className="h-[136px] w-[102px] sm:h-[152px] sm:w-[114px]"
         />
       </div>
       <div className="mascot-attack-path" aria-hidden="true">
@@ -3427,7 +3427,7 @@ export default function Home() {
               </div>
             </section>
             <div className="mt-3 overflow-hidden rounded-xl border border-sidebar-border bg-sidebar-accent">
-              <div className="grid grid-cols-[70px_minmax(0,1fr)] items-center gap-3 p-2.5">
+              <div className="grid grid-cols-[93px_minmax(0,1fr)] items-center gap-3 p-2.5">
                 <MascotAvatar
                   gender={mascotGender}
                   profession={activeMascotProfession}
@@ -3435,7 +3435,7 @@ export default function Home() {
                   equipment={activeEquipment}
                   elements={elementLevels}
                   equippedElement={equippedElement}
-                  className="h-[93px] w-[70px]"
+                  className="h-[124px] w-[93px]"
                 />
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center justify-between gap-1">
@@ -3553,7 +3553,7 @@ export default function Home() {
                                       gender={mascotGender}
                                       profession={profession}
                                       tier={mascotStage}
-                                      className="mx-auto h-24 w-[72px]"
+                                      className="mx-auto h-[120px] w-[90px]"
                                     />
                                     <span className="mt-1 block text-xs font-semibold">
                                       {item.title[locale]}
@@ -4302,7 +4302,7 @@ export default function Home() {
               </section>
             )}
             <div
-              className={`mascot-companion-stage mt-4 grid grid-cols-[84px_minmax(0,1fr)] items-end gap-3 border-t border-border pt-4 sm:grid-cols-[104px_minmax(0,1fr)] ${battleVisible ? 'battle-stage-active' : ''}`}
+              className={`mascot-companion-stage mt-4 grid grid-cols-[100px_minmax(0,1fr)] items-end gap-3 border-t border-border pt-4 sm:grid-cols-[120px_minmax(0,1fr)] ${battleVisible ? 'battle-stage-active' : ''}`}
             >
               <button
                 type="button"
@@ -4318,7 +4318,7 @@ export default function Home() {
                   equipment={activeEquipment}
                   elements={elementLevels}
                   equippedElement={equippedElement}
-                  className="h-28 w-[84px] sm:h-[139px] sm:w-[104px]"
+                  className="h-[133px] w-[100px] sm:h-40 sm:w-[120px]"
                 />
               </button>
               <div className="min-w-0">
