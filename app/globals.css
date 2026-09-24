@@ -372,58 +372,11 @@ body {
   z-index: 2;
 }
 
-.unequipped-profession-sprite {
-  display: block;
+.profession-character-sprite {
   height: 100%;
-  inset: 0;
-  overflow: hidden;
-  position: absolute;
-  width: 100%;
-}
-
-.unequipped-profession-sprite img {
-  height: 100%;
-  left: var(--profession-x);
-  max-width: none;
-  pointer-events: none;
-  position: absolute;
-  top: 0;
-  width: 400%;
-}
-
-.basic-profession-weapon {
-  height: 104%;
   object-fit: contain;
   pointer-events: none;
-  position: absolute;
-  width: 104%;
-  /* The character paints over the grip so the weapon reads as held, not as a
-     sticker floating in front of the hand. */
-  z-index: 1;
-}
-
-.basic-profession-weapon-cpu {
-  left: -34%;
-  top: -1%;
-  transform: rotate(-12deg);
-}
-
-.basic-profession-weapon-soc {
-  right: -41%;
-  top: -3%;
-  transform: rotate(4deg) scale(1.08);
-}
-
-.basic-profession-weapon-dft {
-  right: -39%;
-  top: -2%;
-  transform: rotate(7deg);
-}
-
-.basic-profession-weapon-timing {
-  right: -40%;
-  top: -2%;
-  transform: rotate(8deg);
+  width: 100%;
 }
 
 .mascot-equipment {
@@ -1173,81 +1126,6 @@ body {
   position: relative;
   width: 100%;
   z-index: 2;
-}
-
-.attack-held-weapon {
-  display: block;
-  overflow: visible;
-  pointer-events: none;
-  position: absolute;
-  transform-origin: 50% 72%;
-  z-index: 1;
-}
-
-.attack-held-weapon > img {
-  height: 100%;
-  object-fit: contain;
-  width: 100%;
-}
-
-.attack-held-weapon-cpu {
-  height: 88%;
-  left: -7%;
-  top: -2%;
-  transform: rotate(-34deg);
-  width: 64%;
-}
-
-.attack-held-weapon-soc {
-  height: 96%;
-  right: -1%;
-  top: 0;
-  transform: rotate(3deg);
-  width: 72%;
-}
-
-.attack-held-weapon-dft {
-  height: 96%;
-  right: -2%;
-  top: -2%;
-  transform: rotate(7deg);
-  width: 66%;
-}
-
-.attack-held-weapon-timing {
-  height: 92%;
-  right: -1%;
-  top: 1%;
-  transform: rotate(8deg);
-  width: 66%;
-}
-
-.attack-held-equipment {
-  overflow: hidden;
-}
-
-.attack-held-equipment-cpuBlade {
-  height: 76%;
-  left: -2%;
-  top: 6%;
-  transform: rotate(-28deg);
-  width: 50%;
-}
-
-.attack-held-equipment-dftLantern {
-  height: 66%;
-  right: 2%;
-  top: 22%;
-  transform: rotate(7deg);
-  width: 45%;
-}
-
-.attack-held-equipment-timingGrimoire {
-  height: 55%;
-  right: 4%;
-  top: 28%;
-  transform: rotate(7deg);
-  width: 44%;
 }
 
 .battle-running .attack-pose-sprite {

@@ -1129,109 +1129,67 @@ function WearableEquipmentSprite({
   );
 }
 
-function UnequippedProfessionSprite({
-  gender,
-  profession,
-}: {
-  gender: MascotGender;
-  profession: UnlockableProfession;
-}) {
-  const columns: Record<UnlockableProfession, number> = {
-    cpu: 0,
-    soc: 1,
-    dft: 2,
-    timing: 3,
-  };
-  return (
-    <span
-      className="unequipped-profession-sprite"
-      style={
-        {
-          '--profession-x': `${columns[profession] * -100}%`,
-        } as CSSProperties
-      }
-      aria-hidden="true"
-    >
-      <img
-        src={`./mascot/penguin-classes-${gender}-unequipped.webp`}
-        alt=""
-        width={2172}
-        height={724}
-        decoding="async"
-        draggable={false}
-      />
-    </span>
-  );
-}
-
-function BasicProfessionWeapon({
-  profession,
-  hidden = false,
-}: {
-  profession: UnlockableProfession;
-  hidden?: boolean;
-}) {
-  if (hidden) return null;
-
-  return (
-    <img
-      src={`./mascot/basic-weapon-${profession}-v2.webp`}
-      alt=""
-      width={512}
-      height={512}
-      decoding="async"
-      draggable={false}
-      className={`basic-profession-weapon basic-profession-weapon-${profession}`}
-      aria-hidden="true"
-    />
-  );
-}
-
-const primaryProfessionEquipment: Partial<
-  Record<UnlockableProfession, EquipmentId>
+const integratedProfessionEquipment: Record<
+  UnlockableProfession,
+  EquipmentId[]
 > = {
-  cpu: 'cpuBlade',
-  dft: 'dftLantern',
-  timing: 'timingGrimoire',
+  cpu: ['cpuBlade', 'cpuShield'],
+  soc: ['socQuiver'],
+  dft: ['dftLantern'],
+  timing: ['timingGrimoire'],
 };
 
-function equippedPrimaryWeapon(
+function integratedEquipmentIds(
   profession: UnlockableProfession,
   equipment: ActiveEquipment[],
 ) {
-  const equipmentId = primaryProfessionEquipment[profession];
-  return equipmentId
-    ? (equipment.find((item) => item.id === equipmentId) ?? null)
-    : null;
+  return integratedProfessionEquipment[profession].filter((id) =>
+    equipment.some((item) => item.id === id),
+  );
 }
 
-function BattleHeldWeapon({
+function professionCharacterVariant(
+  profession: UnlockableProfession,
+  equipment: ActiveEquipment[],
+) {
+  const integrated = integratedEquipmentIds(profession, equipment);
+
+  if (profession === 'cpu') {
+    const weapon = integrated.includes('cpuBlade');
+    const relic = integrated.includes('cpuShield');
+    if (weapon && relic) return 'full';
+    if (weapon) return 'weapon';
+    if (relic) return 'relic';
+    return 'base';
+  }
+
+  return integrated.length > 0 ? 'weapon' : 'base';
+}
+
+function ProfessionCharacterSprite({
+  gender,
   profession,
   equipment,
+  state,
 }: {
+  gender: MascotGender;
   profession: UnlockableProfession;
   equipment: ActiveEquipment[];
+  state: 'idle' | 'attack';
 }) {
-  const equippedWeapon = equippedPrimaryWeapon(profession, equipment);
+  const variant = professionCharacterVariant(profession, equipment);
 
   return (
-    <span
-      className={`attack-held-weapon attack-held-weapon-${profession} ${equippedWeapon ? `attack-held-equipment attack-held-equipment-${equippedWeapon.id}` : 'attack-held-basic'}`}
+    <img
+      src={`./mascot/profession-${profession}-${gender}-${state}-${variant}-v5.webp`}
+      alt=""
+      width={768}
+      height={768}
+      decoding="async"
+      draggable={false}
+      className="profession-character-sprite"
       aria-hidden="true"
-    >
-      {equippedWeapon ? (
-        <WearableEquipmentSprite id={equippedWeapon.id} />
-      ) : (
-        <img
-          src={`./mascot/basic-weapon-${profession}-v2.webp`}
-          alt=""
-          width={512}
-          height={512}
-          decoding="async"
-          draggable={false}
-        />
-      )}
-    </span>
+    />
   );
 }
 
@@ -1247,14 +1205,11 @@ function AttackPoseSprite({
   if (profession === 'novice') return null;
   return (
     <span className="attack-pose-sprite" aria-hidden="true">
-      <BattleHeldWeapon profession={profession} equipment={equipment} />
-      <img
-        src={`./mascot/attack-unarmed-${gender}-${profession}-v3.webp`}
-        alt=""
-        width={768}
-        height={768}
-        decoding="async"
-        draggable={false}
+      <ProfessionCharacterSprite
+        gender={gender}
+        profession={profession}
+        equipment={equipment}
+        state="attack"
       />
     </span>
   );
@@ -1303,9 +1258,10 @@ function MascotAvatar({
     (maximum, item) => Math.max(maximum, item.stars),
     0,
   );
-  const hidesBasicWeapon =
-    profession !== 'novice' &&
-    equippedPrimaryWeapon(profession, equipment) !== null;
+  const integratedEquipment =
+    profession === 'novice'
+      ? []
+      : integratedEquipmentIds(profession, equipment);
   return (
     <div
       className={`mascot-avatar mascot-tier-${tier} mascot-gender-${gender} mascot-profession-${profession} ${equipmentStarLevel > 0 ? 'equipment-starred' : ''} ${equipmentStarLevel >= 5 ? 'equipment-divine' : ''} ${selectedElement ? `mascot-enchanted mascot-enchanted-${selectedElement}` : ''} ${rootsEquipped ? 'mascot-enchanted mascot-four-roots' : ''} relative overflow-visible ${className}`}
@@ -1323,17 +1279,16 @@ function MascotAvatar({
             className="mascot-character absolute inset-0 h-full w-full object-contain transition-transform duration-500 ease-out"
           />
         ) : (
-          <UnequippedProfessionSprite gender={gender} profession={profession} />
+          <ProfessionCharacterSprite
+            gender={gender}
+            profession={profession}
+            equipment={equipment}
+            state="idle"
+          />
         )}
       </div>
       {(selectedElement || rootsEquipped) && (
         <span className="mascot-element-cloak" aria-hidden="true" />
-      )}
-      {profession !== 'novice' && (
-        <BasicProfessionWeapon
-          profession={profession}
-          hidden={hidesBasicWeapon}
-        />
       )}
       {rootsEquipped && (
         <span className="mascot-roots-orbit" aria-hidden="true">
@@ -1351,20 +1306,22 @@ function MascotAvatar({
       <span className="mascot-gender-emblem" aria-hidden="true">
         {gender === 'masculine' ? <Mars /> : <Venus />}
       </span>
-      {equipment.map((instance) => (
-        <span
-          key={instance.uid}
-          className={`mascot-equipment mascot-equipment-${instance.slot} mascot-equipment-${instance.id}`}
-          style={{ '--item-stars': instance.stars } as CSSProperties}
-        >
-          <WearableEquipmentSprite id={instance.id} />
-          {instance.stars > 0 && (
-            <span className="mascot-equipment-stars" aria-hidden="true">
-              {'★'.repeat(instance.stars)}
-            </span>
-          )}
-        </span>
-      ))}
+      {equipment
+        .filter((instance) => !integratedEquipment.includes(instance.id))
+        .map((instance) => (
+          <span
+            key={instance.uid}
+            className={`mascot-equipment mascot-equipment-${instance.slot} mascot-equipment-${instance.id}`}
+            style={{ '--item-stars': instance.stars } as CSSProperties}
+          >
+            <WearableEquipmentSprite id={instance.id} />
+            {instance.stars > 0 && (
+              <span className="mascot-equipment-stars" aria-hidden="true">
+                {'★'.repeat(instance.stars)}
+              </span>
+            )}
+          </span>
+        ))}
     </div>
   );
 }

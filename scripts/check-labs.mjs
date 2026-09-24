@@ -193,9 +193,15 @@ verify(
     /equippedEquipmentUids: 'soc-rtl-lab:equipped-equipment-uids'/.test(
       pageSource,
     ) &&
-    /equipment\.map\(\(instance\)/.test(pageSource) &&
+    /equipment[\s\S]*\.filter\(\(instance\)[\s\S]*\.map\(\(instance\)/.test(
+      pageSource,
+    ) &&
     /equipment-wearable-sprite-v2\.webp/.test(pageSource) &&
-    /penguin-classes-\$\{gender\}-unequipped\.webp/.test(pageSource),
+    /profession-\$\{profession\}-\$\{gender\}-\$\{state\}-\$\{variant\}-v5\.webp/.test(
+      pageSource,
+    ) &&
+    /cpu: \['cpuBlade', 'cpuShield'\]/.test(pageSource) &&
+    /soc: \['socQuiver'\]/.test(pageSource),
   'Companion supports a persistent two-slot wearable equipment loadout',
 );
 verify(
