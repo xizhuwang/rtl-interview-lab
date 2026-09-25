@@ -1801,12 +1801,34 @@ function LogicBriefCard({
           </dd>
           <dt>{locale === 'zh' ? '訊號翻成人話' : 'Translate the signals'}</dt>
           <dd>{localize(cpuGuide.signals, locale)}</dd>
+          {cpuGuide.codingFlow ? (
+            <>
+              <dt>{locale === 'zh' ? '照順序問問題' : 'Ask in this order'}</dt>
+              <dd>
+                <pre>{localize(cpuGuide.codingFlow, locale)}</pre>
+              </dd>
+            </>
+          ) : null}
           <dt>{locale === 'zh' ? '實際跑一次' : 'Walk through an example'}</dt>
           <dd>{localize(cpuGuide.example, locale)}</dd>
           <dt>
             {locale === 'zh' ? '最後才寫規則' : 'Only then write the rule'}
           </dt>
           <dd>{localize(cpuGuide.rule, locale)}</dd>
+          {cpuGuide.skeleton ? (
+            <>
+              <dt>
+                {locale === 'zh'
+                  ? '不直接給答案的骨架'
+                  : 'A skeleton without the answer'}
+              </dt>
+              <dd>
+                <pre className="cpu-code-skeleton">
+                  {localize(cpuGuide.skeleton, locale)}
+                </pre>
+              </dd>
+            </>
+          ) : null}
         </dl>
       ) : (
         <dl>

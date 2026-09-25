@@ -40,7 +40,7 @@ initial begin repeat(2)@(posedge clk);#1;check(rd1===0&&rd2===0);rst_n=1;write_r
     id: 'soc-cpu-forwarding', order: 35, track: 'cpu-cache', difficulty: 'intermediate', minutes: 25, points: 170,
     kind: 'build', judge: 'simulation', language: 'Verilog-2005',
     title: { zh: '五級 Pipeline Forwarding Unit', en: 'Five-stage pipeline forwarding unit' },
-    description: { zh: '為 EX stage 的兩個 source operand 選擇 register file、EX/MEM 或 MEM/WB 的結果，消除可轉送的 RAW data hazard。', en: 'Select register-file, EX/MEM, or MEM/WB data for both EX-stage operands to resolve forwardable RAW hazards.' },
+    description: { zh: '前一條指令的結果尚未寫回 register file，下一條指令卻已經要使用。這題不搬運 32-bit 資料，只為 ALU 的 A、B 輸入各產生一組 2-bit 選擇碼。', en: 'An older result has not reached the register file, but the current instruction already needs it. This block moves no 32-bit data; it only produces one 2-bit selector for each ALU input.' },
     specs: [
       { zh: 'forward=00 選 register file、10 選 EX/MEM、01 選 MEM/WB。', en: 'forward=00 selects the register file, 10 EX/MEM, and 01 MEM/WB.' },
       { zh: '只有 RegWrite=1、rd!=0 且 rd 等於對應 rs 時才可 forwarding。', en: 'Forward only when RegWrite=1, rd is nonzero, and rd matches the source register.' },

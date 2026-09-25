@@ -1009,6 +1009,13 @@ body {
   white-space: pre;
 }
 
+.cpu-concept-guide .cpu-code-skeleton {
+  border-color: oklch(0.7 0.13 278 / 28%);
+  background: oklch(0.18 0.035 266 / 96%);
+  color: oklch(0.92 0.035 248);
+  line-height: 1.35rem;
+}
+
 @media (max-width: 520px) {
   .logic-brief-card .cpu-concept-guide {
     display: block;

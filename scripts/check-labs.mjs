@@ -130,6 +130,18 @@ verify(
     }),
   'Every CPU/cache exercise has a bilingual concept walkthrough',
 );
+const forwardingGuide = cpuCacheGuides['soc-cpu-forwarding'];
+verify(
+  ['zh', 'en'].every(
+    (locale) =>
+      forwardingGuide.codingFlow?.[locale]?.includes('forward_a') &&
+      forwardingGuide.codingFlow?.[locale]?.includes('forward_b') &&
+      forwardingGuide.skeleton?.[locale]?.includes("forward_a = 2'b00") &&
+      forwardingGuide.skeleton?.[locale]?.includes('else if') &&
+      forwardingGuide.skeleton?.[locale]?.includes('/*'),
+  ),
+  'Forwarding guide has a bilingual decision tree and incomplete coding skeleton',
+);
 verify(
   challenges.filter((c) => c.track === 'soc').length === 11,
   'Eleven SoC and accelerator exercises',
