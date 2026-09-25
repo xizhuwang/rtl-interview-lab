@@ -34,6 +34,7 @@ const { formatCodeForEditor } = await loadTs('../lib/code-format.ts');
 const { gradeXorCnf } = await loadTs('../lib/cnf.ts');
 const { patternFailures } = await loadTs('../lib/pattern-check.ts');
 const { learningContext } = await loadTs('../lib/learning-context.ts');
+const { cpuCacheGuides } = await loadTs('../lib/cpu-cache-guides.ts');
 const { goldenPatterns } = await loadTs('../lib/golden-patterns.ts');
 const { socLearningAids } = await loadTs('../lib/soc-learning-aids.ts');
 const { boardImplementationCompetencies } = await loadTs('../lib/readiness.ts');
@@ -112,6 +113,22 @@ verify(
 verify(
   challenges.filter((c) => c.track === 'cpu-cache').length === 9,
   'CPU/cache is an independent track',
+);
+verify(
+  challenges
+    .filter((challenge) => challenge.track === 'cpu-cache')
+    .every((challenge) => {
+      const guide = cpuCacheGuides[challenge.id];
+      return (
+        guide &&
+        ['idea', 'diagram', 'signals', 'example', 'rule'].every(
+          (field) =>
+            guide[field]?.zh?.trim().length > 20 &&
+            guide[field]?.en?.trim().length > 20,
+        )
+      );
+    }),
+  'Every CPU/cache exercise has a bilingual concept walkthrough',
 );
 verify(
   challenges.filter((c) => c.track === 'soc').length === 11,

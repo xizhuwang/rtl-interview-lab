@@ -981,6 +981,49 @@ body {
   margin: 0;
 }
 
+.logic-brief-card .cpu-concept-guide {
+  gap: 0.75rem 0.9rem;
+  grid-template-columns: minmax(6.5rem, auto) minmax(0, 1fr);
+}
+
+.cpu-concept-guide dt {
+  align-self: start;
+  border-radius: 999px;
+  background: oklch(0.68 0.15 238 / 10%);
+  padding: 0.08rem 0.5rem;
+  text-align: center;
+}
+
+.cpu-concept-guide pre {
+  margin: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid oklch(0.68 0.15 238 / 18%);
+  border-radius: 0.6rem;
+  background: oklch(0.2 0.025 250 / 5%);
+  color: var(--foreground);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.7rem;
+  line-height: 1.2rem;
+  white-space: pre;
+}
+
+@media (max-width: 520px) {
+  .logic-brief-card .cpu-concept-guide {
+    display: block;
+  }
+
+  .cpu-concept-guide dt {
+    display: table;
+    margin-top: 0.75rem;
+  }
+
+  .cpu-concept-guide dd {
+    margin-top: 0.35rem;
+  }
+}
+
 .equipment-cpu {
   color: oklch(0.83 0.16 205);
 }

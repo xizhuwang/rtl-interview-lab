@@ -87,6 +87,7 @@ import {
   type TrackId,
 } from '@/lib/challenges';
 import { formatCodeForEditor } from '@/lib/code-format';
+import { cpuCacheGuides } from '@/lib/cpu-cache-guides';
 import { gradeXorCnf } from '@/lib/cnf';
 import { patternFailures } from '@/lib/pattern-check';
 import { learningContext, timingCommandGuide } from '@/lib/learning-context';
@@ -1764,6 +1765,7 @@ function LogicBriefCard({
   challenge: Challenge;
   locale: Locale;
 }) {
+  const cpuGuide = cpuCacheGuides[challenge.id];
   const keySteps = challenge.hints
     .slice(0, 2)
     .map((item) => localize(item, locale))
@@ -1780,22 +1782,45 @@ function LogicBriefCard({
       <div>
         <Clock3 />
         <span>
-          {locale === 'zh'
-            ? 'Timing 水晶推演卡'
-            : 'Timing Crystal reasoning card'}
+          {cpuGuide
+            ? locale === 'zh'
+              ? 'CPU／Cache 觀念導讀'
+              : 'CPU / Cache concept guide'
+            : locale === 'zh'
+              ? 'Timing 水晶推演卡'
+              : 'Timing Crystal reasoning card'}
         </span>
       </div>
-      <dl>
-        <dt>{locale === 'zh' ? '先把它想成' : 'Picture it this way'}</dt>
-        <dd>{logicAnalogy[challenge.track][locale]}</dd>
-        <dt>{locale === 'zh' ? '這題先做什麼' : 'What to do first'}</dt>
-        <dd>{keySteps || firstRule}</dd>
-        <dt>{locale === 'zh' ? '怎樣才算做對' : 'How to know it works'}</dt>
-        <dd>
-          {firstRule}{' '}
-          {locale === 'zh' ? `再測：${checks}。` : `Then test: ${checks}.`}
-        </dd>
-      </dl>
+      {cpuGuide ? (
+        <dl className="cpu-concept-guide">
+          <dt>{locale === 'zh' ? '先建立直覺' : 'Build the intuition'}</dt>
+          <dd>{localize(cpuGuide.idea, locale)}</dd>
+          <dt>{locale === 'zh' ? '資料怎麼走' : 'Follow the data'}</dt>
+          <dd>
+            <pre>{localize(cpuGuide.diagram, locale)}</pre>
+          </dd>
+          <dt>{locale === 'zh' ? '訊號翻成人話' : 'Translate the signals'}</dt>
+          <dd>{localize(cpuGuide.signals, locale)}</dd>
+          <dt>{locale === 'zh' ? '實際跑一次' : 'Walk through an example'}</dt>
+          <dd>{localize(cpuGuide.example, locale)}</dd>
+          <dt>
+            {locale === 'zh' ? '最後才寫規則' : 'Only then write the rule'}
+          </dt>
+          <dd>{localize(cpuGuide.rule, locale)}</dd>
+        </dl>
+      ) : (
+        <dl>
+          <dt>{locale === 'zh' ? '先把它想成' : 'Picture it this way'}</dt>
+          <dd>{logicAnalogy[challenge.track][locale]}</dd>
+          <dt>{locale === 'zh' ? '這題先做什麼' : 'What to do first'}</dt>
+          <dd>{keySteps || firstRule}</dd>
+          <dt>{locale === 'zh' ? '怎樣才算做對' : 'How to know it works'}</dt>
+          <dd>
+            {firstRule}{' '}
+            {locale === 'zh' ? `再測：${checks}。` : `Then test: ${checks}.`}
+          </dd>
+        </dl>
+      )}
     </section>
   );
 }
