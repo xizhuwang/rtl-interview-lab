@@ -231,6 +231,16 @@ verify(
   'Daily and weekend panels keep secondary records inside compact details',
 );
 verify(
+  /type BusinessCardProfile/.test(pageSource) &&
+    /businessCardProfile:\s*'soc-rtl-lab:business-card-profile'/.test(
+      pageSource,
+    ) &&
+    /<BusinessCardPreview/.test(pageSource) &&
+    /canvas\.toBlob\(resolve, 'image\/png'/.test(pageSource) &&
+    /xizhuwang\.github\.io\/rtl-interview-lab/.test(pageSource),
+  'Technology business cards keep profile data local and export a branded PNG',
+);
+verify(
   /Math\.floor\(equipmentCatalog\[instance\.id\]\.cost \/ 2\)/.test(pageSource),
   'Equipment resale returns half of the current shop price',
 );

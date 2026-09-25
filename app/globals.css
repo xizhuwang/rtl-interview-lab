@@ -344,6 +344,186 @@ body {
   isolation: isolate;
 }
 
+.tech-business-card {
+  aspect-ratio: 16 / 9;
+  background:
+    radial-gradient(
+      circle at 18% 46%,
+      oklch(0.72 0.16 210 / 22%),
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at 88% 12%,
+      oklch(0.58 0.2 298 / 20%),
+      transparent 34%
+    ),
+    linear-gradient(135deg, oklch(0.19 0.045 250), oklch(0.14 0.055 277));
+  border: 1px solid oklch(0.76 0.11 220 / 38%);
+  border-radius: 1.35rem;
+  box-shadow:
+    0 24px 70px oklch(0.1 0.04 260 / 28%),
+    inset 0 1px 0 oklch(1 0 0 / 9%);
+  color: oklch(0.96 0.02 220);
+  isolation: isolate;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.tech-card-grid {
+  background-image:
+    linear-gradient(oklch(0.8 0.08 220 / 7%) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.8 0.08 220 / 7%) 1px, transparent 1px);
+  background-size: 7.5% 13.333%;
+  inset: 0;
+  mask-image: linear-gradient(90deg, black, transparent 86%);
+  position: absolute;
+  z-index: -2;
+}
+
+.tech-card-glow {
+  background: linear-gradient(
+    90deg,
+    oklch(0.77 0.15 210),
+    oklch(0.68 0.18 292)
+  );
+  height: 0.22rem;
+  left: 35%;
+  position: absolute;
+  right: 5%;
+  top: 8%;
+}
+
+.tech-card-avatar-panel {
+  align-items: flex-end;
+  background: oklch(0.2 0.045 248 / 68%);
+  border: 1px solid oklch(0.77 0.11 216 / 22%);
+  border-radius: 1.1rem;
+  bottom: 9.5%;
+  display: flex;
+  justify-content: center;
+  left: 3.2%;
+  overflow: visible;
+  position: absolute;
+  top: 7%;
+  width: 29%;
+}
+
+.tech-card-avatar-panel .mascot-avatar {
+  height: 91% !important;
+  max-width: 92%;
+  width: 76% !important;
+}
+
+.tech-card-identity {
+  left: 36%;
+  min-width: 0;
+  position: absolute;
+  right: 5%;
+  top: 13.5%;
+}
+
+.tech-card-kicker {
+  color: oklch(0.8 0.13 211);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: clamp(0.43rem, 1.15vw, 0.72rem);
+  font-weight: 750;
+  letter-spacing: 0.12em;
+}
+
+.tech-card-identity h3 {
+  font-size: clamp(1.05rem, 4vw, 2.45rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  margin-top: 3%;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tech-card-role {
+  color: oklch(0.89 0.08 213);
+  font-size: clamp(0.58rem, 1.75vw, 1.05rem);
+  font-weight: 650;
+  margin-top: 2%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tech-card-company {
+  color: oklch(0.83 0.025 235 / 72%);
+  font-size: clamp(0.5rem, 1.35vw, 0.82rem);
+  margin-top: 1%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tech-card-title {
+  align-items: center;
+  background: linear-gradient(
+    90deg,
+    oklch(0.72 0.16 211 / 18%),
+    oklch(0.64 0.18 292 / 12%)
+  );
+  border: 1px solid oklch(0.76 0.13 225 / 34%);
+  border-radius: 0.65rem;
+  display: flex;
+  font-size: clamp(0.54rem, 1.45vw, 0.9rem);
+  font-weight: 750;
+  gap: 0.35rem;
+  margin-top: 5%;
+  max-width: 100%;
+  padding: 2.2% 3%;
+}
+
+.tech-card-title svg {
+  color: oklch(0.83 0.15 205);
+  flex: 0 0 auto;
+  height: 1em;
+  width: 1em;
+}
+
+.tech-card-title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tech-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.28rem;
+  margin-top: 3.5%;
+}
+
+.tech-card-badges span {
+  background: oklch(1 0 0 / 7%);
+  border: 1px solid oklch(0.83 0.08 218 / 22%);
+  border-radius: 999px;
+  color: oklch(0.88 0.045 220);
+  font-size: clamp(0.38rem, 1vw, 0.62rem);
+  font-weight: 600;
+  max-width: 48%;
+  overflow: hidden;
+  padding: 1.2% 2.4%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tech-card-link {
+  bottom: 3.3%;
+  color: oklch(0.84 0.03 226 / 48%);
+  font-size: clamp(0.36rem, 0.92vw, 0.58rem);
+  left: 36%;
+  letter-spacing: 0.025em;
+  position: absolute;
+  right: 5%;
+}
+
 .mascot-hint-button:hover .mascot-avatar,
 .mascot-hint-button:focus-visible .mascot-avatar {
   animation: mascot-float 700ms ease-in-out 2;

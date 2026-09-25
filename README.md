@@ -12,6 +12,8 @@ Timing-sensitive exercises include bilingual golden behavior patterns that can b
 
 An optional game layer places an original penguin companion beside progressive hints and test feedback. Solving domain exercises unlocks four electronic-fantasy professions; points, equipment, elemental enchantments, training targets, and the advanced timing boss provide visible progression without changing the simulator or judging rules. All companion variants now use one consistent character scale and rendering family. Opponents use a separate mechanical-target family so allies and enemies remain visually distinct.
 
+The companion backpack also opens a bilingual **technology business-card builder**. Players can combine their current penguin appearance with a locally saved display name, company or organization, role or specialty, one unlocked title, and recent achievement badges. The 16:9 preview uses a restrained navy, cyan, and violet circuit-card style and can be exported entirely in the browser as a 1200 x 675 PNG. The exported card includes a small project-discovery link; profile fields are never uploaded, and no account or server is required.
+
 PayPal.Me is the current public voluntary-support option and does not grant points. Visitors who need another support method can contact the author through the portfolio site. Automatic paid points and gifting remain disabled until a server can verify payments, store entitlements and transaction records, and support refunds.
 
 See [MONETIZATION.md](MONETIZATION.md) for the paid-point architecture, suggested packs, privacy boundaries, and launch checklist.

@@ -17,6 +17,8 @@ import {
   BatteryCharging,
   BookOpen,
   BookOpenCheck,
+  BriefcaseBusiness,
+  Building2,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -26,6 +28,7 @@ import {
   Code2,
   Coins,
   Cpu,
+  Download,
   ExternalLink,
   Flame,
   Gauge,
@@ -52,6 +55,7 @@ import {
   Swords,
   TerminalSquare,
   Target,
+  Contact,
   Trophy,
   Venus,
   Waves,
@@ -394,9 +398,16 @@ type WeekendProgress = {
   officialGoldWeeks: number;
 };
 type AchievementMilestone = {
+  id: string;
   threshold: number;
   title: { zh: string; en: string };
   badge: { zh: string; en: string };
+};
+type BusinessCardProfile = {
+  displayName: string;
+  company: string;
+  position: string;
+  selectedTitleId: string;
 };
 const emptyElementLevels: ElementLevels = {
   fire: 0,
@@ -440,26 +451,31 @@ const emptyWeekendProgress: WeekendProgress = {
 
 const reviewAchievements: AchievementMilestone[] = [
   {
+    id: 'review-7',
     threshold: 7,
     title: { zh: 'IC 小貓咪', en: 'IC Kitten' },
     badge: { zh: '矽晶肉球', en: 'Silicon Paw' },
   },
   {
+    id: 'review-30',
     threshold: 30,
     title: { zh: 'Debug 喵法師', en: 'Debug Cat Mage' },
     badge: { zh: '波形月輪', en: 'Waveform Moon' },
   },
   {
+    id: 'review-90',
     threshold: 90,
     title: { zh: 'RTL 煉丹師', en: 'RTL Alchemist' },
     badge: { zh: '百日邏輯爐', en: 'Logic Furnace' },
   },
   {
+    id: 'review-180',
     threshold: 180,
     title: { zh: 'Chiplet 御劍師', en: 'Chiplet Swordmaster' },
     badge: { zh: '半年互連印', en: 'Interconnect Seal' },
   },
   {
+    id: 'review-365',
     threshold: 365,
     title: { zh: 'I-大帝王', en: 'I/O Grand Emperor' },
     badge: { zh: '年度 Tape-out 王冠', en: 'Annual Tape-out Crown' },
@@ -468,26 +484,31 @@ const reviewAchievements: AchievementMilestone[] = [
 
 const contestAchievements: AchievementMilestone[] = [
   {
+    id: 'contest-4',
     threshold: 4,
     title: { zh: 'Clock 衝浪手', en: 'Clock Surfer' },
     badge: { zh: '四週上線章', en: 'Four-Week Uptime' },
   },
   {
+    id: 'contest-12',
     threshold: 12,
     title: { zh: 'Pipeline 競速貓', en: 'Pipeline Racing Cat' },
     badge: { zh: '十二金流水線', en: 'Twelve-Gold Pipeline' },
   },
   {
+    id: 'contest-24',
     threshold: 24,
     title: { zh: 'NPU 夜行者', en: 'NPU Night Runner' },
     badge: { zh: '張量暗核', en: 'Tensor Dark Core' },
   },
   {
+    id: 'contest-36',
     threshold: 36,
     title: { zh: 'PPA 星艦長', en: 'PPA Starship Captain' },
     badge: { zh: '三十六週時序環', en: '36-Week Timing Ring' },
   },
   {
+    id: 'contest-52',
     threshold: 52,
     title: { zh: '週末 I/O 大帝', en: 'Weekend I/O Emperor' },
     badge: { zh: '年度競速皇冠', en: 'Annual Speedrun Crown' },
@@ -499,6 +520,12 @@ const weekendStageRewards = [
   { coins: 350, hammers: 1 },
   { coins: 600, hammers: 2 },
 ] as const;
+const emptyBusinessCardProfile: BusinessCardProfile = {
+  displayName: '',
+  company: '',
+  position: '',
+  selectedTitleId: '',
+};
 const storageKeys = {
   schemaVersion: 'soc-rtl-lab:schema-version',
   locale: 'soc-rtl-lab:locale',
@@ -523,6 +550,7 @@ const storageKeys = {
   equippedElement: 'soc-rtl-lab:equipped-element',
   dailyProgress: 'soc-rtl-lab:daily-progress',
   weekendProgress: 'soc-rtl-lab:weekend-progress',
+  businessCardProfile: 'soc-rtl-lab:business-card-profile',
   sharedSocEarned: 'academy-shared:v1:soc-earned',
   sharedHbmEarned: 'academy-shared:v1:hbm-earned',
 };
@@ -727,6 +755,26 @@ const copy = {
       '這些是常見流程範例，不是可直接複製到所有專案的完整腳本；請依工具版本、MMMC scenario、PDK 與公司 flow 確認。',
     speaking: '完成後請用自己的話說清楚',
     mascotCustomize: '夥伴背包',
+    businessCard: '科技名片',
+    businessCardDesign: '設計我的名片',
+    businessCardDescription:
+      '角色與成就會自動同步；姓名、公司與職位只儲存在這台裝置。',
+    cardDisplayName: '顯示名稱',
+    cardCompany: '公司／組織',
+    cardPosition: '職位／專長',
+    cardTitle: '名片稱號',
+    cardAchievements: '已解鎖成就',
+    cardNoAchievements: '完成每日複習或週末正式賽後即可解鎖成就。',
+    cardDownload: '下載 PNG 名片',
+    cardDownloading: '正在產生名片…',
+    cardDownloadFailed: '圖片產生失敗，請稍後再試。',
+    cardPrivacy:
+      '下載在瀏覽器內完成，不會上傳姓名、公司或職位。請只填入願意公開的資料。',
+    cardNamePlaceholder: '你的名字或暱稱',
+    cardCompanyPlaceholder: '公司、學校或個人品牌',
+    cardPositionPlaceholder: '例如 RTL Design Engineer',
+    cardDefaultName: 'RTL PLAYER',
+    cardDefaultCompany: 'DIGITAL IC LAB',
     mascotShop: '裝備商店',
     backpack: '夥伴背包',
     shop: '點數商店',
@@ -898,6 +946,27 @@ const copy = {
       'These are common flow examples, not drop-in scripts for every project. Confirm tool release, MMMC scenarios, PDK, and company flow.',
     speaking: 'Explain it in your own words after solving',
     mascotCustomize: 'Companion backpack',
+    businessCard: 'Tech business card',
+    businessCardDesign: 'Design my card',
+    businessCardDescription:
+      'Your character and achievements stay in sync. Name, company, and role are stored only on this device.',
+    cardDisplayName: 'Display name',
+    cardCompany: 'Company / organization',
+    cardPosition: 'Role / specialty',
+    cardTitle: 'Card title',
+    cardAchievements: 'Unlocked achievements',
+    cardNoAchievements:
+      'Complete Daily Review or official Weekend Trials to unlock achievements.',
+    cardDownload: 'Download PNG card',
+    cardDownloading: 'Rendering card…',
+    cardDownloadFailed: 'Could not render the image. Please try again.',
+    cardPrivacy:
+      'The download is generated in your browser. Your name, company, and role are never uploaded. Only enter information you are willing to share.',
+    cardNamePlaceholder: 'Your name or handle',
+    cardCompanyPlaceholder: 'Company, school, or personal brand',
+    cardPositionPlaceholder: 'e.g. RTL Design Engineer',
+    cardDefaultName: 'RTL PLAYER',
+    cardDefaultCompany: 'DIGITAL IC LAB',
     mascotShop: 'Equipment shop',
     backpack: 'Companion backpack',
     shop: 'Point shop',
@@ -1577,6 +1646,76 @@ function MascotAvatar({
   );
 }
 
+function BusinessCardPreview({
+  locale,
+  profile,
+  title,
+  badges,
+  gender,
+  profession,
+  tier,
+  equipment,
+  elements,
+  equippedElement,
+}: {
+  locale: Locale;
+  profile: BusinessCardProfile;
+  title: string;
+  badges: string[];
+  gender: MascotGender;
+  profession: MascotProfession;
+  tier: number;
+  equipment: ActiveEquipment[];
+  elements: ElementLevels;
+  equippedElement: ElementLoadout;
+}) {
+  return (
+    <div
+      className="tech-business-card"
+      aria-label="Technology business card preview"
+    >
+      <span className="tech-card-grid" aria-hidden="true" />
+      <span className="tech-card-glow" aria-hidden="true" />
+      <div className="tech-card-avatar-panel">
+        <MascotAvatar
+          gender={gender}
+          profession={profession}
+          tier={tier}
+          equipment={equipment}
+          elements={elements}
+          equippedElement={equippedElement}
+          className="h-[202px] w-[152px] sm:h-[230px] sm:w-[172px]"
+        />
+      </div>
+      <div className="tech-card-identity">
+        <p className="tech-card-kicker">SOC RTL LAB · PLAYER ID</p>
+        <h3>
+          {profile.displayName || (locale === 'zh' ? 'RTL 玩家' : 'RTL Player')}
+        </h3>
+        <p className="tech-card-role">
+          {profile.position || mascotProfessions[profession].field[locale]}
+        </p>
+        <p className="tech-card-company">
+          {profile.company ||
+            (locale === 'zh' ? '數位 IC 實驗室' : 'Digital IC Lab')}
+        </p>
+        <div className="tech-card-title">
+          <Sparkles aria-hidden="true" />
+          <span>{title}</span>
+        </div>
+        <div className="tech-card-badges">
+          {badges.slice(0, 3).map((badge) => (
+            <span key={badge}>{badge}</span>
+          ))}
+        </div>
+      </div>
+      <p className="tech-card-link">
+        Explore RTL practice · xizhuwang.github.io/rtl-interview-lab
+      </p>
+    </div>
+  );
+}
+
 function BattleArena({
   locale,
   gender,
@@ -1988,6 +2127,10 @@ export default function Home() {
   const [mascotGender, setMascotGender] = useState<MascotGender>('masculine');
   const [mascotProfession, setMascotProfession] =
     useState<MascotProfession>('novice');
+  const [businessCardProfile, setBusinessCardProfile] =
+    useState<BusinessCardProfile>({ ...emptyBusinessCardProfile });
+  const [cardDownloading, setCardDownloading] = useState(false);
+  const [cardDownloadError, setCardDownloadError] = useState('');
   const [equipmentInventory, setEquipmentInventory] = useState<
     EquipmentInstance[]
   >([]);
@@ -2402,6 +2545,9 @@ export default function Home() {
       const savedWeekendProgress = browserStorage.getItem(
         storageKeys.weekendProgress,
       );
+      const savedBusinessCardProfile = browserStorage.getItem(
+        storageKeys.businessCardProfile,
+      );
       const savedHbmEarned = Number(
         browserStorage.getItem(storageKeys.sharedHbmEarned) ?? '0',
       );
@@ -2445,9 +2591,38 @@ export default function Home() {
         const parsedWeekendProgress: unknown = JSON.parse(
           savedWeekendProgress ?? JSON.stringify(emptyWeekendProgress),
         );
+        const parsedBusinessCardProfile: unknown = JSON.parse(
+          savedBusinessCardProfile ?? JSON.stringify(emptyBusinessCardProfile),
+        );
         const parsedEquipmentLoadout: unknown = JSON.parse(
           savedEquippedEquipmentUids ?? 'null',
         );
+        if (
+          parsedBusinessCardProfile &&
+          typeof parsedBusinessCardProfile === 'object' &&
+          !Array.isArray(parsedBusinessCardProfile)
+        ) {
+          const saved =
+            parsedBusinessCardProfile as Partial<BusinessCardProfile>;
+          setBusinessCardProfile({
+            displayName:
+              typeof saved.displayName === 'string'
+                ? saved.displayName.slice(0, 40)
+                : '',
+            company:
+              typeof saved.company === 'string'
+                ? saved.company.slice(0, 60)
+                : '',
+            position:
+              typeof saved.position === 'string'
+                ? saved.position.slice(0, 60)
+                : '',
+            selectedTitleId:
+              typeof saved.selectedTitleId === 'string'
+                ? saved.selectedTitleId.slice(0, 40)
+                : '',
+          });
+        }
         if (Array.isArray(parsedSolved)) {
           restoredSolvedIds = [
             ...new Set(
@@ -2978,6 +3153,13 @@ export default function Home() {
         JSON.stringify(weekendProgress),
       );
   }, [weekendProgress]);
+  useEffect(() => {
+    if (storageLoaded.current)
+      browserStorage.setItem(
+        storageKeys.businessCardProfile,
+        JSON.stringify(businessCardProfile),
+      );
+  }, [businessCardProfile]);
   useEffect(() => {
     if (
       !weekendTrial ||
@@ -3613,6 +3795,25 @@ export default function Home() {
     contestAchievements,
     weekendProgress.officialGoldWeeks,
   );
+  const unlockedCardAchievements = [
+    ...reviewAchievements.filter(
+      (achievement) => dailyProgress.questTotalDays >= achievement.threshold,
+    ),
+    ...contestAchievements.filter(
+      (achievement) =>
+        weekendProgress.officialGoldWeeks >= achievement.threshold,
+    ),
+  ];
+  const selectedCardAchievement = unlockedCardAchievements.find(
+    (achievement) => achievement.id === businessCardProfile.selectedTitleId,
+  );
+  const businessCardTitle = selectedCardAchievement
+    ? localize(selectedCardAchievement.title, locale)
+    : mascotTitle;
+  const businessCardBadges = [...unlockedCardAchievements]
+    .reverse()
+    .slice(0, 3)
+    .map((achievement) => localize(achievement.badge, locale));
   const visibleWeekendProgress =
     weekendProgress.weekKey === currentWeekKey
       ? weekendProgress
@@ -3638,6 +3839,231 @@ export default function Home() {
             ...weekendProgress.history,
           ].slice(0, 12),
         };
+
+  const downloadBusinessCard = async () => {
+    if (cardDownloading) return;
+    setCardDownloading(true);
+    setCardDownloadError('');
+    try {
+      await document.fonts?.ready;
+      const canvas = document.createElement('canvas');
+      canvas.width = 1200;
+      canvas.height = 675;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Canvas unavailable');
+
+      const elementAccent: Record<ElementId, string> = {
+        fire: '#fb7185',
+        water: '#38bdf8',
+        wind: '#5eead4',
+        earth: '#fbbf24',
+      };
+      const activeAccent =
+        equippedElement === 'four-roots'
+          ? '#a78bfa'
+          : equippedElement
+            ? elementAccent[equippedElement]
+            : '#22d3ee';
+      const background = context.createLinearGradient(0, 0, 1200, 675);
+      background.addColorStop(0, '#06111f');
+      background.addColorStop(0.58, '#0b1930');
+      background.addColorStop(1, '#17112e');
+      context.fillStyle = background;
+      context.fillRect(0, 0, 1200, 675);
+
+      context.save();
+      context.globalAlpha = 0.08;
+      context.strokeStyle = '#8bdcf1';
+      context.lineWidth = 1;
+      for (let x = 0; x <= 1200; x += 48) {
+        context.beginPath();
+        context.moveTo(x, 0);
+        context.lineTo(x, 675);
+        context.stroke();
+      }
+      for (let y = 0; y <= 675; y += 48) {
+        context.beginPath();
+        context.moveTo(0, y);
+        context.lineTo(1200, y);
+        context.stroke();
+      }
+      context.restore();
+
+      const glow = context.createRadialGradient(250, 310, 20, 250, 310, 330);
+      glow.addColorStop(0, `${activeAccent}55`);
+      glow.addColorStop(1, `${activeAccent}00`);
+      context.fillStyle = glow;
+      context.fillRect(0, 0, 560, 675);
+
+      context.fillStyle = 'rgba(10, 27, 49, 0.82)';
+      context.strokeStyle = `${activeAccent}66`;
+      context.lineWidth = 2;
+      context.beginPath();
+      context.roundRect(38, 42, 360, 568, 34);
+      context.fill();
+      context.stroke();
+
+      const characterVariant =
+        activeMascotProfession === 'novice'
+          ? ''
+          : professionCharacterVariant(activeMascotProfession, activeEquipment);
+      const characterPath =
+        activeMascotProfession === 'novice'
+          ? `./mascot/penguin-${mascotGender}-novice.png`
+          : `./mascot/profession-${activeMascotProfession}-${mascotGender}-idle-${characterVariant}-v5.webp`;
+      const characterImage = await new Promise<HTMLImageElement>(
+        (resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = () => reject(new Error('Character image failed'));
+          image.src = new URL(characterPath, window.location.href).href;
+        },
+      );
+      const characterBox = { x: 58, y: 95, width: 320, height: 430 };
+      const imageScale = Math.min(
+        characterBox.width / characterImage.naturalWidth,
+        characterBox.height / characterImage.naturalHeight,
+      );
+      const imageWidth = characterImage.naturalWidth * imageScale;
+      const imageHeight = characterImage.naturalHeight * imageScale;
+      context.drawImage(
+        characterImage,
+        characterBox.x + (characterBox.width - imageWidth) / 2,
+        characterBox.y + (characterBox.height - imageHeight) / 2,
+        imageWidth,
+        imageHeight,
+      );
+
+      context.fillStyle = '#dff8ff';
+      context.font = '700 22px Inter, "Noto Sans TC", sans-serif';
+      context.textAlign = 'center';
+      context.fillText(
+        mascotProfessions[activeMascotProfession].field[locale],
+        218,
+        554,
+        300,
+      );
+      context.fillStyle = 'rgba(208, 231, 242, 0.68)';
+      context.font = '600 16px ui-monospace, monospace';
+      context.fillText(
+        `${mascotTiers[locale][mascotStage]} · ${activeEquipment.length} GEAR · ${points} PTS`,
+        218,
+        582,
+        300,
+      );
+      context.textAlign = 'left';
+
+      context.fillStyle = activeAccent;
+      context.font = '700 18px ui-monospace, monospace';
+      context.fillText('SOC RTL LAB · PLAYER ID', 450, 92);
+
+      const fitFont = (
+        value: string,
+        maxWidth: number,
+        preferred: number,
+        minimum: number,
+        weight = 750,
+      ) => {
+        let size = preferred;
+        do {
+          context.font = `${weight} ${size}px Inter, "Noto Sans TC", sans-serif`;
+          if (context.measureText(value).width <= maxWidth) break;
+          size -= 2;
+        } while (size > minimum);
+        return size;
+      };
+      const displayName =
+        businessCardProfile.displayName.trim() || text.cardDefaultName;
+      fitFont(displayName, 700, 58, 34);
+      context.fillStyle = '#f7fbff';
+      context.fillText(displayName, 450, 166, 700);
+
+      const position =
+        businessCardProfile.position.trim() ||
+        mascotProfessions[activeMascotProfession].field[locale];
+      fitFont(position, 680, 28, 20, 650);
+      context.fillStyle = '#bdeeff';
+      context.fillText(position, 450, 216, 680);
+
+      const company =
+        businessCardProfile.company.trim() || text.cardDefaultCompany;
+      fitFont(company, 680, 23, 17, 550);
+      context.fillStyle = 'rgba(224, 235, 244, 0.72)';
+      context.fillText(company, 450, 256, 680);
+
+      context.fillStyle = `${activeAccent}22`;
+      context.strokeStyle = `${activeAccent}88`;
+      context.beginPath();
+      context.roundRect(450, 302, 690, 72, 18);
+      context.fill();
+      context.stroke();
+      context.fillStyle = '#ffffff';
+      fitFont(businessCardTitle, 625, 29, 19, 700);
+      context.fillText(businessCardTitle, 482, 347, 625);
+
+      context.font = '650 18px Inter, "Noto Sans TC", sans-serif';
+      context.fillStyle = 'rgba(224, 235, 244, 0.58)';
+      context.fillText(text.cardAchievements.toUpperCase(), 450, 420);
+      let badgeY = 458;
+      const badgeLabels = businessCardBadges.length
+        ? businessCardBadges
+        : [locale === 'zh' ? '等待第一枚成就徽章' : 'First badge awaits'];
+      badgeLabels.forEach((badge, index) => {
+        const badgeX = 450 + (index % 2) * 345;
+        if (index === 2) badgeY = 510;
+        context.fillStyle = 'rgba(255, 255, 255, 0.07)';
+        context.strokeStyle = 'rgba(164, 213, 232, 0.24)';
+        context.beginPath();
+        context.roundRect(badgeX, badgeY - 25, 320, 38, 12);
+        context.fill();
+        context.stroke();
+        context.fillStyle = index === 0 ? activeAccent : '#d7e7f2';
+        context.font = '600 17px Inter, "Noto Sans TC", sans-serif';
+        context.fillText(`◆ ${badge}`, badgeX + 14, badgeY, 286);
+      });
+
+      context.fillStyle = 'rgba(219, 235, 245, 0.54)';
+      context.font = '500 17px ui-monospace, monospace';
+      context.fillText(
+        `${String(solved.length).padStart(2, '0')} / ${challenges.length} LABS  ·  ${unlockedCardAchievements.length} ACHIEVEMENTS`,
+        450,
+        574,
+      );
+      context.strokeStyle = `${activeAccent}66`;
+      context.beginPath();
+      context.moveTo(450, 600);
+      context.lineTo(1140, 600);
+      context.stroke();
+      context.fillStyle = 'rgba(211, 229, 240, 0.44)';
+      context.font = '500 15px Inter, sans-serif';
+      context.fillText(
+        'Explore RTL practice · xizhuwang.github.io/rtl-interview-lab',
+        450,
+        632,
+      );
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, 'image/png', 0.96),
+      );
+      if (!blob) throw new Error('PNG export failed');
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      const safeName = displayName
+        .replace(/[^\w\u3400-\u9fff-]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 40);
+      anchor.href = url;
+      anchor.download = `${safeName || 'rtl-player'}-tech-card.png`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      setCardDownloadError(text.cardDownloadFailed);
+    } finally {
+      setCardDownloading(false);
+    }
+  };
 
   const claimDailyCheckIn = () => {
     if (!todayKey || checkedInToday) return;
@@ -4970,6 +5396,183 @@ export default function Home() {
                       <DialogClose render={<Button className="w-full" />}>
                         {text.mascotDone}
                       </DialogClose>
+                    </DialogContent>
+                  </Dialog>
+                  <Dialog>
+                    <DialogTrigger
+                      render={
+                        <button
+                          type="button"
+                          aria-label={text.businessCard}
+                          className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                        />
+                      }
+                    >
+                      <Contact className="size-3.5" />
+                      {text.businessCardDesign}
+                    </DialogTrigger>
+                    <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-5xl">
+                      <DialogHeader>
+                        <DialogTitle>{text.businessCard}</DialogTitle>
+                        <DialogDescription>
+                          {text.businessCardDescription}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-5 lg:grid-cols-[minmax(250px,0.72fr)_minmax(0,1.45fr)]">
+                        <div className="space-y-3">
+                          <label
+                            htmlFor="business-card-name"
+                            className="block text-xs font-semibold"
+                          >
+                            {text.cardDisplayName}
+                          </label>
+                          <Input
+                            id="business-card-name"
+                            value={businessCardProfile.displayName}
+                            maxLength={40}
+                            placeholder={text.cardNamePlaceholder}
+                            onChange={(event) =>
+                              setBusinessCardProfile((previous) => ({
+                                ...previous,
+                                displayName: event.target.value.slice(0, 40),
+                              }))
+                            }
+                          />
+                          <label
+                            htmlFor="business-card-company"
+                            className="block text-xs font-semibold"
+                          >
+                            {text.cardCompany}
+                          </label>
+                          <div className="relative">
+                            <Building2 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input
+                              id="business-card-company"
+                              className="pl-9"
+                              value={businessCardProfile.company}
+                              maxLength={60}
+                              placeholder={text.cardCompanyPlaceholder}
+                              onChange={(event) =>
+                                setBusinessCardProfile((previous) => ({
+                                  ...previous,
+                                  company: event.target.value.slice(0, 60),
+                                }))
+                              }
+                            />
+                          </div>
+                          <label
+                            htmlFor="business-card-position"
+                            className="block text-xs font-semibold"
+                          >
+                            {text.cardPosition}
+                          </label>
+                          <div className="relative">
+                            <BriefcaseBusiness className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input
+                              id="business-card-position"
+                              className="pl-9"
+                              value={businessCardProfile.position}
+                              maxLength={60}
+                              placeholder={text.cardPositionPlaceholder}
+                              onChange={(event) =>
+                                setBusinessCardProfile((previous) => ({
+                                  ...previous,
+                                  position: event.target.value.slice(0, 60),
+                                }))
+                              }
+                            />
+                          </div>
+                          <label
+                            htmlFor="business-card-title"
+                            className="block text-xs font-semibold"
+                          >
+                            {text.cardTitle}
+                          </label>
+                          <select
+                            id="business-card-title"
+                            value={
+                              selectedCardAchievement
+                                ? businessCardProfile.selectedTitleId
+                                : ''
+                            }
+                            onChange={(event) =>
+                              setBusinessCardProfile((previous) => ({
+                                ...previous,
+                                selectedTitleId: event.target.value,
+                              }))
+                            }
+                            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+                          >
+                            <option value="">{mascotTitle}</option>
+                            {unlockedCardAchievements.map((achievement) => (
+                              <option
+                                key={achievement.id}
+                                value={achievement.id}
+                              >
+                                {localize(achievement.title, locale)}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="rounded-xl border border-border bg-muted/25 p-3">
+                            <p className="text-xs font-semibold">
+                              {text.cardAchievements} ·{' '}
+                              {unlockedCardAchievements.length}
+                            </p>
+                            {unlockedCardAchievements.length ? (
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                {unlockedCardAchievements.map((achievement) => (
+                                  <span
+                                    key={achievement.id}
+                                    className="rounded-full border border-cyan-300/40 bg-cyan-500/10 px-2 py-1 text-[10px] font-medium text-cyan-800 dark:text-cyan-100"
+                                  >
+                                    {localize(achievement.badge, locale)}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+                                {text.cardNoAchievements}
+                              </p>
+                            )}
+                          </div>
+                          <p className="rounded-lg bg-amber-500/10 px-3 py-2 text-[11px] leading-5 text-amber-900 dark:text-amber-100">
+                            {text.cardPrivacy}
+                          </p>
+                        </div>
+                        <div className="min-w-0">
+                          <BusinessCardPreview
+                            locale={locale}
+                            profile={businessCardProfile}
+                            title={businessCardTitle}
+                            badges={businessCardBadges}
+                            gender={mascotGender}
+                            profession={activeMascotProfession}
+                            tier={mascotStage}
+                            equipment={activeEquipment}
+                            elements={elementLevels}
+                            equippedElement={equippedElement}
+                          />
+                          <Button
+                            className="mt-4 w-full"
+                            onClick={downloadBusinessCard}
+                            disabled={cardDownloading}
+                          >
+                            {cardDownloading ? (
+                              <LoaderCircle className="animate-spin" />
+                            ) : (
+                              <Download />
+                            )}
+                            {cardDownloading
+                              ? text.cardDownloading
+                              : text.cardDownload}
+                          </Button>
+                          {cardDownloadError ? (
+                            <p className="mt-2 text-center text-xs text-destructive">
+                              {cardDownloadError}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
                     </DialogContent>
                   </Dialog>
                 </div>
