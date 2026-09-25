@@ -4,6 +4,7 @@
 import {
   useCallback,
   useEffect,
+  useEffectEvent,
   useMemo,
   useRef,
   useState,
@@ -367,6 +368,26 @@ type DailyProgress = {
   rewardCredits: number;
   questDate: string;
   questClaimed: boolean;
+  questStreak: number;
+  questBestStreak: number;
+  questTotalDays: number;
+};
+type WeekendMedal = 'bronze' | 'silver' | 'gold';
+type WeekendHistoryEntry = {
+  weekKey: string;
+  challengeIds: string[];
+  bestSolved: number;
+  bestMs: number;
+  attempts: number;
+};
+type WeekendProgress = {
+  weekKey: string;
+  challengeIds: string[];
+  bestSolved: number;
+  bestMs: number;
+  attempts: number;
+  rewardedMedals: WeekendMedal[];
+  history: WeekendHistoryEntry[];
 };
 const emptyElementLevels: ElementLevels = {
   fire: 0,
@@ -391,6 +412,18 @@ const emptyDailyProgress: DailyProgress = {
   rewardCredits: 0,
   questDate: '',
   questClaimed: false,
+  questStreak: 0,
+  questBestStreak: 0,
+  questTotalDays: 0,
+};
+const emptyWeekendProgress: WeekendProgress = {
+  weekKey: '',
+  challengeIds: [],
+  bestSolved: 0,
+  bestMs: 0,
+  attempts: 0,
+  rewardedMedals: [],
+  history: [],
 };
 const storageKeys = {
   schemaVersion: 'soc-rtl-lab:schema-version',
@@ -415,6 +448,7 @@ const storageKeys = {
   elementSpend: 'soc-rtl-lab:element-spend',
   equippedElement: 'soc-rtl-lab:equipped-element',
   dailyProgress: 'soc-rtl-lab:daily-progress',
+  weekendProgress: 'soc-rtl-lab:weekend-progress',
   sharedSocEarned: 'academy-shared:v1:soc-earned',
   sharedHbmEarned: 'academy-shared:v1:hbm-earned',
 };
@@ -477,6 +511,77 @@ function dailyChallengeFor(key: string) {
     0,
   );
   return challenges[seed % challenges.length] ?? challenges[0];
+}
+
+function dateKeyFromOrdinal(ordinal: number) {
+  const date = new Date(ordinal * 86_400_000);
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+}
+
+function weekKeyFor(dateKey: string) {
+  const ordinal = dateOrdinal(dateKey);
+  if (!Number.isFinite(ordinal)) return '';
+  const weekday = new Date(ordinal * 86_400_000).getUTCDay();
+  const daysAfterMonday = (weekday + 6) % 7;
+  return dateKeyFromOrdinal(ordinal - daysAfterMonday);
+}
+
+function isWeekendDate(dateKey: string) {
+  const ordinal = dateOrdinal(dateKey);
+  if (!Number.isFinite(ordinal)) return false;
+  const weekday = new Date(ordinal * 86_400_000).getUTCDay();
+  return weekday === 0 || weekday === 6;
+}
+
+function weekendContestKeyFor(dateKey: string) {
+  const ordinal = dateOrdinal(dateKey);
+  if (!Number.isFinite(ordinal)) return '';
+  const weekday = new Date(ordinal * 86_400_000).getUTCDay();
+  if (weekday === 6) return `official-${dateKey}`;
+  if (weekday === 0) return `official-${dateKeyFromOrdinal(ordinal - 1)}`;
+  return `practice-${weekKeyFor(dateKey)}`;
+}
+
+function weekendChallengeSetFor(contestKey: string) {
+  const seed = Array.from(contestKey).reduce(
+    (sum, character, index) => sum + character.charCodeAt(0) * (index + 3),
+    0,
+  );
+  const pick = (difficulty: Challenge['difficulty'], offset: number) => {
+    const pool = challenges.filter(
+      (challenge) => challenge.difficulty === difficulty,
+    );
+    return pool[(seed + offset * 17) % pool.length] ?? challenges[0];
+  };
+  const selected = [
+    pick('beginner', 0),
+    pick('intermediate', 1),
+    pick('advanced', 2),
+  ];
+  return selected.filter(
+    (challenge, index) =>
+      selected.findIndex((item) => item.id === challenge.id) === index,
+  );
+}
+
+function streakMilestone(streak: number) {
+  const cycle = Math.max(1, Math.ceil(Math.max(1, streak) / 7));
+  return {
+    day: cycle * 7,
+    coins: Math.min(500, 50 + cycle * 100),
+    hammers: cycle >= 3 ? 2 : 1,
+  };
+}
+
+function formatDuration(milliseconds: number) {
+  const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function randomUnit() {
+  return Math.random();
 }
 
 const copy = {
@@ -592,6 +697,11 @@ const copy = {
     checkedIn: '今日已簽到',
     streak: '連續簽到',
     streakReward: '第 7 天加碼 150 金幣與 1 把鐵鎚',
+    reviewCurrentStreak: '連續複習',
+    reviewBestStreak: '歷史最佳',
+    reviewTotalDays: '累計完成',
+    days: '天',
+    nextStreakReward: '下一個里程碑',
     dailyQuest: '今日複習題',
     dailyQuestReward: '通過可領 80 金幣',
     dailyQuestDone: '今日獎勵已領取',
@@ -599,6 +709,21 @@ const copy = {
     dailyReviewMode: '每日重做模式',
     dailyReviewModeBody:
       '從 Starter code 重新開始；這份草稿不會覆蓋原答案。已完成題目的提示、Golden 與推演卡在本次複習中暫時關閉。',
+    weekendTrial: '週末 RTL 計時賽',
+    weekendOfficial: '本週正式題組 · 週六、週日開放',
+    weekendPractice: '平日試跑題組 · 不發獎勵、不列入紀錄',
+    weekendBest: '本週紀錄',
+    weekendAttempts: '挑戰次數',
+    weekendHistory: '歷史週最佳',
+    startWeekendTrial: '從 Starter code 開始計時',
+    restartWeekendTrial: '重新挑戰',
+    weekendTrialActive: '計時中',
+    weekendTrialModeBody:
+      '本次從 Starter code 重新開始，計時期間不提供提示、Golden 或推演卡，也不會覆蓋原本答案。',
+    weekendMedals: '完成 1／2／3 題依序取得銅／銀／金階段',
+    weekendReward:
+      '正式賽每題首次完成依序獲得 100／150／250 金幣；重跑只能刷新題數與時間。',
+    practiceFinished: '試跑完成；週末再挑戰可留下正式紀錄。',
     level: '階',
     fourRoots: '四靈根已解鎖',
     activeElement: '出戰屬性',
@@ -734,6 +859,11 @@ const copy = {
     checkedIn: 'Checked in today',
     streak: 'Check-in streak',
     streakReward: 'Day 7 adds 150 coins and one hammer',
+    reviewCurrentStreak: 'Review streak',
+    reviewBestStreak: 'Personal best',
+    reviewTotalDays: 'Days completed',
+    days: 'days',
+    nextStreakReward: 'Next milestone',
     dailyQuest: 'Daily review',
     dailyQuestReward: 'Pass it for 80 coins',
     dailyQuestDone: 'Daily reward claimed',
@@ -741,6 +871,22 @@ const copy = {
     dailyReviewMode: 'Daily fresh-start mode',
     dailyReviewModeBody:
       'Start again from the starter code. This temporary draft never overwrites your saved answer; hints, Golden behavior, and reasoning cards stay hidden when reviewing a solved challenge.',
+    weekendTrial: 'Weekend RTL time trial',
+    weekendOfficial: 'Official weekly set · open Saturday and Sunday',
+    weekendPractice: 'Weekday practice set · no rewards or official record',
+    weekendBest: 'Weekly record',
+    weekendAttempts: 'Attempts',
+    weekendHistory: 'Previous weekly bests',
+    startWeekendTrial: 'Start from Starter code',
+    restartWeekendTrial: 'Try again',
+    weekendTrialActive: 'Timer running',
+    weekendTrialModeBody:
+      'This run starts from Starter code. Hints, Golden behavior, and reasoning cards are disabled, and your saved answer is untouched.',
+    weekendMedals: 'Clear 1 / 2 / 3 problems for Bronze / Silver / Gold',
+    weekendReward:
+      'Each first official solve grants 100 / 150 / 250 coins. Replays can only improve solved count and time.',
+    practiceFinished:
+      'Practice cleared. Return on the weekend to record an official result.',
     level: 'Lv.',
     fourRoots: 'Four Roots unlocked',
     activeElement: 'Active element',
@@ -1708,6 +1854,21 @@ export default function Home() {
   const [dailyProgress, setDailyProgress] = useState<DailyProgress>({
     ...emptyDailyProgress,
   });
+  const [weekendProgress, setWeekendProgress] = useState<WeekendProgress>({
+    ...emptyWeekendProgress,
+    rewardedMedals: [],
+    history: [],
+  });
+  const [weekendTrial, setWeekendTrial] = useState<{
+    weekKey: string;
+    challengeIds: string[];
+    drafts: Record<string, string>;
+    completedIds: string[];
+    startedAt: number;
+    official: boolean;
+    completedMs: number;
+  } | null>(null);
+  const [weekendElapsedMs, setWeekendElapsedMs] = useState(0);
   const [hbmEarnedPoints, setHbmEarnedPoints] = useState(0);
   const [dailyReview, setDailyReview] = useState<{
     date: string;
@@ -1733,6 +1894,9 @@ export default function Home() {
   const current =
     challenges.find((item) => item.id === selectedId) ?? challenges[0];
   const dailyChallenge = dailyChallengeFor(todayKey || '2026-01-01');
+  const currentWeekKey = weekendContestKeyFor(todayKey || '2026-01-01');
+  const weekendChallenges = weekendChallengeSetFor(currentWeekKey);
+  const weekendOfficialDay = isWeekendDate(todayKey);
   const context = learningContext[current.id];
   const goldenPattern = goldenPatterns[current.id];
   const socLearningAid = socLearningAids[current.id];
@@ -1743,10 +1907,17 @@ export default function Home() {
   );
   const dailyReviewActive =
     dailyReview?.date === todayKey && dailyReview.challengeId === current.id;
-  const dailyReviewNoAids = dailyReviewActive && solved.includes(current.id);
-  const code = dailyReviewActive
-    ? dailyReview.draft
-    : (solutions[current.id] ?? starterCode);
+  const currentWeekendTrial =
+    weekendTrial?.weekKey === currentWeekKey ? weekendTrial : null;
+  const weekendTrialActive =
+    currentWeekendTrial?.challengeIds.includes(current.id) ?? false;
+  const dailyReviewNoAids =
+    (dailyReviewActive && solved.includes(current.id)) || weekendTrialActive;
+  const code = weekendTrialActive
+    ? (currentWeekendTrial?.drafts[current.id] ?? starterCode)
+    : dailyReviewActive
+      ? dailyReview.draft
+      : (solutions[current.id] ?? starterCode);
   const referenceCode = useMemo(
     () =>
       current.referenceSolution ??
@@ -1787,71 +1958,164 @@ export default function Home() {
     }
   }, []);
 
-  const awardDailyQuest = useCallback(
-    (id: string) => {
-      if (!todayKey || id !== dailyChallenge.id) return;
-      setDailyProgress((previous) => {
-        if (previous.questDate === todayKey && previous.questClaimed === true)
-          return previous;
-        return {
+  const awardDailyQuest = (id: string) => {
+    if (!todayKey || id !== dailyChallenge.id) return;
+    if (
+      dailyProgress.questDate === todayKey &&
+      dailyProgress.questClaimed === true
+    )
+      return;
+    const currentOrdinal = dateOrdinal(todayKey);
+    const previousOrdinal = dateOrdinal(dailyProgress.questDate);
+    const nextQuestStreak =
+      Number.isFinite(previousOrdinal) && currentOrdinal - previousOrdinal === 1
+        ? dailyProgress.questStreak + 1
+        : 1;
+    const milestone = nextQuestStreak % 7 === 0;
+    const milestoneReward = streakMilestone(nextQuestStreak);
+    setDailyProgress((previous) => {
+      if (previous.questDate === todayKey && previous.questClaimed === true)
+        return previous;
+      return {
+        ...previous,
+        questDate: todayKey,
+        questClaimed: true,
+        questStreak: nextQuestStreak,
+        questBestStreak: Math.max(previous.questBestStreak, nextQuestStreak),
+        questTotalDays: previous.questTotalDays + 1,
+        rewardCredits:
+          previous.rewardCredits + 80 + (milestone ? milestoneReward.coins : 0),
+      };
+    });
+    if (milestone)
+      setConsumables((previous) => ({
+        ...previous,
+        hammer: previous.hammer + milestoneReward.hammers,
+      }));
+  };
+
+  const finishWeekendTrial = (id: string) => {
+    if (
+      !weekendTrial ||
+      weekendTrial.completedMs > 0 ||
+      weekendTrial.weekKey !== currentWeekKey ||
+      !weekendTrial.challengeIds.includes(id) ||
+      weekendTrial.completedIds.includes(id)
+    )
+      return;
+
+    const elapsedMs = Math.max(
+      1000,
+      window.performance.now() - weekendTrial.startedAt,
+    );
+    const completedIds = [...weekendTrial.completedIds, id];
+    const completedAll =
+      completedIds.length === weekendTrial.challengeIds.length;
+    setWeekendElapsedMs(elapsedMs);
+    setWeekendTrial((previous) =>
+      previous
+        ? {
+            ...previous,
+            completedIds,
+            completedMs: completedAll ? elapsedMs : 0,
+          }
+        : previous,
+    );
+    if (!weekendTrial.official) return;
+
+    const previousWeek =
+      weekendProgress.weekKey === currentWeekKey
+        ? weekendProgress
+        : {
+            ...emptyWeekendProgress,
+            weekKey: currentWeekKey,
+            challengeIds: weekendTrial.challengeIds,
+            history: [
+              ...(weekendProgress.weekKey && weekendProgress.attempts > 0
+                ? [
+                    {
+                      weekKey: weekendProgress.weekKey,
+                      challengeIds: weekendProgress.challengeIds,
+                      bestSolved: weekendProgress.bestSolved,
+                      bestMs: weekendProgress.bestMs,
+                      attempts: weekendProgress.attempts,
+                    },
+                  ]
+                : []),
+              ...weekendProgress.history,
+            ].slice(0, 12),
+          };
+    const score = completedIds.length;
+    const medal = (['bronze', 'silver', 'gold'] as WeekendMedal[])[score - 1];
+    const rewards = [100, 150, 250];
+    const isNewMedal =
+      Boolean(medal) && !previousWeek.rewardedMedals.includes(medal);
+    const reward = isNewMedal ? rewards[score - 1] : 0;
+    const improvesRecord =
+      score > previousWeek.bestSolved ||
+      (score === previousWeek.bestSolved &&
+        (previousWeek.bestMs === 0 || elapsedMs < previousWeek.bestMs));
+    setWeekendProgress({
+      ...previousWeek,
+      bestSolved: improvesRecord ? score : previousWeek.bestSolved,
+      bestMs: improvesRecord ? elapsedMs : previousWeek.bestMs,
+      rewardedMedals: isNewMedal
+        ? [...previousWeek.rewardedMedals, medal]
+        : previousWeek.rewardedMedals,
+    });
+    if (reward > 0)
+      setDailyProgress((previous) => ({
+        ...previous,
+        rewardCredits: previous.rewardCredits + reward,
+      }));
+  };
+
+  const markSolved = (id: string) => {
+    awardDailyQuest(id);
+    finishWeekendTrial(id);
+    if (solved.includes(id)) return false;
+    const solvedChallenge = challenges.find((item) => item.id === id);
+    const next = [...solved, id];
+    setSolved(next);
+    browserStorage.setItem(storageKeys.solved, JSON.stringify(next));
+    setCoinReward(solvedChallenge?.points ?? 0);
+
+    const isDropBoss =
+      solvedChallenge?.difficulty === 'advanced' || finalBossChallenges.has(id);
+    if (isDropBoss) {
+      const roll = randomUnit();
+      const consumableIds = Object.keys(consumableCatalog) as ConsumableId[];
+      const grantConsumable = () => {
+        const item =
+          consumableIds[Math.floor(randomUnit() * consumableIds.length)];
+        const quantity = 2 + Math.floor(randomUnit() * 4);
+        setConsumables((previous) => ({
           ...previous,
-          questDate: todayKey,
-          questClaimed: true,
-          rewardCredits: previous.rewardCredits + 80,
-        };
-      });
-    },
-    [dailyChallenge.id, todayKey],
-  );
+          [item]: previous[item] + quantity,
+        }));
+        setDropReward({ kind: 'consumable', id: item, quantity });
+      };
 
-  const markSolved = useCallback(
-    (id: string) => {
-      awardDailyQuest(id);
-      if (solved.includes(id)) return false;
-      const solvedChallenge = challenges.find((item) => item.id === id);
-      const next = [...solved, id];
-      setSolved(next);
-      browserStorage.setItem(storageKeys.solved, JSON.stringify(next));
-      setCoinReward(solvedChallenge?.points ?? 0);
-
-      const isDropBoss =
-        solvedChallenge?.difficulty === 'advanced' ||
-        finalBossChallenges.has(id);
-      if (isDropBoss) {
-        const roll = Math.random();
-        const consumableIds = Object.keys(consumableCatalog) as ConsumableId[];
-        const grantConsumable = () => {
-          const item =
-            consumableIds[Math.floor(Math.random() * consumableIds.length)];
-          const quantity = 2 + Math.floor(Math.random() * 4);
-          setConsumables((previous) => ({
-            ...previous,
-            [item]: previous[item] + quantity,
-          }));
-          setDropReward({ kind: 'consumable', id: item, quantity });
-        };
-
-        if (roll < 0.62) {
-          grantConsumable();
-        } else if (roll < 0.77) {
-          const equipmentIds = Object.keys(equipmentCatalog) as EquipmentId[];
-          const item =
-            equipmentIds[Math.floor(Math.random() * equipmentIds.length)];
-          setEquipmentInventory((previous) => [
-            ...previous,
-            createEquipmentInstance(item),
-          ]);
-          setDropReward({ kind: 'equipment', id: item });
-        } else {
-          setDropReward(null);
-        }
+      if (roll < 0.62) {
+        grantConsumable();
+      } else if (roll < 0.77) {
+        const equipmentIds = Object.keys(equipmentCatalog) as EquipmentId[];
+        const item =
+          equipmentIds[Math.floor(randomUnit() * equipmentIds.length)];
+        setEquipmentInventory((previous) => [
+          ...previous,
+          createEquipmentInstance(item),
+        ]);
+        setDropReward({ kind: 'equipment', id: item });
       } else {
         setDropReward(null);
       }
-      return true;
-    },
-    [awardDailyQuest, solved],
-  );
+    } else {
+      setDropReward(null);
+    }
+    return true;
+  };
+  const markSolvedEvent = useEffectEvent((id: string) => markSolved(id));
 
   const selectChallenge = useCallback(
     (id: string) => {
@@ -1955,6 +2219,9 @@ export default function Home() {
       const savedDailyProgress = browserStorage.getItem(
         storageKeys.dailyProgress,
       );
+      const savedWeekendProgress = browserStorage.getItem(
+        storageKeys.weekendProgress,
+      );
       const savedHbmEarned = Number(
         browserStorage.getItem(storageKeys.sharedHbmEarned) ?? '0',
       );
@@ -1994,6 +2261,9 @@ export default function Home() {
         );
         const parsedDailyProgress: unknown = JSON.parse(
           savedDailyProgress ?? JSON.stringify(emptyDailyProgress),
+        );
+        const parsedWeekendProgress: unknown = JSON.parse(
+          savedWeekendProgress ?? JSON.stringify(emptyWeekendProgress),
         );
         const parsedEquipmentLoadout: unknown = JSON.parse(
           savedEquippedEquipmentUids ?? 'null',
@@ -2186,6 +2456,70 @@ export default function Home() {
             questDate:
               typeof saved.questDate === 'string' ? saved.questDate : '',
             questClaimed: saved.questClaimed === true,
+            questStreak: Math.max(
+              0,
+              Math.floor(Number(saved.questStreak) || 0),
+            ),
+            questBestStreak: Math.max(
+              Math.floor(Number(saved.questStreak) || 0),
+              Math.floor(Number(saved.questBestStreak) || 0),
+            ),
+            questTotalDays: Math.max(
+              saved.questClaimed ? 1 : 0,
+              Math.floor(Number(saved.questTotalDays) || 0),
+            ),
+          });
+        }
+        if (
+          parsedWeekendProgress &&
+          typeof parsedWeekendProgress === 'object' &&
+          !Array.isArray(parsedWeekendProgress)
+        ) {
+          const saved = parsedWeekendProgress as Partial<WeekendProgress>;
+          const validIds = new Set(challenges.map((item) => item.id));
+          const medals = new Set<WeekendMedal>(['bronze', 'silver', 'gold']);
+          const history = Array.isArray(saved.history)
+            ? saved.history
+                .filter(
+                  (entry): entry is WeekendHistoryEntry =>
+                    Boolean(entry) &&
+                    typeof entry.weekKey === 'string' &&
+                    Array.isArray(entry.challengeIds) &&
+                    entry.challengeIds.every(
+                      (id) => typeof id === 'string' && validIds.has(id),
+                    ) &&
+                    Number.isFinite(Number(entry.bestSolved)) &&
+                    Number.isFinite(Number(entry.bestMs)) &&
+                    Number.isFinite(Number(entry.attempts)),
+                )
+                .slice(0, 12)
+            : [];
+          setWeekendProgress({
+            weekKey: typeof saved.weekKey === 'string' ? saved.weekKey : '',
+            challengeIds: Array.isArray(saved.challengeIds)
+              ? saved.challengeIds.filter(
+                  (id): id is string =>
+                    typeof id === 'string' && validIds.has(id),
+                )
+              : [],
+            bestSolved: Math.min(
+              3,
+              Math.max(0, Math.floor(Number(saved.bestSolved) || 0)),
+            ),
+            bestMs: Math.max(0, Math.floor(Number(saved.bestMs) || 0)),
+            attempts: Math.max(0, Math.floor(Number(saved.attempts) || 0)),
+            rewardedMedals: Array.isArray(saved.rewardedMedals)
+              ? [
+                  ...new Set(
+                    saved.rewardedMedals.filter(
+                      (medal): medal is WeekendMedal =>
+                        typeof medal === 'string' &&
+                        medals.has(medal as WeekendMedal),
+                    ),
+                  ),
+                ]
+              : [],
+            history,
           });
         }
         const parsedEnhancementSpend = Number(savedEnhancementSpend);
@@ -2315,7 +2649,7 @@ export default function Home() {
         String(restoredSocPoints),
       );
       storageLoaded.current = true;
-      browserStorage.setItem(storageKeys.schemaVersion, '6');
+      browserStorage.setItem(storageKeys.schemaVersion, '7');
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
@@ -2417,6 +2751,26 @@ export default function Home() {
       );
   }, [dailyProgress]);
   useEffect(() => {
+    if (storageLoaded.current)
+      browserStorage.setItem(
+        storageKeys.weekendProgress,
+        JSON.stringify(weekendProgress),
+      );
+  }, [weekendProgress]);
+  useEffect(() => {
+    if (
+      !weekendTrial ||
+      weekendTrial.weekKey !== currentWeekKey ||
+      weekendTrial.completedMs > 0
+    )
+      return;
+    const updateElapsed = () =>
+      setWeekendElapsedMs(window.performance.now() - weekendTrial.startedAt);
+    updateElapsed();
+    const timer = window.setInterval(updateElapsed, 1000);
+    return () => window.clearInterval(timer);
+  }, [currentWeekKey, weekendTrial]);
+  useEffect(() => {
     if (!storageLoaded.current) return;
     const timer = window.setTimeout(() => {
       browserStorage.setItem(storageKeys.code, JSON.stringify(solutions));
@@ -2469,6 +2823,7 @@ export default function Home() {
       if (document.hidden) return;
 
       const now = Date.now();
+      setTodayKey(localDateKey(new Date(now)));
       let cancelledStaleWork = false;
       if (pendingRequest.current && now - runStartedAt.current > 50000) {
         pendingRequest.current = null;
@@ -2563,11 +2918,11 @@ export default function Home() {
       });
       setRunning(false);
       scheduleMascotReturn();
-      if (next.ok) markSolved(current.id);
+      if (next.ok) markSolvedEvent(current.id);
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [clearRunWatchdog, current.id, markSolved, scheduleMascotReturn]);
+  }, [clearRunWatchdog, current.id, scheduleMascotReturn]);
 
   useEffect(() => {
     const onSynthesis = (event: MessageEvent) => {
@@ -2676,7 +3031,16 @@ export default function Home() {
     }
     if (areaResult) setAreaResult(null);
     if (areaError) setAreaError('');
-    if (dailyReviewActive) {
+    if (weekendTrialActive) {
+      setWeekendTrial((previous) =>
+        previous
+          ? {
+              ...previous,
+              drafts: { ...previous.drafts, [current.id]: next },
+            }
+          : previous,
+      );
+    } else if (dailyReviewActive) {
       setDailyReview((previous) =>
         previous ? { ...previous, draft: next } : previous,
       );
@@ -3005,8 +3369,43 @@ export default function Home() {
     Boolean(todayKey) &&
     dailyProgress.questDate === todayKey &&
     dailyProgress.questClaimed;
+  const currentStreak =
+    Number.isFinite(dateOrdinal(todayKey)) &&
+    Number.isFinite(dateOrdinal(dailyProgress.lastCheckIn)) &&
+    dateOrdinal(todayKey) - dateOrdinal(dailyProgress.lastCheckIn) <= 1
+      ? dailyProgress.streak
+      : 0;
   const streakCycleDay =
-    dailyProgress.streak === 0 ? 0 : ((dailyProgress.streak - 1) % 7) + 1;
+    currentStreak === 0 ? 0 : ((currentStreak - 1) % 7) + 1;
+  const currentReviewStreak =
+    Number.isFinite(dateOrdinal(todayKey)) &&
+    Number.isFinite(dateOrdinal(dailyProgress.questDate)) &&
+    dateOrdinal(todayKey) - dateOrdinal(dailyProgress.questDate) <= 1
+      ? dailyProgress.questStreak
+      : 0;
+  const nextReviewMilestone = streakMilestone(currentReviewStreak + 1);
+  const visibleWeekendProgress =
+    weekendProgress.weekKey === currentWeekKey
+      ? weekendProgress
+      : {
+          ...emptyWeekendProgress,
+          weekKey: currentWeekKey,
+          challengeIds: weekendChallenges.map((challenge) => challenge.id),
+          history: [
+            ...(weekendProgress.weekKey && weekendProgress.attempts > 0
+              ? [
+                  {
+                    weekKey: weekendProgress.weekKey,
+                    challengeIds: weekendProgress.challengeIds,
+                    bestSolved: weekendProgress.bestSolved,
+                    bestMs: weekendProgress.bestMs,
+                    attempts: weekendProgress.attempts,
+                  },
+                ]
+              : []),
+            ...weekendProgress.history,
+          ].slice(0, 12),
+        };
 
   const claimDailyCheckIn = () => {
     if (!todayKey || checkedInToday) return;
@@ -3031,6 +3430,7 @@ export default function Home() {
   };
 
   const startDailyReview = () => {
+    setWeekendTrial(null);
     selectChallenge(dailyChallenge.id);
     setDailyReview({
       date: todayKey,
@@ -3040,6 +3440,55 @@ export default function Home() {
         dailyChallenge.language,
       ),
     });
+  };
+
+  const startWeekendTrial = (startedAt: number) => {
+    const challengeIds = weekendChallenges.map((challenge) => challenge.id);
+    const drafts = Object.fromEntries(
+      weekendChallenges.map((challenge) => [
+        challenge.id,
+        formatCodeForEditor(challenge.starter, challenge.language),
+      ]),
+    );
+    setDailyReview(null);
+    selectChallenge(challengeIds[0]);
+    setWeekendElapsedMs(0);
+    setWeekendTrial({
+      weekKey: currentWeekKey,
+      challengeIds,
+      drafts,
+      completedIds: [],
+      startedAt,
+      official: weekendOfficialDay,
+      completedMs: 0,
+    });
+    if (weekendOfficialDay) {
+      setWeekendProgress((previous) => {
+        if (previous.weekKey === currentWeekKey)
+          return { ...previous, attempts: previous.attempts + 1 };
+        return {
+          ...emptyWeekendProgress,
+          weekKey: currentWeekKey,
+          challengeIds,
+          attempts: 1,
+          rewardedMedals: [],
+          history: [
+            ...(previous.weekKey && previous.attempts > 0
+              ? [
+                  {
+                    weekKey: previous.weekKey,
+                    challengeIds: previous.challengeIds,
+                    bestSolved: previous.bestSolved,
+                    bestMs: previous.bestMs,
+                    attempts: previous.attempts,
+                  },
+                ]
+              : []),
+            ...previous.history,
+          ].slice(0, 12),
+        };
+      });
+    }
   };
 
   const buyEquipment = (id: EquipmentId) => {
@@ -3385,8 +3834,8 @@ export default function Home() {
                   <Gift className="size-3.5 text-amber-500" />
                   {text.dailyTraining}
                 </span>
-                <span className="font-mono text-[10px] text-muted-foreground">
-                  {text.streak} {dailyProgress.streak} ({streakCycleDay}/7)
+                <span className="rounded-full bg-background/70 px-2 py-0.5 font-mono text-[10px] font-semibold text-primary">
+                  {currentStreak} {text.days}
                 </span>
               </div>
               <Button
@@ -3399,7 +3848,8 @@ export default function Home() {
                 <Coins />
                 {checkedInToday ? text.checkedIn : text.dailyCheckIn}
               </Button>
-              <p className="mt-1 text-[10px] leading-4 text-muted-foreground">
+              <p className="mt-1.5 text-[10px] leading-4 text-muted-foreground">
+                {text.streak} {currentStreak} ({streakCycleDay}/7) ·{' '}
                 {text.streakReward}
               </p>
               <div className="mt-2 border-t border-sidebar-border pt-2">
@@ -3408,6 +3858,38 @@ export default function Home() {
                 </p>
                 <p className="mt-1 line-clamp-2 text-xs font-medium leading-4">
                   {localize(dailyChallenge.title, locale)}
+                </p>
+                <div className="mt-2 grid grid-cols-3 gap-1 text-center">
+                  <div className="rounded-md bg-background/65 px-1 py-1.5">
+                    <p className="font-mono text-xs font-bold">
+                      {currentReviewStreak}
+                    </p>
+                    <p className="text-[9px] text-muted-foreground">
+                      {text.reviewCurrentStreak}
+                    </p>
+                  </div>
+                  <div className="rounded-md bg-background/65 px-1 py-1.5">
+                    <p className="font-mono text-xs font-bold">
+                      {dailyProgress.questBestStreak}
+                    </p>
+                    <p className="text-[9px] text-muted-foreground">
+                      {text.reviewBestStreak}
+                    </p>
+                  </div>
+                  <div className="rounded-md bg-background/65 px-1 py-1.5">
+                    <p className="font-mono text-xs font-bold">
+                      {dailyProgress.questTotalDays}
+                    </p>
+                    <p className="text-[9px] text-muted-foreground">
+                      {text.reviewTotalDays}
+                    </p>
+                  </div>
+                </div>
+                <p className="mt-1.5 text-[9px] leading-4 text-muted-foreground">
+                  {text.nextStreakReward}：{nextReviewMilestone.day} {text.days}{' '}
+                  · +{nextReviewMilestone.coins} · {nextReviewMilestone.hammers}
+                  ×
+                  <Hammer className="ml-0.5 inline size-3" />
                 </p>
                 <div className="mt-2 flex items-center justify-between gap-2">
                   <span className="text-[10px] text-muted-foreground">
@@ -3425,6 +3907,162 @@ export default function Home() {
                   </button>
                 </div>
               </div>
+            </section>
+            <section
+              className="weekend-trial-card mt-3"
+              aria-label={text.weekendTrial}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="flex items-center gap-1.5 text-xs font-semibold">
+                    <Clock3 className="size-3.5 text-violet-500" />
+                    {text.weekendTrial}
+                  </p>
+                  <p className="mt-0.5 text-[9px] text-muted-foreground">
+                    {weekendOfficialDay
+                      ? text.weekendOfficial
+                      : text.weekendPractice}
+                  </p>
+                </div>
+                <span
+                  className={`rounded-full px-2 py-0.5 font-mono text-xs font-bold ${
+                    currentWeekendTrial && currentWeekendTrial.completedMs === 0
+                      ? 'bg-violet-500/15 text-violet-700'
+                      : 'bg-background/70'
+                  }`}
+                >
+                  {currentWeekendTrial
+                    ? formatDuration(
+                        currentWeekendTrial.completedMs || weekendElapsedMs,
+                      )
+                    : '--:--'}
+                </span>
+              </div>
+              <div className="mt-2 space-y-1">
+                {weekendChallenges.map((challenge, index) => {
+                  const completed =
+                    currentWeekendTrial?.completedIds.includes(challenge.id) ??
+                    false;
+                  return (
+                    <button
+                      key={challenge.id}
+                      type="button"
+                      disabled={!currentWeekendTrial}
+                      onClick={() => selectChallenge(challenge.id)}
+                      className={`flex w-full items-center gap-2 rounded-md border px-2 py-1.5 text-left text-[10px] transition-colors ${
+                        current.id === challenge.id && currentWeekendTrial
+                          ? 'border-violet-400 bg-violet-500/10'
+                          : 'border-border bg-background/55'
+                      } disabled:cursor-default`}
+                    >
+                      <span
+                        className={`grid size-5 shrink-0 place-items-center rounded-full font-mono font-bold ${
+                          completed
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-violet-500/12 text-violet-700'
+                        }`}
+                      >
+                        {completed ? <Check className="size-3" /> : index + 1}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate font-medium">
+                        {localize(challenge.title, locale)}
+                      </span>
+                      <span className="text-[9px] text-muted-foreground">
+                        {localize(
+                          difficultyLabel[challenge.difficulty],
+                          locale,
+                        )}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-1 text-[10px]">
+                <span className="rounded-md bg-background/65 px-2 py-1">
+                  {text.weekendBest}{' '}
+                  <strong className="font-mono">
+                    {visibleWeekendProgress.bestSolved}/3 ·{' '}
+                    {visibleWeekendProgress.bestMs > 0
+                      ? formatDuration(visibleWeekendProgress.bestMs)
+                      : '--:--'}
+                  </strong>
+                </span>
+                <span className="rounded-md bg-background/65 px-2 py-1">
+                  {text.weekendAttempts}{' '}
+                  <strong>{visibleWeekendProgress.attempts}</strong>
+                </span>
+              </div>
+              <div className="mt-2 flex gap-1" aria-label={text.weekendMedals}>
+                {(['bronze', 'silver', 'gold'] as WeekendMedal[]).map(
+                  (medal) => (
+                    <span
+                      key={medal}
+                      className={`flex-1 rounded-md border px-1 py-1 text-center text-[9px] font-semibold uppercase ${
+                        visibleWeekendProgress.rewardedMedals.includes(medal)
+                          ? medal === 'gold'
+                            ? 'border-amber-400 bg-amber-300/35 text-amber-800'
+                            : medal === 'silver'
+                              ? 'border-slate-400 bg-slate-300/35 text-slate-700'
+                              : 'border-orange-500 bg-orange-300/30 text-orange-800'
+                          : 'border-border bg-background/45 text-muted-foreground'
+                      }`}
+                    >
+                      {medal === 'bronze'
+                        ? '1/3'
+                        : medal === 'silver'
+                          ? '2/3'
+                          : '3/3'}
+                    </span>
+                  ),
+                )}
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-2 w-full justify-center"
+                disabled={!todayKey}
+                onClick={(event) => startWeekendTrial(event.timeStamp)}
+              >
+                <Play />
+                {currentWeekendTrial
+                  ? text.restartWeekendTrial
+                  : text.startWeekendTrial}
+              </Button>
+              <p className="mt-1.5 text-[9px] leading-4 text-muted-foreground">
+                {text.weekendMedals}
+                <br />
+                {text.weekendReward}
+              </p>
+              {currentWeekendTrial?.completedMs &&
+              !currentWeekendTrial.official ? (
+                <p className="mt-1 text-[9px] font-medium text-violet-700">
+                  {text.practiceFinished}
+                </p>
+              ) : null}
+              {visibleWeekendProgress.history.length > 0 ? (
+                <details className="mt-2 border-t border-sidebar-border pt-2">
+                  <summary className="cursor-pointer text-[10px] font-semibold">
+                    {text.weekendHistory}
+                  </summary>
+                  <div className="mt-1 space-y-1">
+                    {visibleWeekendProgress.history.slice(0, 4).map((entry) => (
+                      <div
+                        key={`${entry.weekKey}-${entry.challengeIds.join('-')}`}
+                        className="flex justify-between gap-2 text-[9px] text-muted-foreground"
+                      >
+                        <span>{entry.weekKey}</span>
+                        <span className="font-mono">
+                          {entry.bestSolved}/3 ·{' '}
+                          {entry.bestMs > 0
+                            ? formatDuration(entry.bestMs)
+                            : '--:--'}{' '}
+                          · {entry.attempts}×
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              ) : null}
             </section>
             <div className="mt-3 overflow-hidden rounded-xl border border-sidebar-border bg-sidebar-accent">
               <div className="grid grid-cols-[93px_minmax(0,1fr)] items-center gap-3 p-2.5">
@@ -4119,6 +4757,19 @@ export default function Home() {
                 <div className="mt-3 rounded-lg border border-violet-300/60 bg-violet-500/10 px-3 py-2 text-xs leading-5 text-violet-900 dark:text-violet-100">
                   <strong>{text.dailyReviewMode}：</strong>{' '}
                   {text.dailyReviewModeBody}
+                </div>
+              )}
+              {weekendTrialActive && currentWeekendTrial && (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-violet-300/60 bg-violet-500/10 px-3 py-2 text-xs leading-5 text-violet-900 dark:text-violet-100">
+                  <span>
+                    <strong>{text.weekendTrial}：</strong>{' '}
+                    {text.weekendTrialModeBody}
+                  </span>
+                  <span className="rounded-full bg-background/75 px-2 py-0.5 font-mono font-bold">
+                    {currentWeekendTrial.completedMs > 0
+                      ? formatDuration(currentWeekendTrial.completedMs)
+                      : `${text.weekendTrialActive} ${formatDuration(weekendElapsedMs)}`}
+                  </span>
                 </div>
               )}
               <p className="mt-1 font-mono text-xs text-muted-foreground">

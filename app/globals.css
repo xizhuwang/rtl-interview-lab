@@ -847,6 +847,17 @@ body {
   padding: 0.75rem;
 }
 
+.weekend-trial-card {
+  background: linear-gradient(
+    145deg,
+    oklch(0.98 0.018 255 / 94%),
+    oklch(0.95 0.045 302 / 90%)
+  );
+  border: 1px solid oklch(0.72 0.09 290 / 48%);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+}
+
 .forge-station {
   align-items: center;
   background: linear-gradient(

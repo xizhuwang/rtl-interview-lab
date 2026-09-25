@@ -152,8 +152,25 @@ verify(
   'Starter profiles receive 20 visors, 20 crystals, and 50 companions',
 );
 verify(
-  /schemaVersion,\s*'6'/.test(pageSource) && /normalized - 30/.test(pageSource),
-  'Schema v6 preserves the original starter-grant migration',
+  /schemaVersion,\s*'7'/.test(pageSource) && /normalized - 30/.test(pageSource),
+  'Schema v7 preserves the original starter-grant migration',
+);
+verify(
+  /questStreak:\s*number/.test(pageSource) &&
+    /questBestStreak:\s*number/.test(pageSource) &&
+    /questTotalDays:\s*number/.test(pageSource) &&
+    /streakMilestone/.test(pageSource),
+  'Daily review preserves streak history and escalating milestones',
+);
+verify(
+  /WeekendProgress/.test(pageSource) &&
+    /weekendChallengeSetFor/.test(pageSource) &&
+    /pick\('beginner', 0\)[\s\S]*pick\('intermediate', 1\)[\s\S]*pick\('advanced', 2\)/.test(
+      pageSource,
+    ) &&
+    /finishWeekendTrial/.test(pageSource) &&
+    /const rewards = \[100, 150, 250\]/.test(pageSource),
+  'Weekend contest uses a three-problem set with official records and staged rewards',
 );
 verify(
   /Math\.floor\(equipmentCatalog\[instance\.id\]\.cost \/ 2\)/.test(pageSource),
@@ -206,14 +223,16 @@ verify(
 );
 verify(
   /dailyProgress:\s*'soc-rtl-lab:daily-progress'/.test(pageSource) &&
-    /rewardCredits: previous\.rewardCredits \+ 50 \+ \(milestone \? 150 : 0\)/.test(
+    /milestone \? milestoneReward\.coins : 0/.test(pageSource) &&
+    /previous\.rewardCredits \+ 50 \+ \(milestone \? 150 : 0\)/.test(
       pageSource,
-    ) &&
-    /previous\.rewardCredits \+ 80/.test(pageSource),
-  'Daily check-in, seven-day milestone, and rotating RTL review rewards persist locally',
+    ),
+  'Daily check-in stays original while review streak rewards persist separately',
 );
 verify(
-  /dailyReviewActive\s*\?\s*dailyReview\.draft/.test(pageSource) &&
+  /weekendTrialActive[\s\S]*dailyReviewActive[\s\S]*dailyReview\.draft/.test(
+    pageSource,
+  ) &&
     /setDailyReview\(\{[\s\S]*draft: formatCodeForEditor/.test(pageSource) &&
     /dailyReviewNoAids/.test(pageSource),
   'Daily review starts from a temporary fresh draft and hides solved aids',
