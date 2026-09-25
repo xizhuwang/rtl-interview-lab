@@ -3,9 +3,9 @@ import type { Localized } from './challenges';
 export type CpuCacheGuide = {
   idea: Localized;
   diagram: Localized;
-  signals: Localized;
-  example: Localized;
-  rule: Localized;
+  signals?: Localized;
+  example?: Localized;
+  rule?: Localized;
   codingFlow?: Localized;
   skeleton?: Localized;
 };
@@ -35,24 +35,12 @@ export const cpuCacheGuides: Record<string, CpuCacheGuide> = {
   },
   'soc-cpu-forwarding': {
     idea: {
-      zh: '先把它想成「幫 ALU 選資料來源的兩個開關」。前一條 ADD 已算出 x5，但還沒寫回 register file；下一條 SUB 現在就要用 x5。與其停下來等，直接把較新的結果接到 ALU。這題不用搬 32-bit 資料，只要輸出兩個 2-bit 選擇碼。',
-      en: 'Think of two switches that choose the ALU inputs. An older ADD has produced x5 but has not written it back yet, while the following SUB needs x5 now. Instead of waiting, select the newer pipeline result. This exercise moves no 32-bit data; it only produces two 2-bit select codes.',
+      zh: 'CPU Pipeline 發生 RAW data hazard 時，新值還沒寫回 register file，下一條指令卻已經要使用；Forwarding 直接把較新的結果送到 ALU，避免不必要的 stall。這題只負責輸出 ALU 的兩組選擇碼。',
+      en: 'A RAW data hazard occurs when the next pipeline instruction needs a value before it reaches the register file. Forwarding sends the newer result directly to the ALU to avoid an unnecessary stall. This exercise only generates the two ALU select codes.',
     },
     diagram: {
       zh: '較早：ADD x5, x1, x2   現在位於 EX/MEM，x5 新值已算好\n目前：SUB x6, x5, x3   現在位於 EX，需要 rs1=x5\n\nALU A 端可以選：\n  00 → register file 裡的舊 x5\n  10 → EX/MEM 裡最新的 ADD 結果  ← 這次要選\n  01 → MEM/WB 裡更早一條指令的結果\n\n因此這個例子的 forward_a = 10。',
       en: 'Older: ADD x5, x1, x2   now in EX/MEM; the new x5 is ready\nCurrent: SUB x6, x5, x3 now in EX and needs rs1=x5\n\nALU input A can select:\n  00 → old x5 from the register file\n  10 → newest ADD result in EX/MEM  ← choose this one\n  01 → result from an even older instruction in MEM/WB\n\nTherefore forward_a = 10 in this example.',
-    },
-    signals: {
-      zh: '先只分成三組：① ex_rs1／ex_rs2＝目前這條指令需要哪兩格；② mem_rd＝前一條指令要寫哪格，是最新候選；③ wb_rd＝更早一條指令要寫哪格，是次新候選。mem_regwrite／wb_regwrite 為 0 代表它根本不會寫回；rd=0 代表 x0，也不能轉送。forward_a 看 rs1，forward_b 看 rs2。',
-      en: 'Use three groups: (1) ex_rs1/ex_rs2 are the two registers needed now; (2) mem_rd is the previous instruction destination and the newest candidate; (3) wb_rd is an older destination and the second choice. A low RegWrite means no writeback, and rd=0 is x0, so neither may forward. forward_a checks rs1; forward_b checks rs2.',
-    },
-    example: {
-      zh: '把數字代入：ex_rs1=5、mem_regwrite=1、mem_rd=5，所以 rs1 命中最新候選，A 選 10。若 mem_rd 不等於 5，但 wb_regwrite=1、wb_rd=5，才改選 01。rs2 必須用同一流程另外算一次，不能沿用 A 的結果。',
-      en: 'Substitute values: ex_rs1=5, mem_regwrite=1, mem_rd=5, so rs1 matches the newest candidate and A selects 10. If mem_rd does not equal 5 but wb_regwrite=1 and wb_rd=5, select 01 instead. Run the same logic independently for rs2; never copy A blindly.',
-    },
-    rule: {
-      zh: '每個輸出先設 00。依序問三件事：「那一級真的會寫嗎？」「目的地不是 x0 嗎？」「目的地等於我現在要讀的 rs 嗎？」MEM 三題都成立就選 10；只有 MEM 未命中才問 WB，成立則選 01。這就是 if／else if 的原因。',
-      en: 'Default each output to 00. Ask three questions: will that stage really write, is its destination not x0, and does its destination equal the source needed now? If all three are true for MEM, select 10. Ask WB only when MEM misses; then select 01. That priority is why the code uses if/else if.',
     },
     codingFlow: {
       zh: '預設 forward_a = 00\n        │\n        ▼\nMEM 會寫 register？rd 不是 x0？mem_rd == ex_rs1？\n        ├─ YES → forward_a = 10\n        │\n        └─ NO ─► WB 會寫 register？rd 不是 x0？wb_rd == ex_rs1？\n                    ├─ YES → forward_a = 01\n                    └─ NO  → 維持 00\n\nforward_b 完全相同，只把 ex_rs1 換成 ex_rs2。',

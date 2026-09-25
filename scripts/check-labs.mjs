@@ -121,11 +121,17 @@ verify(
       const guide = cpuCacheGuides[challenge.id];
       return (
         guide &&
-        ['idea', 'diagram', 'signals', 'example', 'rule'].every(
+        ['idea', 'diagram'].every(
           (field) =>
             guide[field]?.zh?.trim().length > 20 &&
             guide[field]?.en?.trim().length > 20,
-        )
+        ) &&
+        (challenge.id === 'soc-cpu-forwarding' ||
+          ['signals', 'example', 'rule'].every(
+            (field) =>
+              guide[field]?.zh?.trim().length > 20 &&
+              guide[field]?.en?.trim().length > 20,
+          ))
       );
     }),
   'Every CPU/cache exercise has a bilingual concept walkthrough',

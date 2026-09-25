@@ -1799,8 +1799,14 @@ function LogicBriefCard({
           <dd>
             <pre>{localize(cpuGuide.diagram, locale)}</pre>
           </dd>
-          <dt>{locale === 'zh' ? '訊號翻成人話' : 'Translate the signals'}</dt>
-          <dd>{localize(cpuGuide.signals, locale)}</dd>
+          {cpuGuide.signals ? (
+            <>
+              <dt>
+                {locale === 'zh' ? '訊號翻成人話' : 'Translate the signals'}
+              </dt>
+              <dd>{localize(cpuGuide.signals, locale)}</dd>
+            </>
+          ) : null}
           {cpuGuide.codingFlow ? (
             <>
               <dt>{locale === 'zh' ? '照順序問問題' : 'Ask in this order'}</dt>
@@ -1809,12 +1815,22 @@ function LogicBriefCard({
               </dd>
             </>
           ) : null}
-          <dt>{locale === 'zh' ? '實際跑一次' : 'Walk through an example'}</dt>
-          <dd>{localize(cpuGuide.example, locale)}</dd>
-          <dt>
-            {locale === 'zh' ? '最後才寫規則' : 'Only then write the rule'}
-          </dt>
-          <dd>{localize(cpuGuide.rule, locale)}</dd>
+          {cpuGuide.example ? (
+            <>
+              <dt>
+                {locale === 'zh' ? '實際跑一次' : 'Walk through an example'}
+              </dt>
+              <dd>{localize(cpuGuide.example, locale)}</dd>
+            </>
+          ) : null}
+          {cpuGuide.rule ? (
+            <>
+              <dt>
+                {locale === 'zh' ? '最後才寫規則' : 'Only then write the rule'}
+              </dt>
+              <dd>{localize(cpuGuide.rule, locale)}</dd>
+            </>
+          ) : null}
           {cpuGuide.skeleton ? (
             <>
               <dt>
