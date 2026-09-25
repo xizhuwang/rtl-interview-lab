@@ -208,8 +208,27 @@ verify(
       pageSource,
     ) &&
     /finishWeekendTrial/.test(pageSource) &&
-    /const rewards = \[100, 150, 250\]/.test(pageSource),
-  'Weekend contest uses a three-problem set with official records and staged rewards',
+    /weekendStageRewards = \[[\s\S]*coins: 200[\s\S]*coins: 350[\s\S]*coins: 600/.test(
+      pageSource,
+    ) &&
+    /officialGoldWeeks:\s*number/.test(pageSource) &&
+    /officialStageClears:\s*number/.test(pageSource),
+  'Weekend contest uses a three-problem set, larger staged rewards, and lifetime records',
+);
+verify(
+  /IC 小貓咪/.test(pageSource) &&
+    /I-大帝王/.test(pageSource) &&
+    /Pipeline 競速貓/.test(pageSource) &&
+    /threshold: 365/.test(pageSource) &&
+    /threshold: 52/.test(pageSource) &&
+    /achievementProgress/.test(pageSource),
+  'Daily review and weekend Gold weeks unlock long-term titles and badges',
+);
+verify(
+  /achievement-strip/.test(pageSource) &&
+    /compact-progress-details/.test(pageSource) &&
+    /className="compact-progress-details mt-2"/.test(pageSource),
+  'Daily and weekend panels keep secondary records inside compact details',
 );
 verify(
   /Math\.floor\(equipmentCatalog\[instance\.id\]\.cost \/ 2\)/.test(pageSource),

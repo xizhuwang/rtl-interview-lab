@@ -389,6 +389,14 @@ type WeekendProgress = {
   attempts: number;
   rewardedMedals: WeekendMedal[];
   history: WeekendHistoryEntry[];
+  officialWeeksEntered: number;
+  officialStageClears: number;
+  officialGoldWeeks: number;
+};
+type AchievementMilestone = {
+  threshold: number;
+  title: { zh: string; en: string };
+  badge: { zh: string; en: string };
 };
 const emptyElementLevels: ElementLevels = {
   fire: 0,
@@ -425,7 +433,72 @@ const emptyWeekendProgress: WeekendProgress = {
   attempts: 0,
   rewardedMedals: [],
   history: [],
+  officialWeeksEntered: 0,
+  officialStageClears: 0,
+  officialGoldWeeks: 0,
 };
+
+const reviewAchievements: AchievementMilestone[] = [
+  {
+    threshold: 7,
+    title: { zh: 'IC 小貓咪', en: 'IC Kitten' },
+    badge: { zh: '矽晶肉球', en: 'Silicon Paw' },
+  },
+  {
+    threshold: 30,
+    title: { zh: 'Debug 喵法師', en: 'Debug Cat Mage' },
+    badge: { zh: '波形月輪', en: 'Waveform Moon' },
+  },
+  {
+    threshold: 90,
+    title: { zh: 'RTL 煉丹師', en: 'RTL Alchemist' },
+    badge: { zh: '百日邏輯爐', en: 'Logic Furnace' },
+  },
+  {
+    threshold: 180,
+    title: { zh: 'Chiplet 御劍師', en: 'Chiplet Swordmaster' },
+    badge: { zh: '半年互連印', en: 'Interconnect Seal' },
+  },
+  {
+    threshold: 365,
+    title: { zh: 'I-大帝王', en: 'I/O Grand Emperor' },
+    badge: { zh: '年度 Tape-out 王冠', en: 'Annual Tape-out Crown' },
+  },
+];
+
+const contestAchievements: AchievementMilestone[] = [
+  {
+    threshold: 4,
+    title: { zh: 'Clock 衝浪手', en: 'Clock Surfer' },
+    badge: { zh: '四週上線章', en: 'Four-Week Uptime' },
+  },
+  {
+    threshold: 12,
+    title: { zh: 'Pipeline 競速貓', en: 'Pipeline Racing Cat' },
+    badge: { zh: '十二金流水線', en: 'Twelve-Gold Pipeline' },
+  },
+  {
+    threshold: 24,
+    title: { zh: 'NPU 夜行者', en: 'NPU Night Runner' },
+    badge: { zh: '張量暗核', en: 'Tensor Dark Core' },
+  },
+  {
+    threshold: 36,
+    title: { zh: 'PPA 星艦長', en: 'PPA Starship Captain' },
+    badge: { zh: '三十六週時序環', en: '36-Week Timing Ring' },
+  },
+  {
+    threshold: 52,
+    title: { zh: '週末 I/O 大帝', en: 'Weekend I/O Emperor' },
+    badge: { zh: '年度競速皇冠', en: 'Annual Speedrun Crown' },
+  },
+];
+
+const weekendStageRewards = [
+  { coins: 200, hammers: 0 },
+  { coins: 350, hammers: 1 },
+  { coins: 600, hammers: 2 },
+] as const;
 const storageKeys = {
   schemaVersion: 'soc-rtl-lab:schema-version',
   locale: 'soc-rtl-lab:locale',
@@ -574,6 +647,17 @@ function streakMilestone(streak: number) {
   };
 }
 
+function achievementProgress(
+  milestones: AchievementMilestone[],
+  value: number,
+) {
+  const unlocked = [...milestones]
+    .reverse()
+    .find((milestone) => value >= milestone.threshold);
+  const next = milestones.find((milestone) => value < milestone.threshold);
+  return { unlocked, next };
+}
+
 function formatDuration(milliseconds: number) {
   const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
   const minutes = Math.floor(totalSeconds / 60);
@@ -707,6 +791,12 @@ const copy = {
     dailyQuestReward: '通過可領 80 金幣',
     dailyQuestDone: '今日獎勵已領取',
     goDailyQuest: '前往挑戰',
+    honorTitle: '目前稱號',
+    honorBadge: '徽章',
+    honorNext: '下一稱號',
+    honorCollection: '稱號與獎勵',
+    reviewRookie: 'RTL 見習生',
+    reviewRookieBadge: '初始晶片',
     dailyReviewMode: '每日重做模式',
     dailyReviewModeBody:
       '從 Starter code 重新開始；這份草稿不會覆蓋原答案。已完成題目的提示、Golden 與推演卡在本次複習中暫時關閉。',
@@ -723,7 +813,11 @@ const copy = {
       '本次從 Starter code 重新開始，計時期間不提供提示、Golden 或推演卡，也不會覆蓋原本答案。',
     weekendMedals: '完成 1／2／3 題依序取得銅／銀／金階段',
     weekendReward:
-      '正式賽每題首次完成依序獲得 100／150／250 金幣；重跑只能刷新題數與時間。',
+      '正式賽每題首次完成依序獲得 200／350／600 金幣；銀階另得 1 把鐵鎚，金階另得 2 把。重跑只刷新題數與時間。',
+    weekendGoldWeeks: '累積金牌週',
+    weekendStageClears: '正式階段',
+    contestRookie: '計時賽新秀',
+    contestRookieBadge: '起跑閘門',
     practiceFinished: '試跑完成；週末再挑戰可留下正式紀錄。',
     level: '階',
     fourRoots: '四靈根已解鎖',
@@ -869,6 +963,12 @@ const copy = {
     dailyQuestReward: 'Pass it for 80 coins',
     dailyQuestDone: 'Daily reward claimed',
     goDailyQuest: 'Go to challenge',
+    honorTitle: 'Current title',
+    honorBadge: 'Badge',
+    honorNext: 'Next title',
+    honorCollection: 'Titles and rewards',
+    reviewRookie: 'RTL Trainee',
+    reviewRookieBadge: 'Starter Chip',
     dailyReviewMode: 'Daily fresh-start mode',
     dailyReviewModeBody:
       'Start again from the starter code. This temporary draft never overwrites your saved answer; hints, Golden behavior, and reasoning cards stay hidden when reviewing a solved challenge.',
@@ -885,7 +985,11 @@ const copy = {
       'This run starts from Starter code. Hints, Golden behavior, and reasoning cards are disabled, and your saved answer is untouched.',
     weekendMedals: 'Clear 1 / 2 / 3 problems for Bronze / Silver / Gold',
     weekendReward:
-      'Each first official solve grants 100 / 150 / 250 coins. Replays can only improve solved count and time.',
+      'First official clears grant 200 / 350 / 600 coins. Silver also grants one hammer and Gold grants two. Replays only improve solved count and time.',
+    weekendGoldWeeks: 'Gold weeks',
+    weekendStageClears: 'Official stages',
+    contestRookie: 'Time-trial Rookie',
+    contestRookieBadge: 'Starting Gate',
     practiceFinished:
       'Practice cleared. Return on the weekend to record an official result.',
     level: 'Lv.',
@@ -2093,6 +2197,9 @@ export default function Home() {
             ...emptyWeekendProgress,
             weekKey: currentWeekKey,
             challengeIds: weekendTrial.challengeIds,
+            officialWeeksEntered: weekendProgress.officialWeeksEntered,
+            officialStageClears: weekendProgress.officialStageClears,
+            officialGoldWeeks: weekendProgress.officialGoldWeeks,
             history: [
               ...(weekendProgress.weekKey && weekendProgress.attempts > 0
                 ? [
@@ -2110,10 +2217,10 @@ export default function Home() {
           };
     const score = completedIds.length;
     const medal = (['bronze', 'silver', 'gold'] as WeekendMedal[])[score - 1];
-    const rewards = [100, 150, 250];
     const isNewMedal =
       Boolean(medal) && !previousWeek.rewardedMedals.includes(medal);
-    const reward = isNewMedal ? rewards[score - 1] : 0;
+    const stageReward = weekendStageRewards[score - 1];
+    const reward = isNewMedal ? (stageReward?.coins ?? 0) : 0;
     const improvesRecord =
       score > previousWeek.bestSolved ||
       (score === previousWeek.bestSolved &&
@@ -2125,11 +2232,21 @@ export default function Home() {
       rewardedMedals: isNewMedal
         ? [...previousWeek.rewardedMedals, medal]
         : previousWeek.rewardedMedals,
+      officialStageClears:
+        previousWeek.officialStageClears + (isNewMedal ? 1 : 0),
+      officialGoldWeeks:
+        previousWeek.officialGoldWeeks +
+        (isNewMedal && medal === 'gold' ? 1 : 0),
     });
     if (reward > 0)
       setDailyProgress((previous) => ({
         ...previous,
         rewardCredits: previous.rewardCredits + reward,
+      }));
+    if (isNewMedal && stageReward && stageReward.hammers > 0)
+      setConsumables((previous) => ({
+        ...previous,
+        hammer: previous.hammer + stageReward.hammers,
       }));
   };
 
@@ -2557,6 +2674,33 @@ export default function Home() {
                 )
                 .slice(0, 12)
             : [];
+          const rewardedMedals = Array.isArray(saved.rewardedMedals)
+            ? [
+                ...new Set(
+                  saved.rewardedMedals.filter(
+                    (medal): medal is WeekendMedal =>
+                      typeof medal === 'string' &&
+                      medals.has(medal as WeekendMedal),
+                  ),
+                ),
+              ]
+            : [];
+          const inferredWeeks =
+            history.length +
+            (typeof saved.weekKey === 'string' &&
+            saved.weekKey &&
+            Number(saved.attempts) > 0
+              ? 1
+              : 0);
+          const inferredStageClears =
+            history.reduce(
+              (total, entry) =>
+                total + Math.min(3, Math.max(0, Number(entry.bestSolved) || 0)),
+              0,
+            ) + rewardedMedals.length;
+          const inferredGoldWeeks =
+            history.filter((entry) => Number(entry.bestSolved) >= 3).length +
+            (Number(saved.bestSolved) >= 3 ? 1 : 0);
           setWeekendProgress({
             weekKey: typeof saved.weekKey === 'string' ? saved.weekKey : '',
             challengeIds: Array.isArray(saved.challengeIds)
@@ -2571,18 +2715,32 @@ export default function Home() {
             ),
             bestMs: Math.max(0, Math.floor(Number(saved.bestMs) || 0)),
             attempts: Math.max(0, Math.floor(Number(saved.attempts) || 0)),
-            rewardedMedals: Array.isArray(saved.rewardedMedals)
-              ? [
-                  ...new Set(
-                    saved.rewardedMedals.filter(
-                      (medal): medal is WeekendMedal =>
-                        typeof medal === 'string' &&
-                        medals.has(medal as WeekendMedal),
-                    ),
-                  ),
-                ]
-              : [],
+            rewardedMedals,
             history,
+            officialWeeksEntered: Math.max(
+              0,
+              Math.floor(
+                Number.isFinite(Number(saved.officialWeeksEntered))
+                  ? Number(saved.officialWeeksEntered)
+                  : inferredWeeks,
+              ),
+            ),
+            officialStageClears: Math.max(
+              0,
+              Math.floor(
+                Number.isFinite(Number(saved.officialStageClears))
+                  ? Number(saved.officialStageClears)
+                  : inferredStageClears,
+              ),
+            ),
+            officialGoldWeeks: Math.max(
+              0,
+              Math.floor(
+                Number.isFinite(Number(saved.officialGoldWeeks))
+                  ? Number(saved.officialGoldWeeks)
+                  : inferredGoldWeeks,
+              ),
+            ),
           });
         }
         const parsedEnhancementSpend = Number(savedEnhancementSpend);
@@ -3447,6 +3605,14 @@ export default function Home() {
       ? dailyProgress.questStreak
       : 0;
   const nextReviewMilestone = streakMilestone(currentReviewStreak + 1);
+  const reviewHonor = achievementProgress(
+    reviewAchievements,
+    dailyProgress.questTotalDays,
+  );
+  const contestHonor = achievementProgress(
+    contestAchievements,
+    weekendProgress.officialGoldWeeks,
+  );
   const visibleWeekendProgress =
     weekendProgress.weekKey === currentWeekKey
       ? weekendProgress
@@ -3454,6 +3620,9 @@ export default function Home() {
           ...emptyWeekendProgress,
           weekKey: currentWeekKey,
           challengeIds: weekendChallenges.map((challenge) => challenge.id),
+          officialWeeksEntered: weekendProgress.officialWeeksEntered,
+          officialStageClears: weekendProgress.officialStageClears,
+          officialGoldWeeks: weekendProgress.officialGoldWeeks,
           history: [
             ...(weekendProgress.weekKey && weekendProgress.attempts > 0
               ? [
@@ -3535,6 +3704,9 @@ export default function Home() {
           challengeIds,
           attempts: 1,
           rewardedMedals: [],
+          officialWeeksEntered: previous.officialWeeksEntered + 1,
+          officialStageClears: previous.officialStageClears,
+          officialGoldWeeks: previous.officialGoldWeeks,
           history: [
             ...(previous.weekKey && previous.attempts > 0
               ? [
@@ -3898,78 +4070,75 @@ export default function Home() {
                   {text.dailyTraining}
                 </span>
                 <span className="rounded-full bg-background/70 px-2 py-0.5 font-mono text-[10px] font-semibold text-primary">
-                  {currentStreak} {text.days}
+                  {currentReviewStreak} {text.days}
                 </span>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                className="mt-2 w-full justify-center"
-                disabled={!todayKey || checkedInToday}
-                onClick={claimDailyCheckIn}
-              >
-                <Coins />
-                {checkedInToday ? text.checkedIn : text.dailyCheckIn}
-              </Button>
-              <p className="mt-1.5 text-[10px] leading-4 text-muted-foreground">
-                {text.streak} {currentStreak} ({streakCycleDay}/7) ·{' '}
-                {text.streakReward}
+              <p className="mt-1.5 line-clamp-2 text-xs font-medium leading-4">
+                {localize(dailyChallenge.title, locale)}
               </p>
-              <div className="mt-2 border-t border-sidebar-border pt-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">
-                  {text.dailyQuest}
-                </p>
-                <p className="mt-1 line-clamp-2 text-xs font-medium leading-4">
-                  {localize(dailyChallenge.title, locale)}
-                </p>
-                <div className="mt-2 grid grid-cols-3 gap-1 text-center">
-                  <div className="rounded-md bg-background/65 px-1 py-1.5">
-                    <p className="font-mono text-xs font-bold">
-                      {currentReviewStreak}
-                    </p>
-                    <p className="text-[9px] text-muted-foreground">
-                      {text.reviewCurrentStreak}
-                    </p>
-                  </div>
-                  <div className="rounded-md bg-background/65 px-1 py-1.5">
-                    <p className="font-mono text-xs font-bold">
-                      {dailyProgress.questBestStreak}
-                    </p>
-                    <p className="text-[9px] text-muted-foreground">
-                      {text.reviewBestStreak}
-                    </p>
-                  </div>
-                  <div className="rounded-md bg-background/65 px-1 py-1.5">
-                    <p className="font-mono text-xs font-bold">
-                      {dailyProgress.questTotalDays}
-                    </p>
-                    <p className="text-[9px] text-muted-foreground">
-                      {text.reviewTotalDays}
-                    </p>
-                  </div>
-                </div>
-                <p className="mt-1.5 text-[9px] leading-4 text-muted-foreground">
-                  {text.nextStreakReward}：{nextReviewMilestone.day} {text.days}{' '}
-                  · +{nextReviewMilestone.coins} · {nextReviewMilestone.hammers}
-                  ×
-                  <Hammer className="ml-0.5 inline size-3" />
-                </p>
-                <div className="mt-2 flex items-center justify-between gap-2">
-                  <span className="text-[10px] text-muted-foreground">
-                    {dailyQuestClaimed
-                      ? text.dailyQuestDone
-                      : text.dailyQuestReward}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={startDailyReview}
-                    disabled={!todayKey}
-                    className="text-[10px] font-semibold text-primary hover:underline disabled:opacity-50"
-                  >
-                    {text.goDailyQuest}
-                  </button>
-                </div>
+              <div className="mt-2 flex gap-1.5">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="min-w-0 flex-1 justify-center px-2 text-[10px]"
+                  disabled={!todayKey || checkedInToday}
+                  onClick={claimDailyCheckIn}
+                >
+                  <Coins />
+                  {checkedInToday ? text.checkedIn : text.dailyCheckIn}
+                </Button>
+                <Button
+                  size="sm"
+                  className="min-w-0 flex-1 justify-center px-2 text-[10px]"
+                  disabled={!todayKey}
+                  onClick={startDailyReview}
+                >
+                  <Play />
+                  {dailyQuestClaimed ? text.dailyQuestDone : text.goDailyQuest}
+                </Button>
               </div>
+              <div className="achievement-strip mt-2">
+                <Star className="size-3.5 fill-amber-400 text-amber-500" />
+                <span className="min-w-0 flex-1 truncate font-semibold">
+                  {reviewHonor.unlocked
+                    ? localize(reviewHonor.unlocked.title, locale)
+                    : text.reviewRookie}
+                </span>
+                <span className="truncate text-[9px] text-muted-foreground">
+                  {text.honorBadge} ·{' '}
+                  {reviewHonor.unlocked
+                    ? localize(reviewHonor.unlocked.badge, locale)
+                    : text.reviewRookieBadge}
+                </span>
+              </div>
+              <details className="compact-progress-details mt-2">
+                <summary>{text.honorCollection}</summary>
+                <div className="mt-2 space-y-1 text-[9px] leading-4 text-muted-foreground">
+                  <p>
+                    {text.reviewCurrentStreak} {currentReviewStreak} ·{' '}
+                    {text.reviewBestStreak} {dailyProgress.questBestStreak} ·{' '}
+                    {text.reviewTotalDays} {dailyProgress.questTotalDays}
+                  </p>
+                  <p>
+                    {text.streak} {currentStreak} ({streakCycleDay}/7) ·{' '}
+                    {text.streakReward}
+                  </p>
+                  <p>
+                    {text.nextStreakReward}：{nextReviewMilestone.day}{' '}
+                    {text.days} · +{nextReviewMilestone.coins} ·{' '}
+                    {nextReviewMilestone.hammers}×
+                    <Hammer className="ml-0.5 inline size-3" />
+                  </p>
+                  {reviewHonor.next ? (
+                    <p className="font-medium text-primary">
+                      {text.honorNext}：
+                      {localize(reviewHonor.next.title, locale)} ·{' '}
+                      {dailyProgress.questTotalDays}/
+                      {reviewHonor.next.threshold} {text.days}
+                    </p>
+                  ) : null}
+                </div>
+              </details>
             </section>
             <section
               className="weekend-trial-card mt-3"
@@ -4001,84 +4170,31 @@ export default function Home() {
                     : '--:--'}
                 </span>
               </div>
-              <div className="mt-2 space-y-1">
-                {weekendChallenges.map((challenge, index) => {
-                  const completed =
-                    currentWeekendTrial?.completedIds.includes(challenge.id) ??
-                    false;
-                  return (
-                    <button
-                      key={challenge.id}
-                      type="button"
-                      disabled={!currentWeekendTrial}
-                      onClick={() => selectChallenge(challenge.id)}
-                      className={`flex w-full items-center gap-2 rounded-md border px-2 py-1.5 text-left text-[10px] transition-colors ${
-                        current.id === challenge.id && currentWeekendTrial
-                          ? 'border-violet-400 bg-violet-500/10'
-                          : 'border-border bg-background/55'
-                      } disabled:cursor-default`}
-                    >
-                      <span
-                        className={`grid size-5 shrink-0 place-items-center rounded-full font-mono font-bold ${
-                          completed
-                            ? 'bg-emerald-500 text-white'
-                            : 'bg-violet-500/12 text-violet-700'
-                        }`}
-                      >
-                        {completed ? <Check className="size-3" /> : index + 1}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate font-medium">
-                        {localize(challenge.title, locale)}
-                      </span>
-                      <span className="text-[9px] text-muted-foreground">
-                        {localize(
-                          difficultyLabel[challenge.difficulty],
-                          locale,
-                        )}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="mt-2 grid grid-cols-2 gap-1 text-[10px]">
-                <span className="rounded-md bg-background/65 px-2 py-1">
-                  {text.weekendBest}{' '}
-                  <strong className="font-mono">
-                    {visibleWeekendProgress.bestSolved}/3 ·{' '}
-                    {visibleWeekendProgress.bestMs > 0
-                      ? formatDuration(visibleWeekendProgress.bestMs)
-                      : '--:--'}
-                  </strong>
+              <div className="achievement-strip mt-2">
+                <Trophy className="size-3.5 text-violet-600" />
+                <span className="min-w-0 flex-1 truncate font-semibold">
+                  {contestHonor.unlocked
+                    ? localize(contestHonor.unlocked.title, locale)
+                    : text.contestRookie}
                 </span>
-                <span className="rounded-md bg-background/65 px-2 py-1">
-                  {text.weekendAttempts}{' '}
-                  <strong>{visibleWeekendProgress.attempts}</strong>
+                <span className="truncate text-[9px] text-muted-foreground">
+                  {text.honorBadge} ·{' '}
+                  {contestHonor.unlocked
+                    ? localize(contestHonor.unlocked.badge, locale)
+                    : text.contestRookieBadge}
                 </span>
               </div>
-              <div className="mt-2 flex gap-1" aria-label={text.weekendMedals}>
-                {(['bronze', 'silver', 'gold'] as WeekendMedal[]).map(
-                  (medal) => (
-                    <span
-                      key={medal}
-                      className={`flex-1 rounded-md border px-1 py-1 text-center text-[9px] font-semibold uppercase ${
-                        visibleWeekendProgress.rewardedMedals.includes(medal)
-                          ? medal === 'gold'
-                            ? 'border-amber-400 bg-amber-300/35 text-amber-800'
-                            : medal === 'silver'
-                              ? 'border-slate-400 bg-slate-300/35 text-slate-700'
-                              : 'border-orange-500 bg-orange-300/30 text-orange-800'
-                          : 'border-border bg-background/45 text-muted-foreground'
-                      }`}
-                    >
-                      {medal === 'bronze'
-                        ? '1/3'
-                        : medal === 'silver'
-                          ? '2/3'
-                          : '3/3'}
-                    </span>
-                  ),
-                )}
-              </div>
+              <p className="mt-1.5 text-[9px] text-muted-foreground">
+                {text.weekendBest}{' '}
+                <strong className="font-mono text-foreground">
+                  {visibleWeekendProgress.bestSolved}/3 ·{' '}
+                  {visibleWeekendProgress.bestMs > 0
+                    ? formatDuration(visibleWeekendProgress.bestMs)
+                    : '--:--'}
+                </strong>{' '}
+                · {text.weekendAttempts}{' '}
+                <strong>{visibleWeekendProgress.attempts}</strong>
+              </p>
               <Button
                 size="sm"
                 variant="outline"
@@ -4091,41 +4207,111 @@ export default function Home() {
                   ? text.restartWeekendTrial
                   : text.startWeekendTrial}
               </Button>
-              <p className="mt-1.5 text-[9px] leading-4 text-muted-foreground">
-                {text.weekendMedals}
-                <br />
-                {text.weekendReward}
-              </p>
               {currentWeekendTrial?.completedMs &&
               !currentWeekendTrial.official ? (
                 <p className="mt-1 text-[9px] font-medium text-violet-700">
                   {text.practiceFinished}
                 </p>
               ) : null}
-              {visibleWeekendProgress.history.length > 0 ? (
-                <details className="mt-2 border-t border-sidebar-border pt-2">
-                  <summary className="cursor-pointer text-[10px] font-semibold">
-                    {text.weekendHistory}
-                  </summary>
-                  <div className="mt-1 space-y-1">
-                    {visibleWeekendProgress.history.slice(0, 4).map((entry) => (
-                      <div
-                        key={`${entry.weekKey}-${entry.challengeIds.join('-')}`}
-                        className="flex justify-between gap-2 text-[9px] text-muted-foreground"
+              <details
+                className="compact-progress-details mt-2"
+                open={Boolean(currentWeekendTrial)}
+              >
+                <summary>{text.honorCollection}</summary>
+                <div className="mt-2 space-y-1">
+                  {weekendChallenges.map((challenge, index) => {
+                    const completed =
+                      currentWeekendTrial?.completedIds.includes(
+                        challenge.id,
+                      ) ?? false;
+                    return (
+                      <button
+                        key={challenge.id}
+                        type="button"
+                        disabled={!currentWeekendTrial}
+                        onClick={() => selectChallenge(challenge.id)}
+                        className={`flex w-full items-center gap-2 rounded-md border px-2 py-1.5 text-left text-[10px] transition-colors ${
+                          current.id === challenge.id && currentWeekendTrial
+                            ? 'border-violet-400 bg-violet-500/10'
+                            : 'border-border bg-background/55'
+                        } disabled:cursor-default`}
                       >
-                        <span>{entry.weekKey}</span>
-                        <span className="font-mono">
-                          {entry.bestSolved}/3 ·{' '}
-                          {entry.bestMs > 0
-                            ? formatDuration(entry.bestMs)
-                            : '--:--'}{' '}
-                          · {entry.attempts}×
+                        <span
+                          className={`grid size-5 shrink-0 place-items-center rounded-full font-mono font-bold ${completed ? 'bg-emerald-500 text-white' : 'bg-violet-500/12 text-violet-700'}`}
+                        >
+                          {completed ? <Check className="size-3" /> : index + 1}
                         </span>
-                      </div>
-                    ))}
+                        <span className="min-w-0 flex-1 truncate font-medium">
+                          {localize(challenge.title, locale)}
+                        </span>
+                        <span className="text-[9px] text-muted-foreground">
+                          {localize(
+                            difficultyLabel[challenge.difficulty],
+                            locale,
+                          )}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  <div className="flex gap-1" aria-label={text.weekendMedals}>
+                    {(['bronze', 'silver', 'gold'] as WeekendMedal[]).map(
+                      (medal) => (
+                        <span
+                          key={medal}
+                          className={`flex-1 rounded-md border px-1 py-1 text-center text-[9px] font-semibold uppercase ${visibleWeekendProgress.rewardedMedals.includes(medal) ? (medal === 'gold' ? 'border-amber-400 bg-amber-300/35 text-amber-800' : medal === 'silver' ? 'border-slate-400 bg-slate-300/35 text-slate-700' : 'border-orange-500 bg-orange-300/30 text-orange-800') : 'border-border bg-background/45 text-muted-foreground'}`}
+                        >
+                          {medal === 'bronze'
+                            ? '1/3'
+                            : medal === 'silver'
+                              ? '2/3'
+                              : '3/3'}
+                        </span>
+                      ),
+                    )}
                   </div>
-                </details>
-              ) : null}
+                  <p className="text-[9px] leading-4 text-muted-foreground">
+                    {text.weekendReward}
+                  </p>
+                  <p className="text-[9px] text-muted-foreground">
+                    {text.weekendStageClears}{' '}
+                    {visibleWeekendProgress.officialStageClears} ·{' '}
+                    {text.weekendGoldWeeks}{' '}
+                    {visibleWeekendProgress.officialGoldWeeks}
+                  </p>
+                  {contestHonor.next ? (
+                    <p className="text-[9px] font-medium text-primary">
+                      {text.honorNext}：
+                      {localize(contestHonor.next.title, locale)} ·{' '}
+                      {visibleWeekendProgress.officialGoldWeeks}/
+                      {contestHonor.next.threshold} {text.weekendGoldWeeks}
+                    </p>
+                  ) : null}
+                  {visibleWeekendProgress.history.length > 0 ? (
+                    <div className="border-t border-sidebar-border pt-1">
+                      <p className="mb-1 text-[9px] font-semibold">
+                        {text.weekendHistory}
+                      </p>
+                      {visibleWeekendProgress.history
+                        .slice(0, 4)
+                        .map((entry) => (
+                          <div
+                            key={`${entry.weekKey}-${entry.challengeIds.join('-')}`}
+                            className="flex justify-between gap-2 text-[9px] text-muted-foreground"
+                          >
+                            <span>{entry.weekKey}</span>
+                            <span className="font-mono">
+                              {entry.bestSolved}/3 ·{' '}
+                              {entry.bestMs > 0
+                                ? formatDuration(entry.bestMs)
+                                : '--:--'}{' '}
+                              · {entry.attempts}×
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  ) : null}
+                </div>
+              </details>
             </section>
             <div className="mt-3 overflow-hidden rounded-xl border border-sidebar-border bg-sidebar-accent">
               <div className="grid grid-cols-[93px_minmax(0,1fr)] items-center gap-3 p-2.5">

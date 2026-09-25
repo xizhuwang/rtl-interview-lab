@@ -844,7 +844,7 @@ body {
   );
   border: 1px solid var(--sidebar-border);
   border-radius: 0.75rem;
-  padding: 0.75rem;
+  padding: 0.65rem;
 }
 
 .weekend-trial-card {
@@ -855,7 +855,35 @@ body {
   );
   border: 1px solid oklch(0.72 0.09 290 / 48%);
   border-radius: 0.75rem;
-  padding: 0.75rem;
+  padding: 0.65rem;
+}
+
+.achievement-strip {
+  align-items: center;
+  background: oklch(1 0 0 / 62%);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 0.55rem;
+  display: flex;
+  font-size: 0.625rem;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.35rem 0.45rem;
+}
+
+.compact-progress-details {
+  border-top: 1px solid var(--sidebar-border);
+  padding-top: 0.4rem;
+}
+
+.compact-progress-details > summary {
+  cursor: pointer;
+  font-size: 0.625rem;
+  font-weight: 700;
+  list-style-position: inside;
+}
+
+.compact-progress-details[open] > summary {
+  color: var(--primary);
 }
 
 .forge-station {
