@@ -38,6 +38,10 @@ const { cpuCacheGuides } = await loadTs('../lib/cpu-cache-guides.ts');
 const { goldenPatterns } = await loadTs('../lib/golden-patterns.ts');
 const { socLearningAids } = await loadTs('../lib/soc-learning-aids.ts');
 const { boardImplementationCompetencies } = await loadTs('../lib/readiness.ts');
+const compactCpuGuideIds = new Set([
+  'soc-cpu-forwarding',
+  'soc-cpu-branch-predictor',
+]);
 const workerSource = await readFile(
   new URL('../public/engine/worker.js', import.meta.url),
   'utf8',
@@ -126,7 +130,7 @@ verify(
             guide[field]?.zh?.trim().length > 20 &&
             guide[field]?.en?.trim().length > 20,
         ) &&
-        (challenge.id === 'soc-cpu-forwarding' ||
+        (compactCpuGuideIds.has(challenge.id) ||
           ['signals', 'example', 'rule'].every(
             (field) =>
               guide[field]?.zh?.trim().length > 20 &&

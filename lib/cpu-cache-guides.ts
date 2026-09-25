@@ -101,24 +101,12 @@ end`,
   },
   'soc-cpu-branch-predictor': {
     idea: {
-      zh: 'Predictor 像有慣性的投票器：一次反常結果不應立刻翻盤。二位元 counter 的低兩個狀態猜 not taken，高兩個狀態猜 taken，必須連續趨勢才會跨過中線。',
-      en: 'The predictor is a voter with inertia: one unusual outcome should not immediately reverse the guess. The lower two states predict not-taken and the upper two predict taken.',
+      zh: 'CPU 遇到 branch 時，必須先猜下一個 PC 才能繼續取指令。二位元 Predictor 用四個狀態保留慣性，避免一次偶發結果就立刻反轉預測。',
+      en: 'When the CPU reaches a branch, it predicts the next PC so instruction fetch can continue. A two-bit predictor keeps four states so one unusual outcome does not immediately reverse the prediction.',
     },
     diagram: {
       zh: '強不跳 00 ⇄ 弱不跳 01 ⇄ 弱跳 10 ⇄ 強跳 11\nactual_taken 往右；actual_not_taken 往左；兩端飽和不回捲',
       en: 'strong NT 00 ⇄ weak NT 01 ⇄ weak T 10 ⇄ strong T 11\nactual taken moves right; not-taken moves left; endpoints saturate',
-    },
-    signals: {
-      zh: 'state[1] 就是 predict_taken；update 表示這拍有真實 branch 結果可學習；actual_taken 決定 counter 增或減。update=0 時不能偷改歷史。',
-      en: 'state[1] is predict_taken. update says a resolved branch is available for training; actual_taken increments or decrements the counter. With update=0, history must not change.',
-    },
-    example: {
-      zh: 'reset 到 01（弱不跳）。一次 taken：01→10，預測改為 taken；再一次 taken：10→11。之後一次 not taken 只退到 10，仍預測 taken，這就是 hysteresis。',
-      en: 'Reset to 01 (weak not-taken). One taken result moves 01→10 and changes the prediction; another moves 10→11. A single not-taken then returns only to 10, demonstrating hysteresis.',
-    },
-    rule: {
-      zh: '輸出直接接 state[1]；clocked block 只在 update 時更新。taken 且 state!=11 才加一，not taken 且 state!=00 才減一，避免 11→00 或 00→11。',
-      en: 'Drive the prediction from state[1] and update state only when update is high. Increment only below 11 and decrement only above 00 to prevent wraparound.',
     },
   },
   'soc-cache-direct-mapped': {
