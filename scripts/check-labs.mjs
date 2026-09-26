@@ -245,13 +245,18 @@ verify(
   'Technology business cards keep profile data local and export a branded PNG',
 );
 verify(
-  /\.mascot-equipment-socCompass\s*\{[\s\S]*?top:\s*60%;[\s\S]*?\}/.test(
+  /\.mascot-equipment-socCompass\s*\{[\s\S]*?height:\s*18%;[\s\S]*?top:\s*59%;[\s\S]*?\}/.test(
     globalStyles,
   ) &&
-    /\.mascot-equipment-lowPowerCharm\s*\{[\s\S]*?top:\s*62%;[\s\S]*?\}/.test(
+    /\.mascot-equipment-lowPowerCharm\s*\{[\s\S]*?height:\s*18%;[\s\S]*?top:\s*60%;[\s\S]*?\}/.test(
       globalStyles,
     ),
-  'Archer and timing relics stay on the waist below the face line',
+  'Archer and timing relics stay visible on the waist below the face line',
+);
+verify(
+  !pageSource.includes('cpu-idle-hand-corrected') &&
+    !globalStyles.includes('cpu-idle-hand-corrected'),
+  'CPU swordsman keeps the same sword hand in idle and attack art',
 );
 verify(
   /Math\.floor\(equipmentCatalog\[instance\.id\]\.cost \/ 2\)/.test(pageSource),

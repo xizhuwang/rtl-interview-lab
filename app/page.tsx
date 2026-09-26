@@ -1507,7 +1507,7 @@ function ProfessionCharacterSprite({
       height={768}
       decoding="async"
       draggable={false}
-      className={`profession-character-sprite ${profession === 'cpu' && state === 'idle' ? 'cpu-idle-hand-corrected' : ''}`}
+      className="profession-character-sprite"
       aria-hidden="true"
     />
   );

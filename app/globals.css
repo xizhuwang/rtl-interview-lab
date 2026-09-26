@@ -559,12 +559,6 @@ body {
   width: 100%;
 }
 
-/* The attack illustration holds the sword in the character's left flipper.
-   Mirror only the idle swordsman so the resting pose uses that same hand. */
-.cpu-idle-hand-corrected {
-  transform: scaleX(-1);
-}
-
 .mascot-equipment {
   display: block;
   overflow: hidden;
@@ -635,11 +629,11 @@ body {
   /* Clip the compass to the archer's hip belt. Keeping it below the
      shoulder strap prevents the large circular sprite from floating over
      the face in both the idle and draw poses. */
-  height: 15%;
-  left: 31%;
-  top: 60%;
+  height: 18%;
+  left: 29%;
+  top: 59%;
   transform: rotate(-7deg);
-  width: 15%;
+  width: 18%;
   z-index: 7;
 }
 
@@ -673,11 +667,11 @@ body {
 .mascot-equipment-lowPowerCharm {
   /* The moon charm is a waist accessory, not a second head ornament.
      This anchor also stays clear of the mage's hat and casting hand. */
-  height: 15%;
-  left: 33%;
-  top: 62%;
+  height: 18%;
+  left: 30%;
+  top: 60%;
   transform: rotate(-6deg);
-  width: 15%;
+  width: 18%;
   z-index: 7;
 }
 
