@@ -54,6 +54,10 @@ const pageSource = await readFile(
   new URL('../app/page.tsx', import.meta.url),
   'utf8',
 );
+const globalStyles = await readFile(
+  new URL('../app/globals.css', import.meta.url),
+  'utf8',
+);
 let checks = 0;
 function verify(ok, name) {
   assert.ok(ok, name);
@@ -239,6 +243,15 @@ verify(
     /canvas\.toBlob\(resolve, 'image\/png'/.test(pageSource) &&
     /xizhuwang\.github\.io\/rtl-interview-lab/.test(pageSource),
   'Technology business cards keep profile data local and export a branded PNG',
+);
+verify(
+  /\.mascot-equipment-socCompass\s*\{[\s\S]*?top:\s*60%;[\s\S]*?\}/.test(
+    globalStyles,
+  ) &&
+    /\.mascot-equipment-lowPowerCharm\s*\{[\s\S]*?top:\s*62%;[\s\S]*?\}/.test(
+      globalStyles,
+    ),
+  'Archer and timing relics stay on the waist below the face line',
 );
 verify(
   /Math\.floor\(equipmentCatalog\[instance\.id\]\.cost \/ 2\)/.test(pageSource),

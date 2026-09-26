@@ -632,11 +632,14 @@ body {
 }
 
 .mascot-equipment-socCompass {
-  bottom: 30%;
-  height: 21%;
-  left: 42%;
-  transform: rotate(5deg);
-  width: 21%;
+  /* Clip the compass to the archer's hip belt. Keeping it below the
+     shoulder strap prevents the large circular sprite from floating over
+     the face in both the idle and draw poses. */
+  height: 15%;
+  left: 31%;
+  top: 60%;
+  transform: rotate(-7deg);
+  width: 15%;
   z-index: 7;
 }
 
@@ -668,10 +671,13 @@ body {
 }
 
 .mascot-equipment-lowPowerCharm {
-  height: 19%;
-  left: 42%;
-  top: 34%;
-  width: 19%;
+  /* The moon charm is a waist accessory, not a second head ornament.
+     This anchor also stays clear of the mage's hat and casting hand. */
+  height: 15%;
+  left: 33%;
+  top: 62%;
+  transform: rotate(-6deg);
+  width: 15%;
   z-index: 7;
 }
 
