@@ -1507,7 +1507,7 @@ function ProfessionCharacterSprite({
       height={768}
       decoding="async"
       draggable={false}
-      className="profession-character-sprite"
+      className={`profession-character-sprite profession-${profession}-sprite`}
       aria-hidden="true"
     />
   );
@@ -1631,7 +1631,7 @@ function MascotAvatar({
         .map((instance) => (
           <span
             key={instance.uid}
-            className={`mascot-equipment mascot-equipment-${instance.slot} mascot-equipment-${instance.id}`}
+            className={`mascot-equipment mascot-equipment-${instance.slot} mascot-equipment-${instance.id} ${instance.stars > 0 ? 'equipment-item-starred' : ''} ${instance.stars >= 5 ? 'equipment-item-divine' : ''}`}
             style={{ '--item-stars': instance.stars } as CSSProperties}
           >
             <WearableEquipmentSprite id={instance.id} />

@@ -559,6 +559,12 @@ body {
   width: 100%;
 }
 
+/* Every CPU pose faces the target on the arena's right side. Applying the
+   mirror to the shared sprite class keeps idle and attack handedness aligned. */
+.profession-cpu-sprite {
+  transform: scaleX(-1);
+}
+
 .mascot-equipment {
   display: block;
   overflow: hidden;
@@ -688,14 +694,39 @@ body {
   color: oklch(0.82 0.17 75);
 }
 
-.equipment-starred .mascot-equipment {
-  filter: brightness(calc(1 + var(--item-stars) * 0.05))
-    drop-shadow(0 0 calc(2px + var(--item-stars) * 1px) currentColor);
+.equipment-item-starred {
+  filter: brightness(calc(1 + var(--item-stars) * 0.06))
+    saturate(calc(1 + var(--item-stars) * 0.05))
+    drop-shadow(1px 0 0 oklch(0.88 0.14 90 / 72%))
+    drop-shadow(-1px 0 0 oklch(0.88 0.14 90 / 72%))
+    drop-shadow(0 1px 0 oklch(0.88 0.14 90 / 72%))
+    drop-shadow(0 -1px 0 oklch(0.88 0.14 90 / 72%))
+    drop-shadow(0 0 calc(3px + var(--item-stars) * 1.4px) currentColor);
 }
 
-.equipment-divine .mascot-equipment {
-  filter: brightness(1.25) saturate(1.18)
-    drop-shadow(0 0 8px oklch(0.87 0.17 90 / 80%));
+.equipment-item-divine {
+  filter: brightness(1.32) saturate(1.28)
+    drop-shadow(1px 0 0 oklch(0.94 0.18 95))
+    drop-shadow(-1px 0 0 oklch(0.94 0.18 95))
+    drop-shadow(0 1px 0 oklch(0.94 0.18 95))
+    drop-shadow(0 -1px 0 oklch(0.94 0.18 95))
+    drop-shadow(0 0 10px oklch(0.87 0.17 90 / 92%))
+    drop-shadow(0 0 18px oklch(0.76 0.19 70 / 62%));
+}
+
+/* Integrated weapons are baked into the profession artwork. A restrained
+   silhouette aura communicates their highest star level without drawing a
+   rectangular frame around the whole character. */
+.equipment-starred .profession-character-sprite {
+  filter: drop-shadow(
+    0 0 calc(2px + var(--gear-stars) * 0.8px)
+      oklch(0.79 0.15 215 / calc(26% + var(--gear-stars) * 7%))
+  );
+}
+
+.equipment-divine .profession-character-sprite {
+  filter: drop-shadow(0 0 6px oklch(0.9 0.17 92 / 78%))
+    drop-shadow(0 0 13px oklch(0.75 0.18 220 / 55%));
 }
 
 .mascot-gender-emblem {
@@ -1487,6 +1518,12 @@ body {
   animation: cpu-lunge 820ms cubic-bezier(0.32, 0.74, 0.24, 1) 3;
 }
 
+.mascot-battle-arena.profession-cpu {
+  --cpu-lunge-distance: clamp(210px, 40vw, 360px);
+  --cpu-lunge-follow: clamp(172px, 33vw, 295px);
+  --cpu-lunge-return: clamp(80px, 16vw, 150px);
+}
+
 .battle-running.profession-soc .mascot-battle-actor {
   animation: archer-draw 900ms ease-in-out 3;
 }
@@ -1529,10 +1566,29 @@ body {
     transform: translate(-5px, 3px) rotate(-5deg);
   }
   52% {
-    transform: translate(39px, -8px) rotate(8deg) scale(1.04);
+    transform: translate(var(--cpu-lunge-distance), -8px) rotate(8deg)
+      scale(1.08);
   }
   72% {
-    transform: translate(28px, -2px) rotate(2deg);
+    transform: translate(var(--cpu-lunge-follow), -2px) rotate(2deg) scale(1.04);
+  }
+}
+
+.battle-success.profession-cpu .mascot-battle-actor {
+  animation: cpu-melee-return 1200ms cubic-bezier(0.22, 0.8, 0.25, 1) forwards;
+}
+
+@keyframes cpu-melee-return {
+  0% {
+    transform: translateX(var(--cpu-lunge-distance)) translateY(-7px)
+      rotate(6deg) scale(1.06);
+  }
+  48% {
+    transform: translateX(var(--cpu-lunge-return)) translateY(-9px)
+      rotate(-2deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(0);
   }
 }
 
@@ -1700,21 +1756,22 @@ body {
 
 .actor-motion-accent {
   border-radius: 999px;
-  height: 66px;
+  height: 78px;
   left: -42px;
   opacity: 0;
   pointer-events: none;
   position: absolute;
   top: 50%;
   translate: 0 -50%;
-  width: 66px;
+  width: 78px;
 }
 
 .battle-running.profession-cpu .actor-motion-accent {
   animation: sword-arc-accent 820ms ease-out 3;
-  border-right: 7px solid oklch(0.82 0.17 205);
-  border-top: 3px solid white;
-  filter: drop-shadow(0 0 7px oklch(0.72 0.18 220));
+  border-right: 10px solid oklch(0.84 0.18 205);
+  border-top: 4px solid white;
+  filter: drop-shadow(0 0 9px oklch(0.72 0.18 220))
+    drop-shadow(0 0 15px oklch(0.68 0.2 225 / 72%));
 }
 
 .battle-running.profession-soc .actor-motion-accent {
@@ -1839,21 +1896,21 @@ body {
 
 .profession-projectile {
   color: oklch(0.84 0.17 205);
-  height: 9px;
-  width: 42px;
+  height: 11px;
+  width: 48px;
 }
 
 .profession-cpu .profession-projectile {
-  background: linear-gradient(
-    90deg,
-    transparent,
-    currentColor 42%,
-    white 52%,
-    transparent 72%
-  );
-  border-radius: 90% 10%;
-  filter: drop-shadow(0 0 5px currentColor);
-  transform: rotate(-24deg);
+  background: transparent;
+  border-right: 5px solid currentColor;
+  border-top: 2px solid white;
+  border-radius: 50%;
+  filter: drop-shadow(0 0 7px currentColor)
+    drop-shadow(0 0 12px oklch(0.72 0.19 220 / 75%));
+  height: 56px;
+  left: calc(100% - 50px);
+  transform: rotate(-28deg);
+  width: 56px;
 }
 
 .profession-soc .profession-projectile {
@@ -1867,8 +1924,9 @@ body {
     72% 58%,
     0 58%
   );
-  height: 12px;
-  width: 54px;
+  filter: drop-shadow(0 0 7px currentColor);
+  height: 15px;
+  width: 64px;
 }
 
 .profession-dft .profession-projectile {
@@ -1881,8 +1939,8 @@ body {
   );
   border-radius: 999px;
   box-shadow: 0 0 calc(9px + var(--effect-level) * 2px) oklch(0.82 0.18 110);
-  height: 28px;
-  width: 28px;
+  height: 36px;
+  width: 36px;
 }
 
 .profession-timing .profession-projectile {
@@ -1896,8 +1954,8 @@ body {
   border: 1px solid color-mix(in oklab, currentColor 72%, white);
   border-radius: 999px;
   box-shadow: 0 0 calc(9px + var(--effect-level) * 3px) currentColor;
-  height: calc(22px + var(--effect-level) * 2px);
-  width: calc(22px + var(--effect-level) * 2px);
+  height: calc(28px + var(--effect-level) * 2px);
+  width: calc(28px + var(--effect-level) * 2px);
 }
 
 .profession-projectile.projectile-a {
@@ -1917,6 +1975,12 @@ body {
 .battle-success .profession-projectile,
 .battle-failure .profession-projectile {
   animation: profession-skill-flight 820ms ease-out 3;
+}
+
+.battle-running.profession-cpu .profession-projectile,
+.battle-success.profession-cpu .profession-projectile,
+.battle-failure.profession-cpu .profession-projectile {
+  animation-name: cpu-melee-slash;
 }
 
 .battle-success .profession-projectile,
@@ -1957,6 +2021,29 @@ body {
   }
 }
 
+@keyframes cpu-melee-slash {
+  0%,
+  24%,
+  100% {
+    opacity: 0;
+    scale: 0.45;
+    rotate: -42deg;
+    translate: -20% -50%;
+  }
+  48% {
+    opacity: 1;
+    scale: 1.18;
+    rotate: 12deg;
+    translate: -8% -50%;
+  }
+  72% {
+    opacity: 0;
+    scale: 1.42;
+    rotate: 48deg;
+    translate: 8% -50%;
+  }
+}
+
 .attack-core {
   background: oklch(0.82 0.18 205);
   box-shadow: 0 0 calc(6px + var(--effect-level) * 2px) currentColor;
@@ -1979,14 +2066,20 @@ body {
 }
 
 .profession-cpu .attack-core {
-  border-radius: 100% 0;
-  height: 8px;
-  transform: rotate(-8deg);
+  background: transparent;
+  border-bottom: 4px solid currentColor;
+  border-radius: 50%;
+  border-right: 9px solid white;
+  height: 76px;
+  left: calc(100% - 68px);
+  transform: rotate(-24deg);
+  width: 76px;
 }
 
 .profession-soc .attack-core {
   clip-path: polygon(0 38%, 82% 38%, 82% 0, 100% 50%, 82% 100%, 82% 62%, 0 62%);
-  height: 22px;
+  filter: drop-shadow(0 0 8px currentColor);
+  height: 28px;
 }
 
 .profession-dft .attack-core {
@@ -1994,8 +2087,8 @@ body {
   border: 4px solid oklch(0.78 0.2 145);
   border-radius: 999px;
   color: oklch(0.78 0.2 145);
-  height: 38px;
-  width: 38px;
+  height: 46px;
+  width: 46px;
 }
 
 .profession-timing .attack-core {
@@ -2010,8 +2103,8 @@ body {
   border: 2px solid currentColor;
   border-radius: 999px;
   color: oklch(0.82 0.18 78);
-  height: 42px;
-  width: 42px;
+  height: 52px;
+  width: 52px;
 }
 
 .battle-element-fire .attack-core,
@@ -2062,6 +2155,12 @@ body {
   animation: attack-flight 720ms ease-out 3;
 }
 
+.battle-running.profession-cpu .attack-core,
+.battle-success.profession-cpu .attack-core,
+.battle-failure.profession-cpu .attack-core {
+  animation-name: cpu-melee-impact;
+}
+
 .battle-success .attack-core,
 .battle-failure .attack-core {
   animation-iteration-count: 2;
@@ -2086,6 +2185,33 @@ body {
     scale: 1 1;
     translate: -100% -50%;
   }
+}
+
+@keyframes cpu-melee-impact {
+  0%,
+  26%,
+  100% {
+    opacity: 0;
+    scale: 0.35;
+    rotate: -38deg;
+    translate: -20% -50%;
+  }
+  52% {
+    opacity: 1;
+    scale: 1.08;
+    rotate: 8deg;
+    translate: 0 -50%;
+  }
+  76% {
+    opacity: 0;
+    scale: 1.38;
+    rotate: 38deg;
+    translate: 12% -50%;
+  }
+}
+
+.profession-cpu .attack-trail {
+  width: 42%;
 }
 
 .profession-dft .attack-core {
@@ -3024,6 +3150,12 @@ body {
 }
 
 @media (max-width: 520px) {
+  .mascot-battle-arena.profession-cpu {
+    --cpu-lunge-distance: clamp(115px, 32vw, 160px);
+    --cpu-lunge-follow: clamp(94px, 26vw, 132px);
+    --cpu-lunge-return: clamp(42px, 13vw, 72px);
+  }
+
   .mascot-battle-arena {
     grid-template-columns: 100px minmax(32px, 1fr) 72px;
   }

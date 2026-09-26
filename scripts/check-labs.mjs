@@ -254,9 +254,23 @@ verify(
   'Archer and timing relics stay visible on the waist below the face line',
 );
 verify(
-  !pageSource.includes('cpu-idle-hand-corrected') &&
-    !globalStyles.includes('cpu-idle-hand-corrected'),
-  'CPU swordsman keeps the same sword hand in idle and attack art',
+  /profession-\$\{profession\}-sprite/.test(pageSource) &&
+    /\.profession-cpu-sprite\s*\{[\s\S]*?scaleX\(-1\)/.test(globalStyles) &&
+    !pageSource.includes('cpu-idle-hand-corrected'),
+  'CPU idle and attack sprites share one target-facing orientation',
+);
+verify(
+  /equipment-item-starred/.test(pageSource) &&
+    /\.equipment-item-starred\s*\{[\s\S]*?drop-shadow/.test(globalStyles) &&
+    /\.equipment-divine \.profession-character-sprite/.test(globalStyles),
+  'Equipment gains a star-scaled outline and integrated-gear aura',
+);
+verify(
+  /@keyframes cpu-melee-impact/.test(globalStyles) &&
+    /@keyframes cpu-melee-slash/.test(globalStyles) &&
+    /--cpu-lunge-distance:\s*clamp\(210px, 40vw, 360px\)/.test(globalStyles) &&
+    /--cpu-lunge-distance:\s*clamp\(115px, 32vw, 160px\)/.test(globalStyles),
+  'CPU battle motion closes into melee range with target-side slash effects',
 );
 verify(
   /Math\.floor\(equipmentCatalog\[instance\.id\]\.cost \/ 2\)/.test(pageSource),
