@@ -95,6 +95,18 @@ task check;
 endtask
 `;
 
+const syncFifoPorts = `module sync_fifo_4 #(parameter DATA_WIDTH = 8)(
+  input wire clk,
+  input wire rst,
+  input wire wr_en,
+  input wire [DATA_WIDTH-1:0] wr_data,
+  output wire full,
+  input wire rd_en,
+  output reg [DATA_WIDTH-1:0] rd_data,
+  output reg rd_valid,
+  output wire empty
+);`;
+
 export const challenges: Challenge[] = [
   {
     id: 'rtl-edge-pulse', order: 1, track: 'rtl', difficulty: 'beginner', minutes: 10, points: 80,
@@ -966,6 +978,135 @@ tick(1,1,0,0,1);tick(0,1,1,1,1);tick(1,0,0,0,0);$display("@@PASS@@");$finish;end
 
 challenges.push(...cpuCacheChallenges);
 challenges.push(...socAcceleratorChallenges);
+challenges.push({
+  id: 'rtl-sync-fifo', order: 49, track: 'rtl', difficulty: 'intermediate', minutes: 20, points: 150,
+  kind: 'build', judge: 'simulation', language: 'Verilog-2005',
+  title: { zh: '深度 4 單時脈 FIFO', en: 'Depth-4 synchronous FIFO' },
+  description: { zh: '用同一個 clk 管理四筆資料。寫出 full、empty、指標回繞與同拍讀寫，並以 rd_valid 標記上升沿後的讀取結果。', en: 'Build a four-entry FIFO on one clock. Handle full, empty, pointer wraparound, and simultaneous reads and writes. Mark the registered read result with rd_valid.' },
+  specs: [
+    { zh: 'rst 為高有效同步 reset。Reset 後 empty = 1、full = 0、rd_valid = 0、rd_data = 0。', en: 'rst is active-high and synchronous. After reset, empty = 1, full = 0, rd_valid = 0, and rd_data = 0.' },
+    { zh: '上升沿前未滿才接受寫入，非空才接受讀取。滿時同拍讀寫只接受讀，空時同拍讀寫只接受寫。', en: 'Use the pre-edge flags to accept requests. At full, simultaneous requests accept only the read. At empty, they accept only the write.' },
+    { zh: '讀出最早尚未取走的資料。接受讀取後更新 rd_data 並將 rd_valid 設為 1。其他拍 rd_valid 為 0，rd_data 保持。', en: 'Return the oldest unread entry. After an accepted read, update rd_data and set rd_valid. On other cycles, clear rd_valid and hold rd_data.' },
+    { zh: '讀寫指標各自只在操作獲准時前進。兩個操作都獲准時，兩個指標都前進，占用量維持。', en: 'Advance each pointer only on acceptance. When both operations are accepted, advance both pointers and hold the occupancy.' },
+  ],
+  testGroups: [
+    { zh: 'Reset、填滿與讀空', en: 'Reset, fill, and drain' },
+    { zh: '空滿邊界的同拍讀寫', en: 'Simultaneous requests at empty and full' },
+    { zh: '指標回繞、資料順序與 rd_valid', en: 'Pointer wraparound, ordering, and rd_valid' },
+  ],
+  hints: [
+    { zh: '用 2-bit 指標定址 0～3，用 3-bit count 表示 0～4 筆未讀資料。', en: 'Use two-bit pointers for addresses 0 through 3 and a three-bit count for occupancies 0 through 4.' },
+    { zh: '先用拍前的 full、empty 算 push、pop，再決定哪些指標前進。', en: 'Use the pre-edge full and empty flags to compute push and pop, then advance the accepted pointers.' },
+    { zh: '用 case ({push, pop}) 更新 count。只有 10 加一、01 減一，11 時兩個指標仍要前進。', en: 'Use case ({push, pop}) for count. Increment on 10, decrement on 01, and advance both pointers on 11 while holding count.' },
+  ],
+  starter: `${syncFifoPorts}
+  // TODO: storage, pointers, occupancy, and registered read output.
+endmodule`,
+  referenceSolution: `${syncFifoPorts}
+  reg [DATA_WIDTH-1:0] mem [0:3];
+  reg [1:0] wptr, rptr;
+  reg [2:0] count;
+  wire push, pop;
+
+  assign empty = (count == 3'd0);
+  assign full = (count == 3'd4);
+  assign push = wr_en && !full;
+  assign pop = rd_en && !empty;
+
+  always @(posedge clk) begin
+    if (rst) begin
+      wptr <= 2'd0;
+      rptr <= 2'd0;
+      count <= 3'd0;
+      rd_data <= {DATA_WIDTH{1'b0}};
+      rd_valid <= 1'b0;
+    end else begin
+      rd_valid <= pop;
+      if (push) begin
+        mem[wptr] <= wr_data;
+        wptr <= wptr + 2'd1;
+      end
+      if (pop) begin
+        rd_data <= mem[rptr];
+        rptr <= rptr + 2'd1;
+      end
+      case ({push, pop})
+        2'b10: count <= count + 3'd1;
+        2'b01: count <= count - 3'd1;
+        default: count <= count;
+      endcase
+    end
+  end
+endmodule`,
+  testbench: `module tb;
+  reg clk = 0, rst = 1, wr_en = 0, rd_en = 0;
+  reg [7:0] wr_data = 0;
+  wire full, empty, rd_valid;
+  wire [7:0] rd_data;
+  reg [7:0] queue [0:3];
+  reg [7:0] expected_data = 0;
+  integer occupancy = 0;
+  integer i;
+
+  sync_fifo_4 dut(.clk(clk), .rst(rst), .wr_en(wr_en), .wr_data(wr_data),
+    .full(full), .rd_en(rd_en), .rd_data(rd_data), .rd_valid(rd_valid), .empty(empty));
+  always #5 clk = ~clk;
+  ${pass}
+
+  task step;
+    input reset, write_req, read_req;
+    input [7:0] value;
+    reg accepted_write, accepted_read;
+    integer j;
+    begin
+      @(negedge clk);
+      rst = reset;
+      wr_en = write_req;
+      rd_en = read_req;
+      wr_data = value;
+      @(posedge clk);
+      accepted_write = !reset && write_req && occupancy < 4;
+      accepted_read = !reset && read_req && occupancy > 0;
+      if (reset) begin
+        occupancy = 0;
+        expected_data = 0;
+      end else begin
+        if (accepted_read) begin
+          expected_data = queue[0];
+          for (j = 0; j < 3; j = j + 1) queue[j] = queue[j+1];
+          occupancy = occupancy - 1;
+        end
+        if (accepted_write) begin
+          queue[occupancy] = value;
+          occupancy = occupancy + 1;
+        end
+      end
+      #1;
+      check(full === (occupancy == 4));
+      check(empty === (occupancy == 0));
+      check(rd_valid === accepted_read);
+      check(rd_data === expected_data);
+    end
+  endtask
+
+  initial begin
+    step(1,0,0,0);
+    step(0,1,0,8'hA1); step(0,1,0,8'hB2);
+    step(0,1,0,8'hC3); step(0,1,0,8'hD4);
+    step(0,1,1,8'hE5); step(0,1,1,8'hE5);
+    repeat (3) step(0,0,1,0);
+    step(0,1,1,8'hF6); step(0,0,1,0);
+    step(0,0,1,0);
+    step(0,1,0,8'h11); step(0,1,0,8'h22);
+    for (i = 0; i < 12; i = i + 1) step(0,1,1,8'h40 + i);
+    step(1,1,1,8'hFF);
+    step(0,0,1,0);
+    step(0,1,0,8'h99); step(0,0,1,0);
+    $display("@@PASS@@");
+    $finish;
+  end
+endmodule`,
+});
 
 export const difficultyLabel: Record<Challenge['difficulty'], Localized> = {
   beginner: { zh: '入門', en: 'Beginner' },

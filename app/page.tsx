@@ -80,6 +80,7 @@ import { WaveformViewer } from '@/components/waveform-viewer';
 import { CodeEditor, ReadOnlyCodeBlock } from '@/components/code-editor';
 import { SocInterfaceGuide } from '@/components/soc-interface-guide';
 import { AsyncFifoGuide, AsyncFifoReasoning } from '@/components/async-fifo-guide';
+import { SyncFifoGuide } from '@/components/sync-fifo-guide';
 import { AdSenseUnit } from '@/components/adsense-unit';
 import {
   challenges,
@@ -2488,6 +2489,12 @@ export default function Home() {
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
+      const linkedId = new URLSearchParams(window.location.search).get('lab');
+      const linkedChallenge = challenges.find(({ id }) => id === linkedId);
+      if (linkedChallenge) {
+        setSelectedId(linkedChallenge.id);
+        setTrack(linkedChallenge.track);
+      }
       let restoredSolvedIds: string[] = [];
       setTodayKey(localDateKey(new Date()));
       const savedLocale = browserStorage.getItem(
@@ -5669,6 +5676,9 @@ export default function Home() {
             )}
             {current.id === 'cdc-async-fifo' && !dailyReviewNoAids && (
               <AsyncFifoGuide locale={locale} />
+            )}
+            {current.id === 'rtl-sync-fifo' && !dailyReviewNoAids && (
+              <SyncFifoGuide locale={locale} reference={referenceCode} />
             )}
             {!dailyReviewNoAids && !logicUnlocked && (
               <AidUnlockCard

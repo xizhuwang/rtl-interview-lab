@@ -103,8 +103,8 @@ function simulate(
   });
 }
 verify(
-  challenges.length === 48 && new Set(challenges.map((c) => c.id)).size === 48,
-  '48 unique bilingual challenges',
+  challenges.length === 49 && new Set(challenges.map((c) => c.id)).size === 49,
+  '49 unique bilingual challenges',
 );
 verify(
   challenges.filter((c) => c.track === 'dft').length === 3,
